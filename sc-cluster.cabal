@@ -1,0 +1,51 @@
+name:                sc-cluster
+version:             0.1.0.0
+synopsis:            Cluster single cells.
+description:         Different methods to cluster and analyze single cell data.
+homepage:            http://github.com/GregorySchwartz/sc-cluster#readme
+license:             GPL-3
+license-file:        LICENSE
+author:              Gregory W. Schwartz
+maintainer:          gsch@pennmedicine.upenn.edu
+copyright:           2017 Gregory W. Schwartz
+category:            Bioinformatics
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Types
+                     , Load
+                     , Cluster
+                     , Plot
+                     , Utility
+  build-depends:       base >= 4.7 && < 5
+                     , bytestring
+                     , cassava
+                     , inline-r
+                     , lens
+                     , matrix-market-attoparsec
+                     , scientific
+                     , text
+                     , vector
+  ghc-options:         -O2
+  default-language:    Haskell2010
+
+executable sc-cluster
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -O2
+  build-depends:       base
+                     , sc-cluster
+                     , bytestring
+                     , cassava
+                     , inline-r
+                     , lens
+                     , optparse-generic
+                     , vector
+  default-language:    Haskell2010
+
+source-repository head
+  type:     git
+  location: https://github.com/GregorySchwartz/sc-cluster
