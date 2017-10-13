@@ -77,7 +77,7 @@ main = do
     sc <- filterMat unFilteredSc
 
     processedMat <- scaleMat (matrix sc) >>= pcaMat
-    
+
     let processedSc = sc { matrix = processedMat }
 
     R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
