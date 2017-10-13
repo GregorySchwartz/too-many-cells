@@ -18,8 +18,8 @@ import Language.R.QQ (r)
 import Types
 
 -- | Plot clusters.
-plotClusters :: String -> RMatImportant s -> R.SomeSEXP s -> R s ()
-plotClusters outputPlot (RMatImportant mat) clustering = do
+plotClusters :: String -> RMatObsRowImportant s -> R.SomeSEXP s -> R s ()
+plotClusters outputPlot (RMatObsRowImportant mat) clustering = do
     -- Plot hierarchy.
     [r| pdf(paste0(outputPlot_hs, "_hierarchy.pdf", sep = ""))
         plot(clustering_hs$hc)
@@ -36,11 +36,9 @@ plotClusters outputPlot (RMatImportant mat) clustering = do
     [r| colors = rainbow(length(unique(clustering_hs$cluster)))
         names(colors) = unique(clustering_hs$cluster)
 
-        pcaMat = prcomp(mat_hs)$x
-
         pdf(paste0(outputPlot_hs, "_pca.pdf", sep = ""))
 
-        plot( pcaMat
+        plot( mat_hs[,c(1,2)]
             , col=clustering_hs$cluster+1
             , pch=ifelse(clustering_hs$cluster == 0, 8, 1) # Mark noise as star
             , cex=ifelse(clustering_hs$cluster == 0, 0.5, 0.75) # Decrease size of noise
@@ -50,7 +48,7 @@ plotClusters outputPlot (RMatImportant mat) clustering = do
         colors = sapply(1:length(clustering_hs$cluster)
                        , function(i) adjustcolor(palette()[(clustering_hs$cluster+1)[i]], alpha.f = clustering_hs$membership_prob[i])
                        )
-        points(pcaMat, col=colors, pch=20)
+        points(mat_hs, col=colors, pch=20)
 
         dev.off()
     |]

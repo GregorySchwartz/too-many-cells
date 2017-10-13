@@ -17,16 +17,21 @@ library
   hs-source-dirs:      src
   exposed-modules:     Types
                      , Load
+                     , Preprocess
                      , Cluster
                      , Plot
                      , Utility
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , cassava
+                     , hmatrix
                      , inline-r
                      , lens
                      , matrix-market-attoparsec
+                     , mltool
+                     , safe
                      , scientific
+                     , statistics
                      , text
                      , vector
   ghc-options:         -O2

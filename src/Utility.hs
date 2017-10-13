@@ -9,41 +9,48 @@ Collects helper functions in the program.
 module Utility
     ( matToRMat
     , scToRMat
-    , scaleRMat
+    , getSCMatrix
     ) where
 
 -- Remote
+import qualified Data.Vector as V
+import qualified Data.Text as T
 import Language.R as R
 import Language.R.QQ (r)
+import qualified Numeric.LinearAlgebra as H
 
 -- Local
 import Types
 
 -- | Convert a mat to an RMatrix.
-matToRMat :: Rows -> Cols -> Vals -> R s (RMat s)
-matToRMat (Rows rows) (Cols cols) (Vals vals) = do
-    [r| library(Matrix) |]
+matToRMat :: SCMatrix -> R s (RMatObsRow s)
+matToRMat m = do
+    [r| library(jsonlite) |]
+
+    let mString = show . H.toLists . getSCMatrix $ m
+
     -- We want rows as observations and columns as features.
-    mat <- [r| t(sparseMatrix(i = rows_hs, j = cols_hs, x = vals_hs)) |]
-    return . RMat $ mat
+    mat <- [r| as.matrix(fromJSON(mString_hs)) |]
+    return . RMatObsRow $ mat
 
 -- | Convert a sc structure to an RMatrix.
-scToRMat :: SingleCells -> R s (RMat s)
+scToRMat :: SingleCells -> R s (RMatObsRowImportant s)
 scToRMat sc = do
     [r| library(Matrix) |]
 
-    let sparseMat = matrix sc
-        rows = Rows $ fmap (!! 0) sparseMat
-        cols = Cols $ fmap (!! 1) sparseMat
-        vals = Vals $ fmap (!! 2) sparseMat
+    let rowNamesR = fmap (T.unpack . unGene) . V.toList . rowNames $ sc
+        colNamesR = fmap (T.unpack . unCell) . V.toList . colNames $ sc
 
-    matToRMat rows cols vals
+    mat <- fmap unRMatObsRow . matToRMat . matrix $ sc
 
--- | Scale a matrix (z-score normalization).
-scaleRMat :: RMat s -> R s (RMatScaled s)
-scaleRMat (RMat mat) =
-    fmap
-        RMatScaled
-        [r| mat = scale(mat_hs);
-            mat[,colSums(!is.na(mat)) > 0]
-        |]
+    -- Switched row and column names because of transpose.
+    -- namedMat <- [r| rownames(mat_hs) = colNamesR_hs
+    --                 colnames(mat_hs) = rowNamesR_hs
+    --             |]
+
+    return . RMatObsRowImportant $ mat
+
+-- | Get the matrix from an SCMatrix.
+getSCMatrix :: SCMatrix -> H.Matrix H.R
+getSCMatrix (MatObsRow x)          = x
+getSCMatrix (MatObsRowImportant x) = x
