@@ -10,19 +10,22 @@ Collects the functions pertaining to the clustering of columns.
 module Cluster
     ( hdbscan
     , clustersToClusterList
+    , hClust
     ) where
 
 -- Remote
+import Data.Foldable (toList)
+import Data.Maybe (catMaybes)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
+import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
-import Data.Foldable (foldl')
+import qualified Data.Clustering.Hierarchical as HC
+import qualified Data.Sequence as Seq
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
-import Statistics.Quantile (continuousBy, s)
 import qualified Numeric.LinearAlgebra as H
-import qualified Data.Clustering.Hierarchical as HC
 
 -- Local
 import Types
@@ -38,31 +41,42 @@ hdbscan (RMatObsRowImportant mat) = do
     return clustering
 
 -- | Hierarchical clustering.
-hClust :: SingleCells -> [(Cell, Cluster)]
-hClust sc = clustering
+hClust
+    :: SingleCells MatObsRowImportant
+    -> ([((Cell, H.Vector H.R), Cluster)], HC.Dendrogram Cell)
+hClust sc = (clustering, fmap fst dend)
   where
-    clustering = assignClusters . fmap (fmap fst . elements findCut) $ dend
-    dend = HC.dendrogram HC.CLINK euclDist items
-    euclDist x y = norm_2 $ snd y - snd x
-    items = zip (V.toList . rowNames $ sc) . toRows . matrix $ sc
+    clustering =
+        assignClusters . fmap HC.elements . flip HC.cutAt (findCut dend) $ dend
+    dend = HC.dendrogram HC.CLINK items euclDist
+    euclDist x y = H.norm_2 $ snd y - snd x
+    items = zip (V.toList . rowNames $ sc)
+          . H.toRows
+          . unMatObsRowImportant
+          . matrix
+          $ sc
 
 -- | Assign clusters to values.
-assignClusters :: [[Cell]] -> [(Cell, Cluster)]
-assignClusters = zipWith (\c -> zip (repeat c)) (fmap Cluster [1..])
+assignClusters :: [[a]] -> [(a, Cluster)]
+assignClusters =
+    concat . zipWith (\c -> flip zip (repeat c)) (fmap Cluster [1..])
 
 -- | Find cut value.
-findCut :: HC.Dendrogram (H.Vector R) -> HC.Distance
-findCut = continuousBy s 3 4 . VU.fromList . foldl' foldFunc
+findCut :: HC.Dendrogram a -> HC.Distance
+findCut = continuousBy s 9 10 . VU.fromList . toList . flattenDist
   where
-    foldFunc !acc (HC.Branch !d _ _) = (Just d) : acc
-    foldFunc _ (HC.Leaf _)           = Nothing
-    
+    flattenDist (HC.Leaf _)          = Seq.empty
+    flattenDist (HC.Branch !d !l !r) =
+        (Seq.<|) d . (Seq.><) (flattenDist l) . flattenDist $ r
+
 -- | Convert the cluster object from hdbscan to a cluster list.
-clustersToClusterList :: SingleCells -> R.SomeSEXP s -> R s [(Cell, Cluster)]
+clustersToClusterList :: SingleCells MatObsRowImportant
+                      -> R.SomeSEXP s
+                      -> R s [(Cell, Cluster)]
 clustersToClusterList sc clustering = do
     io . hPutStrLn stderr $ "Calculating clusters."
     clusterList <- [r| clustering_hs$cluster |]
     return
-        . zip (V.toList . colNames $ sc)
+        . zip (V.toList . rowNames $ sc)
         . fmap Cluster
         $ (R.fromSomeSEXP clusterList :: [Double])

@@ -37,14 +37,12 @@ newtype RMatObsRowImportant s = RMatObsRowImportant
 newtype RMatScaled s    = RMatScaled { unRMatScaled :: R.SomeSEXP s }
 newtype Rows            = Rows { unRows :: [Double] }
 newtype Vals            = Vals { unVals :: [Double] }
+newtype MatObsRow  = MatObsRow { unMatObsRow :: H.Matrix H.R } deriving (Read,Show)
+newtype MatObsRowImportant = MatObsRowImportant { unMatObsRowImportant :: H.Matrix H.R } deriving (Read,Show)
 
 -- Advanced
-data SCMatrix
-    = MatObsRow { unMatObsRow :: H.Matrix H.R }
-    | MatObsRowImportant { unMatObsRow :: H.Matrix H.R }
-    deriving (Read,Show)
-data SingleCells = SingleCells { matrix :: SCMatrix
-                               , rowNames :: Vector Gene
-                               , colNames :: Vector Cell
-                               }
-                   deriving (Read, Show)
+data SingleCells a = SingleCells { matrix :: a
+                                 , rowNames :: Vector Cell
+                                 , colNames :: Vector Gene
+                                 }
+                     deriving (Read, Show)

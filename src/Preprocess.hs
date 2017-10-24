@@ -44,8 +44,7 @@ scaleRMat (RMatObsRow mat) = do
         |]
 
 -- | Scale a matrix based on the library size.
-scaleMat :: SCMatrix -> IO SCMatrix
-scaleMat (MatObsRowImportant _) = error "scaleMat requires MatObsRow."
+scaleMat :: MatObsRow -> IO MatObsRow
 scaleMat (MatObsRow mat) = do
     hPutStrLn stderr "Scaling matrix."
 
@@ -72,9 +71,7 @@ scaleMol xs = H.cmap (/ med) xs
     med = continuousBy s 2 4 . VS.filter (> 0) $ xs
 
 -- | Filter a matrix to remove low count cells and genes.
-filterMat :: SingleCells -> IO SingleCells
-filterMat (SingleCells { matrix = MatObsRowImportant _ }) =
-    error "filterMat requires MatObsRow."
+filterMat :: SingleCells MatObsRow -> IO (SingleCells MatObsRow)
 filterMat sc = do
     hPutStrLn stderr "Filtering matrix."
 
@@ -140,8 +137,7 @@ pcaRMat (RMatObsRow mat) = do
         |]
 
 -- | Conduct PCA on a matrix, retaining 80% of variance.
-pcaMat :: SCMatrix -> IO SCMatrix
-pcaMat (MatObsRowImportant _) = error "pcaMat requires MatObsRow."
+pcaMat :: MatObsRow -> IO MatObsRowImportant
 pcaMat (MatObsRow mat) = do
     hPutStrLn stderr "Calculating PCA."
 

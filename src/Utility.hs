@@ -9,7 +9,6 @@ Collects helper functions in the program.
 module Utility
     ( matToRMat
     , scToRMat
-    , getSCMatrix
     ) where
 
 -- Remote
@@ -23,34 +22,28 @@ import qualified Numeric.LinearAlgebra as H
 import Types
 
 -- | Convert a mat to an RMatrix.
-matToRMat :: SCMatrix -> R s (RMatObsRow s)
-matToRMat m = do
+matToRMat :: MatObsRow -> R s (RMatObsRow s)
+matToRMat (MatObsRow m) = do
     [r| library(jsonlite) |]
 
-    let mString = show . H.toLists . getSCMatrix $ m
+    let mString = show . H.toLists $ m
 
     -- We want rows as observations and columns as features.
     mat <- [r| as.matrix(fromJSON(mString_hs)) |]
     return . RMatObsRow $ mat
 
 -- | Convert a sc structure to an RMatrix.
-scToRMat :: SingleCells -> R s (RMatObsRowImportant s)
+scToRMat :: SingleCells MatObsRow -> R s (RMatObsRow s)
 scToRMat sc = do
     [r| library(Matrix) |]
 
-    let rowNamesR = fmap (T.unpack . unGene) . V.toList . rowNames $ sc
-        colNamesR = fmap (T.unpack . unCell) . V.toList . colNames $ sc
+    let rowNamesR = fmap (T.unpack . unCell) . V.toList . rowNames $ sc
+        colNamesR = fmap (T.unpack . unGene) . V.toList . colNames $ sc
 
     mat <- fmap unRMatObsRow . matToRMat . matrix $ sc
 
-    -- Switched row and column names because of transpose.
-    -- namedMat <- [r| rownames(mat_hs) = colNamesR_hs
-    --                 colnames(mat_hs) = rowNamesR_hs
+    -- namedMat <- [r| rownames(mat_hs) = rowNamesR_hs
+    --                 colnames(mat_hs) = colNamesR_hs
     --             |]
 
-    return . RMatObsRowImportant $ mat
-
--- | Get the matrix from an SCMatrix.
-getSCMatrix :: SCMatrix -> H.Matrix H.R
-getSCMatrix (MatObsRow x)          = x
-getSCMatrix (MatObsRowImportant x) = x
+    return . RMatObsRow $ mat

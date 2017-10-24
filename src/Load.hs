@@ -41,7 +41,7 @@ matToListOfList (IntMatrix size _ _ xs) =
         $ xs
 matToListOfList _ = error "Input matrix is not a Real matrix."
 
-loadCellrangerData :: MatrixFile -> GeneFile -> CellFile -> IO SingleCells
+loadCellrangerData :: MatrixFile -> GeneFile -> CellFile -> IO (SingleCells MatObsRow)
 loadCellrangerData mf gf cf = do
     m <- fmap matToListOfList
        . readMatrix
@@ -64,11 +64,11 @@ loadCellrangerData mf gf cf = do
 
     return $
         SingleCells { matrix   = MatObsRow . H.tr $ m -- We want observations as rows.
-                    , rowNames = g
-                    , colNames = c
+                    , rowNames = c
+                    , colNames = g
                     }
 
-loadMatrixData :: Delimiter -> MatrixFile -> IO SingleCells
+loadMatrixData :: Delimiter -> MatrixFile -> IO (SingleCells MatObsRow)
 loadMatrixData (Delimiter delim) mf = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
@@ -89,6 +89,6 @@ loadMatrixData (Delimiter delim) mf = do
 
     return $
         SingleCells { matrix   = MatObsRow . H.tr . H.fromLists $ m -- We want observations as rows
-                    , rowNames = g
-                    , colNames = c
+                    , rowNames = c
+                    , colNames = g
                     }

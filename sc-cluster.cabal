@@ -24,11 +24,17 @@ library
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , cassava
+                     , containers
+                     , diagrams
+                     , diagrams-lib
+                     , diagrams-cairo
+                     , hierarchical-clustering
                      , hmatrix
                      , inline-r
                      , lens
                      , matrix-market-attoparsec
                      , mltool
+                     , plots
                      , safe
                      , scientific
                      , statistics
@@ -45,9 +51,12 @@ executable sc-cluster
                      , sc-cluster
                      , bytestring
                      , cassava
+                     , diagrams-lib
+                     , diagrams-cairo
                      , inline-r
                      , lens
                      , optparse-generic
+                     , plots
                      , vector
   default-language:    Haskell2010
 

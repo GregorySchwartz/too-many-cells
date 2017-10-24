@@ -4,6 +4,7 @@ Gregory W. Schwartz
 Clusters single cell data.
 -}
 
+{-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -14,13 +15,18 @@ module Main where
 -- Remote
 import Control.Monad (when)
 import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Monoid ((<>))
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
 import Options.Generic
+import System.IO (hPutStrLn, stderr)
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
+import qualified Diagrams.Backend.Cairo as D
+import qualified Diagrams.Prelude as D
+import qualified Plots as D
 
 -- Local
 import Types
@@ -41,6 +47,8 @@ data Options = Options { matrixFile  :: Maybe String
                                <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                        , outputPlot :: Maybe String
                                <?> "([Nothing] | STRING) The prefix for the output plots. No plots generated if not specified."
+                       , outputDendrogram :: Maybe String
+                               <?> "([Nothing] | STRING) The output file for the dendrogram. No file generated if not specified."
                        }
                deriving (Generic)
 
@@ -63,6 +71,7 @@ main = do
             CellFile . fromMaybe "barcodes.tsv" . unHelpful . cellsFile $ opts
         delimiter'   = Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         outputPlot'  = unHelpful . outputPlot $ opts
+        outputDendrogram' = unHelpful . outputDendrogram $ opts
         matrixCsv    =
             any
                 isNothing
@@ -81,13 +90,29 @@ main = do
     let processedSc = sc { matrix = processedMat }
 
     R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
-        mat         <- scToRMat processedSc
-        clusterRes  <- hdbscan mat
-        clusterList <- clustersToClusterList sc clusterRes
+        -- mat         <- scToRMat processedSc
+        -- clusterRes  <- hdbscan mat
+        -- clusterList <- clustersToClusterList sc clusterRes
+
+        io . hPutStrLn stderr $ "Clustering."
+        let (clusterList, dend) = hClust processedSc
 
         case outputPlot' of
             Nothing  -> return ()
-            (Just x) -> plotClusters x mat $ clusterRes
+            (Just x) -> io
+                      . D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
+                      . D.renderAxis
+                      . plotClusters
+                      $ clusterList
+            --(Just x) -> plotClusters x mat $ clusterRes
+            
+        case outputDendrogram' of
+            Nothing  -> return ()
+            (Just x) -> io
+                      . B.writeFile x
+                      . B.pack
+                      . show
+                      $ dend
 
         -- Header
         io . B.putStrLn $ "cell,cluster"
@@ -96,5 +121,5 @@ main = do
         io
             . B.putStrLn
             . CSV.encode
-            . fmap (L.over L._2 unCluster . L.over L._1 unCell)
+            . fmap (\((Cell !x, _), Cluster !z) -> (x, z))
             $ clusterList

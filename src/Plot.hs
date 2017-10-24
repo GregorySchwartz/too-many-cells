@@ -5,21 +5,41 @@ Collects the functions pertaining to plotting the clusterings.
 -}
 
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Plot
     ( plotClusters
+    , plotClustersR
     ) where
 
 -- Remote
+import Control.Lens hiding ((#))
+import Control.Monad (forM)
+import Diagrams.Prelude
+import Diagrams.Backend.Cairo
 import Language.R as R
 import Language.R.QQ (r)
+import Plots
+import qualified Numeric.LinearAlgebra as H
 
 -- Local
 import Types
 
+plotClusters :: [((Cell, H.Vector H.R), Cluster)] -> Axis B V2 Double
+plotClusters vs = r2Axis &~ do
+    let toPoint :: H.Vector H.R -> (Double, Double)
+        toPoint = (\[!x, !y] -> (x, y)) . take 2 . H.toList
+
+    forM vs $ \((_, v), (Cluster c)) -> scatterPlot [toPoint v] $ do
+        let color :: OrderedField n => Colour n
+            color = (cycle colours2) !! (floor c)
+        plotMarker .= circle 1 # fc color # lwO 1 # lc color
+
+    hideGridLines
+
 -- | Plot clusters.
-plotClusters :: String -> RMatObsRowImportant s -> R.SomeSEXP s -> R s ()
-plotClusters outputPlot (RMatObsRowImportant mat) clustering = do
+plotClustersR :: String -> RMatObsRowImportant s -> R.SomeSEXP s -> R s ()
+plotClustersR outputPlot (RMatObsRowImportant mat) clustering = do
     -- Plot hierarchy.
     [r| pdf(paste0(outputPlot_hs, "_hierarchy.pdf", sep = ""))
         plot(clustering_hs$hc)
