@@ -37,10 +37,20 @@ resolver: lts-9.6
 # will not be run. This is useful for tweaking upstream packages.
 packages:
 - .
+# - location:
+#     git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git
+#     commit: ba162fc797aef930d7a9d886c20668352b413359
+  
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - plots-0.1.0.2
+  - inline-r-0.9.0.2
+  - /home/gw/code/utility/spectral-clustering/
+  - /home/gw/code/utility/modularity/
+  - /home/gw/code/utility/hierarchical-spectral-clustering/
+  - git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git
+    commit: ba162fc797aef930d7a9d886c20668352b413359
 
 # Override default flag values for local packages and extra-deps
 flags: {}

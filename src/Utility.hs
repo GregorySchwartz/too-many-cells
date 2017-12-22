@@ -9,13 +9,17 @@ Collects helper functions in the program.
 module Utility
     ( matToRMat
     , scToRMat
+    , getMostFrequent
     ) where
 
 -- Remote
-import qualified Data.Vector as V
-import qualified Data.Text as T
+import Data.Function (on)
+import Data.List (maximumBy)
 import Language.R as R
 import Language.R.QQ (r)
+import qualified Data.Map.Strict as Map
+import qualified Data.Text as T
+import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
@@ -47,3 +51,11 @@ scToRMat sc = do
     --             |]
 
     return . RMatObsRow $ mat
+
+-- | Get the most frequent element of a list.
+getMostFrequent :: (Eq a, Ord a) => [a] -> a
+getMostFrequent = fst
+                . maximumBy (compare `on` snd)
+                . Map.toAscList
+                . Map.fromListWith (+)
+                . flip zip ([1,1..] :: [Double])

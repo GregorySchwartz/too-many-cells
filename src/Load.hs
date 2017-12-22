@@ -6,10 +6,12 @@ cellranger.
 -}
 
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Load
     ( loadCellrangerData
     , loadMatrixData
+    , loadLabelData
     ) where
 
 -- Remote
@@ -18,13 +20,15 @@ import Data.Matrix.MatrixMarket (readMatrix, Matrix(RMatrix, IntMatrix))
 import Data.Maybe (fromMaybe)
 import Data.Scientific (toRealFloat, Scientific)
 import Data.Vector (Vector)
-import qualified Numeric.LinearAlgebra as H
 import Safe
+import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
+import qualified Data.Map as Map
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
 import qualified Data.Vector as V
+import qualified Numeric.LinearAlgebra as H
 
 -- Local
 import Types
@@ -41,6 +45,7 @@ matToListOfList (IntMatrix size _ _ xs) =
         $ xs
 matToListOfList _ = error "Input matrix is not a Real matrix."
 
+-- | Load output of cellranger.
 loadCellrangerData :: MatrixFile -> GeneFile -> CellFile -> IO (SingleCells MatObsRow)
 loadCellrangerData mf gf cf = do
     m <- fmap matToListOfList
@@ -68,6 +73,7 @@ loadCellrangerData mf gf cf = do
                     , colNames = g
                     }
 
+-- | Load a matrix in CSV format with row names and column names.
 loadMatrixData :: Delimiter -> MatrixFile -> IO (SingleCells MatObsRow)
 loadMatrixData (Delimiter delim) mf = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
@@ -92,3 +98,23 @@ loadMatrixData (Delimiter delim) mf = do
                     , rowNames = c
                     , colNames = g
                     }
+
+-- | Load a CSV containing the label of each cell.
+loadLabelData :: Delimiter -> LabelFile -> IO LabelMap
+loadLabelData (Delimiter delim) (LabelFile file) = do
+    let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
+
+    rows <- fmap (\ x -> either error snd ( CSV.decodeByNameWith csvOpts x
+                                        :: Either String (CSV.Header, Vector (Map.Map T.Text T.Text))
+                                         )
+                 )
+          . B.readFile
+          $ file
+
+    let toLabelMap :: Map.Map T.Text T.Text -> Map.Map Cell Label
+        toLabelMap m =
+            Map.singleton
+                (Cell $ Map.findWithDefault (error "No \"cell\" column in label file.") "cell" m)
+                (Label $ Map.findWithDefault (error "No \"label\" column in label file.") "label" m)
+
+    return . LabelMap . Map.unions . fmap toLabelMap . V.toList $ rows

@@ -11,14 +11,18 @@ module Cluster
     ( hdbscan
     , clustersToClusterList
     , hClust
+    , hSpecClust
     ) where
 
 -- Remote
 import Data.Foldable (toList)
+import Data.Int (Int32)
 import Data.Maybe (catMaybes)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
+import Math.Clustering.Hierarchical.Spectral
+       (hierarchicalSpectralCluster, getClusterItems)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
 import qualified Data.Clustering.Hierarchical as HC
@@ -30,6 +34,7 @@ import qualified Numeric.LinearAlgebra as H
 -- Local
 import Types
 import Utility
+import Adjacency
 
 -- | Cluster cLanguage.R.QQ (r)olumns of a sparse matrix using HDBSCAN.
 hdbscan :: RMatObsRowImportant s -> R s (R.SomeSEXP s)
@@ -41,10 +46,11 @@ hdbscan (RMatObsRowImportant mat) = do
     return clustering
 
 -- | Hierarchical clustering.
-hClust
-    :: SingleCells MatObsRowImportant
-    -> ([((Cell, H.Vector H.R), Cluster)], HC.Dendrogram Cell)
-hClust sc = (clustering, fmap fst dend)
+hClust :: SingleCells MatObsRowImportant -> ClusterResults
+hClust sc =
+    ClusterResults { clusterList = clustering
+                   , clusterDend = fmap (V.singleton . fst) dend
+                   }
   where
     clustering =
         assignClusters . fmap HC.elements . flip HC.cutAt (findCut dend) $ dend
@@ -75,8 +81,25 @@ clustersToClusterList :: SingleCells MatObsRowImportant
                       -> R s [(Cell, Cluster)]
 clustersToClusterList sc clustering = do
     io . hPutStrLn stderr $ "Calculating clusters."
-    clusterList <- [r| clustering_hs$cluster |]
+    clusters <- [r| clustering_hs$cluster |]
     return
         . zip (V.toList . rowNames $ sc)
-        . fmap Cluster
-        $ (R.fromSomeSEXP clusterList :: [Double])
+        . fmap (Cluster . fromIntegral)
+        $ (R.fromSomeSEXP clusters :: [Int32])
+
+-- | Hierarchical spectral clustering
+hSpecClust :: SingleCells MatObsRow -> ClusterResults
+hSpecClust sc = ClusterResults { clusterList = clustering
+                               , clusterDend = fmap (fmap fst . fst) dend
+                               }
+  where
+    clustering = assignClusters . fmap V.toList . getClusterItems $ dend
+    dend       = hierarchicalSpectralCluster items . unAdjacencyMat $ adjMat
+    adjMat     =
+        getAdjacencyMat . matrix $ sc
+    items      = V.fromList
+               . zip (V.toList . rowNames $ sc)
+               . H.toRows
+               . unMatObsRow
+               . matrix
+               $ sc

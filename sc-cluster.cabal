@@ -18,26 +18,34 @@ library
   exposed-modules:     Types
                      , Load
                      , Preprocess
+                     , Adjacency
                      , Cluster
+                     , Clumpiness
                      , Plot
                      , Utility
   build-depends:       base >= 4.7 && < 5
                      , bytestring
                      , cassava
+                     , colour
                      , containers
                      , diagrams
                      , diagrams-lib
                      , diagrams-cairo
+                     , find-clumpiness
                      , hierarchical-clustering
+                     , hierarchical-clustering-diagrams
+                     , hierarchical-spectral-clustering
                      , hmatrix
                      , inline-r
                      , lens
                      , matrix-market-attoparsec
                      , mltool
+                     , palette
                      , plots
                      , safe
                      , scientific
                      , statistics
+                     , SVGFonts
                      , text
                      , vector
   ghc-options:         -O2
