@@ -74,7 +74,8 @@ scaleSparseMat (MatObsRow mat) = do
         . S.fromColsL
         . fmap scaleSparseMol
         . S.toColsL
-        . S.fromRowsL
+        . S.transposeSM
+        . S.fromColsL
         . fmap scaleSparseCell
         . S.toRowsL
         $ mat
@@ -145,7 +146,8 @@ filterSparseMat sc = do
         rowFilter = (>= 250) . sum
         colFilter = (> 0) . sum
         mat            = unMatObsRow . matrix $ sc
-        rowFilteredMat = S.fromRowsL
+        rowFilteredMat = S.transposeSM
+                       . S.fromColsL
                        . filter rowFilter
                        . S.toRowsL
                        $ mat

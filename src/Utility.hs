@@ -73,4 +73,5 @@ sparseToHMat mat = H.assoc (S.dimSM mat) 0
 
 -- | Convert a sparse matrix to an hmatrix.
 hToSparseMat :: H.Matrix H.R -> S.SpMatrix Double
-hToSparseMat = S.fromRowsL . fmap S.vr . H.toLists
+hToSparseMat =
+    S.transposeSM . S.sparsifySM . S.fromColsL . fmap S.vr . H.toLists

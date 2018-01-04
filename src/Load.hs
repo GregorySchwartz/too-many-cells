@@ -10,7 +10,7 @@ cellranger.
 
 module Load
     ( loadCellrangerData
---    , loadHMatrixData
+    , loadHMatrixData
     , loadSparseMatrixData
     , loadLabelData
     ) where
@@ -34,6 +34,7 @@ import qualified Numeric.LinearAlgebra as H
 
 -- Local
 import Types
+import Utility
 
 -- | Convert a Matrix to an hmatrix Matrix. Assumes matrix market is 1 indexed.
 matToHMat :: Matrix Scientific -> H.Matrix H.R
@@ -89,30 +90,30 @@ loadCellrangerData mf gf cf = do
 
 -- | Load an H Matrix in CSV format (rows were features) with row names and
 -- column names.
--- loadHMatrixData :: Delimiter -> MatrixFile -> IO (SingleCells MatObsRow)
--- loadHMatrixData (Delimiter delim) mf = do
---     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
+loadHMatrixData :: Delimiter -> MatrixFile -> IO (SingleCells MatObsRow)
+loadHMatrixData (Delimiter delim) mf = do
+    let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
---     all <- fmap (\ x -> either error id ( CSV.decodeWith csvOpts CSV.NoHeader x
---                                        :: Either String (Vector (Vector T.Text))
---                                         )
---                 )
---          . B.readFile
---          . unMatrixFile
---          $ mf
+    all <- fmap (\ x -> either error id ( CSV.decodeWith csvOpts CSV.NoHeader x
+                                       :: Either String (Vector (Vector T.Text))
+                                        )
+                )
+         . B.readFile
+         . unMatrixFile
+         $ mf
 
---     let c = fmap Cell . V.drop 1 . V.head $ all
---         g = fmap (Gene . V.head) . V.drop 1 $ all
---         m = fmap (fmap (either error fst . T.double) . drop 1 . V.toList)
---           . drop 1
---           . V.toList
---           $ all
+    let c = fmap Cell . V.drop 1 . V.head $ all
+        g = fmap (Gene . V.head) . V.drop 1 $ all
+        m = fmap (fmap (either error fst . T.double) . drop 1 . V.toList)
+          . drop 1
+          . V.toList
+          $ all
 
---     return $
---         SingleCells { matrix   = MatObsRow . H.tr . H.fromLists $ m -- We want observations as rows
---                     , rowNames = c
---                     , colNames = g
---                     }
+    return $
+        SingleCells { matrix   = MatObsRow . hToSparseMat . H.tr . H.fromLists $ m -- We want observations as rows
+                    , rowNames = c
+                    , colNames = g
+                    }
 
 -- | Load a sparse matrix in CSV format (rows were features) with row names and
 -- column names.
@@ -138,7 +139,7 @@ loadSparseMatrixData (Delimiter delim) mf = do
           $ all
 
     return $
-        SingleCells { matrix   = MatObsRow . S.transposeSM . S.sparsifySM . S.fromRowsL $ m -- We want observations as rows
+        SingleCells { matrix   = MatObsRow . S.sparsifySM . S.fromColsL $ m -- We want observations as rows
                     , rowNames = c
                     , colNames = g
                     }
