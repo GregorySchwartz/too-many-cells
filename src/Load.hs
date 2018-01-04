@@ -33,15 +33,15 @@ import qualified Numeric.LinearAlgebra as H
 -- Local
 import Types
 
--- | Convert a Matrix to a list of lists.
+-- | Convert a Matrix to a list of lists. Assumes matrix market is 1 indexed.
 matToListOfList :: Matrix Scientific -> H.Matrix H.R
 matToListOfList (RMatrix size _ _ xs) =
     H.assoc size 0
-        . fmap (\(!x, !y, !z) -> ((fromIntegral x, fromIntegral y), toRealFloat z))
+        . fmap (\(!x, !y, !z) -> ((fromIntegral x - 1, fromIntegral y - 1), toRealFloat z))
         $ xs
 matToListOfList (IntMatrix size _ _ xs) =
     H.assoc size 0
-        . fmap (\(!x, !y, !z) -> ((fromIntegral x, fromIntegral y), fromIntegral z))
+        . fmap (\(!x, !y, !z) -> ((fromIntegral x - 1, fromIntegral y - 1), fromIntegral z))
         $ xs
 matToListOfList _ = error "Input matrix is not a Real matrix."
 

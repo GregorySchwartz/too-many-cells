@@ -21,8 +21,9 @@ import Data.Maybe (catMaybes)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
-import Math.Clustering.Hierarchical.Spectral
+import Math.Clustering.Hierarchical.Spectral.Dense
        (hierarchicalSpectralCluster, getClusterItems)
+import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
 import qualified Data.Clustering.Hierarchical as HC
@@ -94,7 +95,10 @@ hSpecClust sc = ClusterResults { clusterList = clustering
                                }
   where
     clustering = assignClusters . fmap V.toList . getClusterItems $ dend
-    dend       = hierarchicalSpectralCluster items . unAdjacencyMat $ adjMat
+    dend       = clusteringTreeToDendrogram
+               . hierarchicalSpectralCluster items
+               . unAdjacencyMat
+               $ adjMat
     adjMat     =
         getAdjacencyMat . matrix $ sc
     items      = V.fromList

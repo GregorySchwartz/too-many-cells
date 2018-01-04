@@ -58,7 +58,11 @@ data Options = Options { matrixFile  :: Maybe String
                deriving (Generic)
 
 modifiers :: Modifiers
-modifiers = lispCaseModifiers { shortNameModifier = firstLetter }
+modifiers = lispCaseModifiers { shortNameModifier = short }
+  where
+    short "dendrogramFile"   = Just 'D'
+    short "outputDendrogram" = Just 'O'
+    short x                  = firstLetter x
 
 instance ParseRecord Options where
     parseRecord = parseRecordWithModifiers modifiers

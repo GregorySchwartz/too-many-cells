@@ -90,7 +90,7 @@ filterMat sc = do
         r = V.ifilter (\i _ -> rowFilter . (H.!) mat $ i)
           . rowNames
           $ sc
-        c = V.ifilter (\i _ -> colFilter . (H.!) (H.tr mat) $ i)
+        c = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
           . colNames
           $ sc
 
