@@ -91,10 +91,10 @@ main = do
                 [unHelpful . genesFile $ opts, unHelpful . cellsFile $ opts]
         unFilteredSc   =
             if matrixCsv
-                then loadMatrixData delimiter' matrixFile'
+                then loadSparseMatrixData delimiter' matrixFile'
                 else loadCellrangerData matrixFile' genesFile' cellsFile'
-        sc             = unFilteredSc >>= filterMat
-        processedMat   = fmap matrix sc >>= scaleMat -- >>= pcaMat
+        sc             = unFilteredSc >>= filterSparseMat
+        processedMat   = fmap matrix sc >>= scaleSparseMat -- >>= pcaMat
         processedSc    = do
             pMat <- processedMat
             fmap (\x -> x { matrix = pMat }) sc

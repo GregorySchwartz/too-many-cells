@@ -18,6 +18,7 @@ import Language.R as R
 import Language.R.QQ (r)
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Numeric.LinearAlgebra as H
+import qualified Data.Sparse.Common as S
 
 -- Local
 
@@ -50,11 +51,11 @@ newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)
 newtype MatObsRow = MatObsRow
-    { unMatObsRow :: H.Matrix H.R
-    } deriving (Read,Show)
+    { unMatObsRow :: S.SpMatrix Double
+    } deriving (Show)
 newtype MatObsRowImportant = MatObsRowImportant
-    { unMatObsRowImportant :: H.Matrix H.R
-    } deriving (Read,Show)
+    { unMatObsRowImportant :: S.SpMatrix Double
+    } deriving (Show)
 newtype LabelMap = LabelMap
     { unLabelMap :: Map Cell Label
     } deriving (Read,Show)
@@ -69,7 +70,7 @@ data SingleCells a = SingleCells { matrix :: a
                                  }
                      deriving (Read, Show)
 
-data ClusterResults = ClusterResults { clusterList :: [((Cell, H.Vector H.R), Cluster)]
+data ClusterResults = ClusterResults { clusterList :: [((Cell, [(Int, Double)]), Cluster)]
                                      , clusterDend :: HC.Dendrogram (Vector Cell)
                                      }
                       deriving (Read, Show)

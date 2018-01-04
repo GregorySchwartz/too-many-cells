@@ -21,13 +21,14 @@ import Data.Maybe (catMaybes)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
-import Math.Clustering.Hierarchical.Spectral.Dense
-       (hierarchicalSpectralCluster, getClusterItems)
+import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster, getClusterItems)
 import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
+import qualified Control.Lens as L
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Sequence as Seq
+import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
 import qualified Numeric.LinearAlgebra as H
@@ -53,12 +54,14 @@ hClust sc =
                    , clusterDend = fmap (V.singleton . fst) dend
                    }
   where
-    clustering =
-        assignClusters . fmap HC.elements . flip HC.cutAt (findCut dend) $ dend
+    clustering = assignClusters
+               . fmap (fmap (L.over L._2 S.toListSV) . HC.elements)
+               . flip HC.cutAt (findCut dend)
+               $ dend
     dend = HC.dendrogram HC.CLINK items euclDist
-    euclDist x y = H.norm_2 $ snd y - snd x
+    euclDist x y = sqrt . sum . fmap (** 2) $ S.liftU2 (-) (snd y) (snd x)
     items = zip (V.toList . rowNames $ sc)
-          . H.toRows
+          . S.toRowsL
           . unMatObsRowImportant
           . matrix
           $ sc
@@ -94,16 +97,19 @@ hSpecClust sc = ClusterResults { clusterList = clustering
                                , clusterDend = fmap (fmap fst . fst) dend
                                }
   where
-    clustering = assignClusters . fmap V.toList . getClusterItems $ dend
+    clustering = assignClusters
+               . fmap (fmap (L.over L._2 S.toListSV) . V.toList)
+               . getClusterItems
+               $ dend
     dend       = clusteringTreeToDendrogram
                . hierarchicalSpectralCluster items
-               . unAdjacencyMat
-               $ adjMat
-    adjMat     =
-        getAdjacencyMat . matrix $ sc
+               . Left
+               . unMatObsRow
+               . matrix
+               $ sc
     items      = V.fromList
                . zip (V.toList . rowNames $ sc)
-               . H.toRows
+               . S.toRowsL
                . unMatObsRow
                . matrix
                $ sc

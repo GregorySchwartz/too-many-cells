@@ -6,32 +6,61 @@ matrices.
 -}
 
 module Adjacency
-    ( cosineSimilarity
-    , getAdjacencyMat
+    ( cosineSimilarityDense
+    , cosineSimilaritySparse
+    , getDenseAdjacencyMat
+    , getSparseAdjacencyMat
     ) where
 
 -- Remote
 import qualified Numeric.LinearAlgebra as H
+import qualified Data.Sparse.Common as S
 
 -- Local
 import Types
+import Utility
 
 -- | Get the cosine similarity between two vectors.
-cosineSimilarity :: H.Vector Double -> H.Vector Double -> Double
-cosineSimilarity v w = H.dot v w / (H.norm_2 v * H.norm_2 w)
+cosineSimilarityDense :: H.Vector Double -> H.Vector Double -> Double
+cosineSimilarityDense v w = H.dot v w / (H.norm_2 v * H.norm_2 w)
+
+-- | Get the cosine similarity between two vectors.
+cosineSimilaritySparse :: S.SpVector Double -> S.SpVector Double -> Double
+cosineSimilaritySparse v w = dot v w / (norm2 v * norm2 w)
+  where
+    dot x = sum . S.liftU2 (*) x
+    norm2 = sqrt . sum . fmap (** 2)
 
 -- | Get an adjacency matrix based on a matrix where each row is an observation
 -- and the adjacencies are cosine similarities.
-getAdjacencyMat :: MatObsRow -> AdjacencyMat
-getAdjacencyMat (MatObsRow mat) =
+getDenseAdjacencyMat :: MatObsRow -> AdjacencyMat
+getDenseAdjacencyMat (MatObsRow sparseMat) =
     AdjacencyMat $ H.assoc (size, size) 0 assocList
   where
+    mat = sparseToHMat sparseMat
     size :: Int
     size       = H.rows mat
     getSim :: Int -> Int -> Double
     getSim i j = if i == j
                     then 0
-                    else cosineSimilarity (mat H.! i) (mat H.! j)
+                    else cosineSimilarityDense (mat H.! i) (mat H.! j)
+    assocList :: [((Int, Int), Double)]
+    assocList  = (\i j -> ((i, j), getSim i j))
+             <$> [0,1 .. (size - 1)]
+             <*> [0,1 .. (size - 1)]
+
+-- | Get an adjacency matrix based on a matrix where each row is an observation
+-- and the adjacencies are cosine similarities.
+getSparseAdjacencyMat :: MatObsRow -> AdjacencyMat
+getSparseAdjacencyMat (MatObsRow mat) =
+    AdjacencyMat $ H.assoc (size, size) 0 assocList
+  where
+    size :: Int
+    size       = S.nrows mat
+    getSim :: Int -> Int -> Double
+    getSim i j = if i == j
+                    then 0
+                    else cosineSimilaritySparse (S.extractRow mat i) (S.extractRow mat j)
     assocList :: [((Int, Int), Double)]
     assocList  = (\i j -> ((i, j), getSim i j))
              <$> [0,1 .. (size - 1)]

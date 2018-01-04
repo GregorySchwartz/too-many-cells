@@ -20,7 +20,7 @@ module Plot
 import Control.Monad (forM, mapM)
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..))
-import Data.List (nub)
+import Data.List (nub, sort)
 import Data.Maybe (fromMaybe)
 import Diagrams.Backend.Cairo
 import Diagrams.Dendrogram (dendrogram, Width(..))
@@ -41,10 +41,10 @@ import Types
 import Utility
 
 -- | Plot clusters on a 2D axis.
-plotClusters :: [((Cell, H.Vector H.R), Cluster)] -> Axis B V2 Double
+plotClusters :: [((Cell, [(Int, Double)]), Cluster)] -> Axis B V2 Double
 plotClusters vs = r2Axis &~ do
-    let toPoint :: H.Vector H.R -> (Double, Double)
-        toPoint = (\[!x, !y] -> (x, y)) . take 2 . H.toList
+    let toPoint :: [(Int, Double)] -> (Double, Double)
+        toPoint = (\[!x, !y] -> (x, y)) . fmap snd . take 2 . sort
 
     forM vs $ \((_, v), (Cluster c)) -> scatterPlot [toPoint v] $ do
         let color :: OrderedField n => Colour n

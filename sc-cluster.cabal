@@ -44,6 +44,7 @@ library
                      , plots
                      , safe
                      , scientific
+                     , sparse-linear-algebra
                      , statistics
                      , SVGFonts
                      , text

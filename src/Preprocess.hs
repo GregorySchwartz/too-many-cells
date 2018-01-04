@@ -8,13 +8,15 @@ Collects functions pertaining to preprocessing the data.
 
 module Preprocess
     ( scaleRMat
-    , scaleMat
+    , scaleDenseMat
+    , scaleSparseMat
     , filterRMat
-    , filterMat
+    , filterDenseMat
+    , filterSparseMat
     , featureSelectionRandomForest
     , removeCorrelated
     , pcaRMat
-    , pcaMat
+    , pcaDenseMat
     ) where
 
 -- Remote
@@ -25,12 +27,14 @@ import MachineLearning.PCA (getDimReducer_rv)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
 import qualified Control.Lens as L
+import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
 import qualified Data.Vector.Storable as VS
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
 import Types
+import Utility
 
 -- | Scale a matrix.
 scaleRMat :: RMatObsRow s -> R s (RMatObsRow s)
@@ -44,41 +48,74 @@ scaleRMat (RMatObsRow mat) = do
         |]
 
 -- | Scale a matrix based on the library size.
-scaleMat :: MatObsRow -> IO MatObsRow
-scaleMat (MatObsRow mat) = do
+scaleDenseMat :: MatObsRow -> IO MatObsRow
+scaleDenseMat (MatObsRow mat) = do
     hPutStrLn stderr "Scaling matrix."
 
     return
         . MatObsRow
+        . hToSparseMat
         . H.fromColumns
-        . fmap scaleMol
+        . fmap scaleDenseMol
         . H.toColumns
         . H.fromRows
-        . fmap scaleCell
+        . fmap scaleDenseCell
         . H.toRows
+        . sparseToHMat
+        $ mat
+        
+-- | Scale a matrix based on the library size.
+scaleSparseMat :: MatObsRow -> IO MatObsRow
+scaleSparseMat (MatObsRow mat) = do
+    hPutStrLn stderr "Scaling matrix."
+
+    return
+        . MatObsRow
+        . S.fromColsL
+        . fmap scaleSparseMol
+        . S.toColsL
+        . S.fromRowsL
+        . fmap scaleSparseCell
+        . S.toRowsL
         $ mat
 
 -- | Scale a cell by the library size.
-scaleCell :: H.Vector H.R -> H.Vector H.R
-scaleCell xs = H.cmap (/ total) xs
+scaleDenseCell :: H.Vector H.R -> H.Vector H.R
+scaleDenseCell xs = H.cmap (/ total) xs
   where
     total = H.sumElements xs
+    
+-- | Scale a cell by the library size.
+scaleSparseCell :: S.SpVector Double -> S.SpVector Double
+scaleSparseCell xs = fmap (/ total) xs
+  where
+    total = sum xs
 
 -- | Median scale molecules across cells.
-scaleMol :: H.Vector H.R -> H.Vector H.R
-scaleMol xs = H.cmap (/ med) xs
+scaleDenseMol :: H.Vector H.R -> H.Vector H.R
+scaleDenseMol xs = H.cmap (/ med) xs
   where
     med = continuousBy s 2 4 . VS.filter (> 0) $ xs
+    
+-- | Median scale molecules across cells.
+scaleSparseMol :: S.SpVector Double -> S.SpVector Double
+scaleSparseMol xs = fmap (/ med) xs
+  where
+    med = continuousBy s 2 4
+        . VS.filter (> 0)
+        . VS.fromList
+        . S.toDenseListSV
+        $ xs
 
 -- | Filter a matrix to remove low count cells and genes.
-filterMat :: SingleCells MatObsRow -> IO (SingleCells MatObsRow)
-filterMat sc = do
+filterDenseMat :: SingleCells MatObsRow -> IO (SingleCells MatObsRow)
+filterDenseMat sc = do
     hPutStrLn stderr "Filtering matrix."
 
-    let m = MatObsRow colFilteredMat
+    let m = MatObsRow . hToSparseMat $ colFilteredMat
         rowFilter = (>= 250) . H.sumElements
         colFilter = (> 0) . H.sumElements
-        mat            = unMatObsRow . matrix $ sc
+        mat            = sparseToHMat . unMatObsRow . matrix $ sc
         rowFilteredMat = H.fromRows
                        . filter rowFilter
                        . H.toRows
@@ -91,6 +128,35 @@ filterMat sc = do
           . rowNames
           $ sc
         c = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
+          . colNames
+          $ sc
+
+    return $ SingleCells { matrix   = m
+                         , rowNames = r
+                         , colNames = c
+                         }
+                         
+-- | Filter a matrix to remove low count cells and genes.
+filterSparseMat :: SingleCells MatObsRow -> IO (SingleCells MatObsRow)
+filterSparseMat sc = do
+    hPutStrLn stderr "Filtering matrix."
+
+    let m = MatObsRow colFilteredMat
+        rowFilter = (>= 250) . sum
+        colFilter = (> 0) . sum
+        mat            = unMatObsRow . matrix $ sc
+        rowFilteredMat = S.fromRowsL
+                       . filter rowFilter
+                       . S.toRowsL
+                       $ mat
+        colFilteredMat = S.fromColsL
+                       . filter colFilter
+                       . S.toRowsL
+                       $ rowFilteredMat
+        r = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
+          . rowNames
+          $ sc
+        c = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
           . colNames
           $ sc
 
@@ -137,12 +203,13 @@ pcaRMat (RMatObsRow mat) = do
         |]
 
 -- | Conduct PCA on a matrix, retaining 80% of variance.
-pcaMat :: MatObsRow -> IO MatObsRowImportant
-pcaMat (MatObsRow mat) = do
+pcaDenseMat :: MatObsRow -> IO MatObsRowImportant
+pcaDenseMat (MatObsRow mat) = do
     hPutStrLn stderr "Calculating PCA."
 
     return
         . MatObsRowImportant
+        . hToSparseMat
         . L.view L._3
-        . getDimReducer_rv mat
+        . getDimReducer_rv (sparseToHMat mat)
         $ 0.8
