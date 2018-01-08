@@ -20,7 +20,7 @@ module Plot
 import Control.Monad (forM, mapM)
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..))
-import Data.List (nub, sort)
+import Data.List (nub)
 import Data.Maybe (fromMaybe)
 import Diagrams.Backend.Cairo
 import Diagrams.Dendrogram (dendrogram, Width(..))
@@ -32,6 +32,7 @@ import Plots
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
@@ -41,15 +42,13 @@ import Types
 import Utility
 
 -- | Plot clusters on a 2D axis.
-plotClusters :: [((Cell, [(Int, Double)]), Cluster)] -> Axis B V2 Double
+plotClusters :: [(CellInfo, Cluster)] -> Axis B V2 Double
 plotClusters vs = r2Axis &~ do
-    let toPoint :: [(Int, Double)] -> (Double, Double)
-        toPoint = (\[!x, !y] -> (x, y)) . fmap snd . take 2 . sort
 
-    forM vs $ \((_, v), (Cluster c)) -> scatterPlot [toPoint v] $ do
-        let color :: OrderedField n => Colour n
-            color = (cycle colours2) !! c
-        plotMarker .= circle 1 # fc color # lwO 1 # lc color
+    forM vs $ \(CellInfo { projection = (X !x, Y !y)}, Cluster c) ->
+        scatterPlot [(x, y)] $ do
+            let color = (cycle colours2) !! c
+            plotMarker .= circle 1 # fc color # lwO 1 # lc color
 
     hideGridLines
 

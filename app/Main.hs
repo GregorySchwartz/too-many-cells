@@ -41,9 +41,11 @@ import Plot
 data Options = Options { matrixFile  :: Maybe String
                                <?> "([matrix.mtx] | FILE) The input file containing the matrix output of cellranger or, if genes-file and cells-file are not specified, a csv containing gene row names and cell column names."
                        , genesFile :: Maybe String
-                               <?> "([genes.tsv] | FILE) The input file containing gene information from cellranger."
+                               <?> "([genes.tsv] | FILE) The input file containing gene information from cellranger. Matches row order in the matrix file."
                        , cellsFile :: Maybe String
-                               <?> "([barcodes.tsv] | FILE) The input file containing gene information from cellranger."
+                               <?> "([barcodes.tsv] | FILE) The input file containing barcode information from cellranger. Matches column order in the matrix file."
+                       , projectionFile :: Maybe String
+                               <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
                        , labelsFile :: Maybe String
                                <?> "([Nothing] | FILE) The input file containing the label for each cell, with \"cell,label\" header."
                        , dendrogramFile :: Maybe String
@@ -78,6 +80,8 @@ main = do
             GeneFile . fromMaybe "genes.tsv" . unHelpful . genesFile $ opts
         cellsFile'  =
             CellFile . fromMaybe "barcodes.tsv" . unHelpful . cellsFile $ opts
+        projectionFile' =
+            fmap ProjectionFile . unHelpful . projectionFile $ opts
         labelsFile'  =
             fmap LabelFile . unHelpful . labelsFile $ opts
         dendrogramFile'  =
@@ -91,8 +95,8 @@ main = do
                 [unHelpful . genesFile $ opts, unHelpful . cellsFile $ opts]
         unFilteredSc   =
             if matrixCsv
-                then loadSparseMatrixData delimiter' matrixFile'
-                else loadCellrangerData matrixFile' genesFile' cellsFile'
+                then loadSparseMatrixData delimiter' projectionFile' matrixFile'
+                else loadCellrangerData projectionFile' genesFile' cellsFile' matrixFile'
         sc             = unFilteredSc >>= filterSparseMat
         processedMat   = fmap matrix sc >>= scaleSparseMat -- >>= pcaMat
         processedSc    = do
@@ -170,5 +174,5 @@ main = do
             clusterResults
                 >>= B.putStrLn
                   . CSV.encode
-                  . fmap (\((Cell !x, _), Cluster !z) -> (x, z))
+                  . fmap (\(!ci, Cluster !c) -> (unCell . barcode $ ci, c))
                   . clusterList

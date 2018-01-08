@@ -4,8 +4,10 @@ Gregory W. Schwartz
 Collects the types used in the program
 -}
 
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE StrictData #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module Types where
 
@@ -36,8 +38,11 @@ newtype GeneFile        = GeneFile { unGeneFile :: FilePath }
 newtype MatrixFile = MatrixFile
     { unMatrixFile :: FilePath
     } deriving (Read,Show)
+newtype ProjectionFile  = ProjectionFile { unProjectionFile :: FilePath }
 newtype LabelFile       = LabelFile { unLabelFile :: FilePath }
 newtype DendrogramFile  = DendrogramFile { unDendrogramFile :: FilePath }
+newtype X               = X { unX :: Double } deriving (Eq, Ord, Read, Show, Num)
+newtype Y               = Y { unY :: Double } deriving (Eq, Ord, Read, Show, Num)
 newtype RMat s          = RMat { unRMat :: R.SomeSEXP s }
 newtype RMatObsRow s    = RMatObsRow { unRMatObsRow :: R.SomeSEXP s }
 newtype RMatFeatRow s   = RMatFeatRow { unRMatFeatRow :: R.SomeSEXP s }
@@ -67,10 +72,17 @@ newtype ColorMap = ColorMap
 data SingleCells a = SingleCells { matrix :: a
                                  , rowNames :: Vector Cell
                                  , colNames :: Vector Gene
+                                 , projections :: Vector (X, Y)
                                  }
                      deriving (Read, Show)
 
-data ClusterResults = ClusterResults { clusterList :: [((Cell, [(Int, Double)]), Cluster)]
+data CellInfo = CellInfo
+    { barcode :: Cell
+    , features :: [(Int, Double)]
+    , projection :: (X, Y)
+    } deriving (Eq,Ord,Read,Show)
+
+data ClusterResults = ClusterResults { clusterList :: [(CellInfo, Cluster)]
                                      , clusterDend :: HC.Dendrogram (Vector Cell)
                                      }
                       deriving (Read, Show)

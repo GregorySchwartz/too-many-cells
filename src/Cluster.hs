@@ -21,8 +21,8 @@ import Data.Maybe (catMaybes)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
-import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster, getClusterItems)
-import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram)
+import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster)
+import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram, getClusterItemsDend)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
 import qualified Control.Lens as L
@@ -51,16 +51,24 @@ hdbscan (RMatObsRowImportant mat) = do
 hClust :: SingleCells MatObsRowImportant -> ClusterResults
 hClust sc =
     ClusterResults { clusterList = clustering
-                   , clusterDend = fmap (V.singleton . fst) dend
+                   , clusterDend = fmap (V.singleton . L.view L._1) dend
                    }
   where
     clustering = assignClusters
-               . fmap (fmap (L.over L._2 S.toListSV) . HC.elements)
+               . fmap ( fmap ((\(!x, !y, !z) -> CellInfo x (S.toListSV y) z))
+                      . HC.elements
+                      )
                . flip HC.cutAt (findCut dend)
                $ dend
     dend = HC.dendrogram HC.CLINK items euclDist
-    euclDist x y = sqrt . sum . fmap (** 2) $ S.liftU2 (-) (snd y) (snd x)
-    items = zip (V.toList . rowNames $ sc)
+    euclDist x y =
+        sqrt . sum . fmap (** 2) $ S.liftU2 (-) (L.view L._2 y) (L.view L._2 x)
+    items = (\ fs
+            -> zip3
+                   (V.toList $ rowNames sc)
+                   fs
+                   (V.toList $ projections sc)
+            )
           . S.toRowsL
           . unMatObsRowImportant
           . matrix
@@ -94,12 +102,12 @@ clustersToClusterList sc clustering = do
 -- | Hierarchical spectral clustering
 hSpecClust :: SingleCells MatObsRow -> ClusterResults
 hSpecClust sc = ClusterResults { clusterList = clustering
-                               , clusterDend = fmap (fmap fst . fst) dend
+                               , clusterDend = fmap (fmap barcode . fst) dend
                                }
   where
     clustering = assignClusters
-               . fmap (fmap (L.over L._2 S.toListSV) . V.toList)
-               . getClusterItems
+               . fmap V.toList
+               . getClusterItemsDend
                $ dend
     dend       = clusteringTreeToDendrogram
                . hierarchicalSpectralCluster items
@@ -107,8 +115,14 @@ hSpecClust sc = ClusterResults { clusterList = clustering
                . unMatObsRow
                . matrix
                $ sc
-    items      = V.fromList
-               . zip (V.toList . rowNames $ sc)
+    items      = (\ fs
+                 -> V.zipWith3
+                        (\x y z -> CellInfo x (S.toListSV y) z)
+                        (rowNames sc)
+                        fs
+                        (projections sc)
+                 )
+               . V.fromList
                . S.toRowsL
                . unMatObsRow
                . matrix

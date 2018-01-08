@@ -63,7 +63,7 @@ scaleDenseMat (MatObsRow mat) = do
         . H.toRows
         . sparseToHMat
         $ mat
-        
+
 -- | Scale a matrix based on the library size.
 scaleSparseMat :: MatObsRow -> IO MatObsRow
 scaleSparseMat (MatObsRow mat) = do
@@ -71,6 +71,7 @@ scaleSparseMat (MatObsRow mat) = do
 
     return
         . MatObsRow
+        . S.sparsifySM
         . S.fromColsL
         . fmap scaleSparseMol
         . S.toColsL
@@ -85,7 +86,7 @@ scaleDenseCell :: H.Vector H.R -> H.Vector H.R
 scaleDenseCell xs = H.cmap (/ total) xs
   where
     total = H.sumElements xs
-    
+
 -- | Scale a cell by the library size.
 scaleSparseCell :: S.SpVector Double -> S.SpVector Double
 scaleSparseCell xs = fmap (/ total) xs
@@ -97,7 +98,7 @@ scaleDenseMol :: H.Vector H.R -> H.Vector H.R
 scaleDenseMol xs = H.cmap (/ med) xs
   where
     med = continuousBy s 2 4 . VS.filter (> 0) $ xs
-    
+
 -- | Median scale molecules across cells.
 scaleSparseMol :: S.SpVector Double -> S.SpVector Double
 scaleSparseMol xs = fmap (/ med) xs
@@ -131,12 +132,16 @@ filterDenseMat sc = do
         c = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
           . colNames
           $ sc
+        p = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
+          . projections
+          $ sc
 
     return $ SingleCells { matrix   = m
                          , rowNames = r
                          , colNames = c
+                         , projections = p
                          }
-                         
+
 -- | Filter a matrix to remove low count cells and genes.
 filterSparseMat :: SingleCells MatObsRow -> IO (SingleCells MatObsRow)
 filterSparseMat sc = do
@@ -153,7 +158,7 @@ filterSparseMat sc = do
                        $ mat
         colFilteredMat = S.fromColsL
                        . filter colFilter
-                       . S.toRowsL
+                       . S.toColsL
                        $ rowFilteredMat
         r = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
           . rowNames
@@ -161,10 +166,14 @@ filterSparseMat sc = do
         c = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
           . colNames
           $ sc
+        p = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
+          . projections
+          $ sc
 
     return $ SingleCells { matrix   = m
                          , rowNames = r
                          , colNames = c
+                         , projections = p
                          }
 
 -- | Filter a matrix to remove low count cells. R version.

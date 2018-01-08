@@ -18,7 +18,8 @@ module Load
 -- Remote
 import Data.Char (ord)
 import Data.Matrix.MatrixMarket (readMatrix, Matrix(RMatrix, IntMatrix))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, maybe)
+import Data.Monoid ((<>))
 import Data.Scientific (toRealFloat, Scientific)
 import Data.Vector (Vector)
 import Safe
@@ -61,9 +62,14 @@ matToSpMat (IntMatrix size _ _ xs) =
 matToSpMat _ = error "Input matrix is not a Real matrix."
 
 -- | Load output of cellranger.
-loadCellrangerData :: MatrixFile -> GeneFile -> CellFile -> IO (SingleCells MatObsRow)
-loadCellrangerData mf gf cf = do
-    m <- fmap matToSpMat
+loadCellrangerData
+    :: Maybe ProjectionFile
+    -> GeneFile
+    -> CellFile
+    -> MatrixFile
+    -> IO (SingleCells MatObsRow)
+loadCellrangerData pf gf cf mf = do
+    m <- fmap (MatObsRow . S.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
        . unMatrixFile
        $ mf
@@ -81,17 +87,22 @@ loadCellrangerData mf gf cf = do
        . B.readFile
        . unCellFile
        $ cf
+    p <- maybe (return . projectMatrix $ m) loadProjectionFile $ pf
 
     return $
-        SingleCells { matrix   = MatObsRow . S.transposeSM $ m -- We want observations as rows.
+        SingleCells { matrix   = m -- We want observations as rows.
                     , rowNames = c
                     , colNames = g
+                    , projections = p
                     }
 
 -- | Load an H Matrix in CSV format (rows were features) with row names and
 -- column names.
-loadHMatrixData :: Delimiter -> MatrixFile -> IO (SingleCells MatObsRow)
-loadHMatrixData (Delimiter delim) mf = do
+loadHMatrixData :: Delimiter
+                -> Maybe ProjectionFile
+                -> MatrixFile
+                -> IO (SingleCells MatObsRow)
+loadHMatrixData (Delimiter delim) pf mf = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
     all <- fmap (\ x -> either error id ( CSV.decodeWith csvOpts CSV.NoHeader x
@@ -104,21 +115,31 @@ loadHMatrixData (Delimiter delim) mf = do
 
     let c = fmap Cell . V.drop 1 . V.head $ all
         g = fmap (Gene . V.head) . V.drop 1 $ all
-        m = fmap (fmap (either error fst . T.double) . drop 1 . V.toList)
+        m = MatObsRow
+          . hToSparseMat
+          . H.tr -- We want observations as rows
+          . H.fromLists
+          . fmap (fmap (either error fst . T.double) . drop 1 . V.toList)
           . drop 1
           . V.toList
           $ all
 
+    p <- maybe (return . projectMatrix $ m) loadProjectionFile $ pf
+
     return $
-        SingleCells { matrix   = MatObsRow . hToSparseMat . H.tr . H.fromLists $ m -- We want observations as rows
+        SingleCells { matrix   = m
                     , rowNames = c
                     , colNames = g
+                    , projections = p
                     }
 
 -- | Load a sparse matrix in CSV format (rows were features) with row names and
 -- column names.
-loadSparseMatrixData :: Delimiter -> MatrixFile -> IO (SingleCells MatObsRow)
-loadSparseMatrixData (Delimiter delim) mf = do
+loadSparseMatrixData :: Delimiter
+                     -> Maybe ProjectionFile
+                     -> MatrixFile
+                     -> IO (SingleCells MatObsRow)
+loadSparseMatrixData (Delimiter delim) pf mf = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
     all <- fmap (\ x -> either error id ( CSV.decodeWith csvOpts CSV.NoHeader x
@@ -133,15 +154,20 @@ loadSparseMatrixData (Delimiter delim) mf = do
         g = fmap (Gene . V.head) . V.drop 1 $ all
         nrows = V.length all - 1
         ncols = V.length (all V.! 1) - 1
-        m = fmap (S.vr . fmap (either error fst . T.double) . drop 1 . V.toList)
-          . drop 1
-          . V.toList
+        m = MatObsRow
+          . S.sparsifySM
+          . S.fromColsV -- We want observations as rows
+          . fmap (S.vr . fmap (either error fst . T.double) . drop 1 . V.toList)
+          . V.drop 1
           $ all
 
+    p <- maybe (return . projectMatrix $ m) loadProjectionFile pf
+
     return $
-        SingleCells { matrix   = MatObsRow . S.sparsifySM . S.fromColsL $ m -- We want observations as rows
+        SingleCells { matrix   = m
                     , rowNames = c
                     , colNames = g
+                    , projections = p
                     }
 
 -- | Load a CSV containing the label of each cell.
@@ -163,3 +189,28 @@ loadLabelData (Delimiter delim) (LabelFile file) = do
                 (Label $ Map.findWithDefault (error "No \"label\" column in label file.") "label" m)
 
     return . LabelMap . Map.unions . fmap toLabelMap . V.toList $ rows
+
+-- | Load a projection file to get a vector of projections.
+loadProjectionFile :: ProjectionFile -> IO (V.Vector (X, Y))
+loadProjectionFile =
+    fmap (\ x -> either
+                                error
+                                (fmap getProjection . V.drop 1)
+                                (CSV.decode CSV.NoHeader x :: Either String (Vector [T.Text]))
+         )
+        . B.readFile
+        . unProjectionFile
+  where
+    getProjection [_, x, y] = ( X . either error fst . T.double $ x
+                              , Y . either error fst . T.double $ y
+                              )
+    getProjection xs        =
+        error $ "Unrecognized projection row: " <> show xs
+
+-- | Decide to use first two values as the projection.
+toPoint :: S.SpVector Double -> (X, Y)
+toPoint = (\[!x, !y] -> (X x, Y y)) . S.toDenseListSV . S.takeSV 2
+
+-- | Project a matrix to first two dimensions.
+projectMatrix :: MatObsRow -> V.Vector (X, Y)
+projectMatrix = V.fromList . fmap toPoint . S.toRowsL . unMatObsRow
