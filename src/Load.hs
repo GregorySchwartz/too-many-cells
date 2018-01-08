@@ -69,18 +69,20 @@ loadCellrangerData
     -> MatrixFile
     -> IO (SingleCells MatObsRow)
 loadCellrangerData pf gf cf mf = do
+    let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
+
     m <- fmap (MatObsRow . S.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
        . unMatrixFile
        $ mf
-    g <- fmap (\ x -> either error (fmap (Gene . fst)) ( CSV.decode CSV.NoHeader x
+    g <- fmap (\ x -> either error (fmap (Gene . fst)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
                                        :: Either String (Vector (T.Text, T.Text))
                                         )
               )
        . B.readFile
        . unGeneFile
        $ gf
-    c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decode CSV.NoHeader x
+    c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
                                        :: Either String (Vector [T.Text])
                                         )
               )
