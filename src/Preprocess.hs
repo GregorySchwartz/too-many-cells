@@ -166,7 +166,7 @@ filterSparseMat sc = do
         c = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
           . colNames
           $ sc
-        p = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
+        p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
           . projections
           $ sc
 

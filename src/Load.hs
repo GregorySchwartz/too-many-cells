@@ -193,7 +193,7 @@ loadLabelData (Delimiter delim) (LabelFile file) = do
     return . LabelMap . Map.unions . fmap toLabelMap . V.toList $ rows
 
 -- | Load a projection file to get a vector of projections.
-loadProjectionFile :: ProjectionFile -> IO (V.Vector (X, Y))
+loadProjectionFile :: ProjectionFile -> IO (Vector (X, Y))
 loadProjectionFile =
     fmap (\ x -> either
                                 error
@@ -214,5 +214,5 @@ toPoint :: S.SpVector Double -> (X, Y)
 toPoint = (\[!x, !y] -> (X x, Y y)) . S.toDenseListSV . S.takeSV 2
 
 -- | Project a matrix to first two dimensions.
-projectMatrix :: MatObsRow -> V.Vector (X, Y)
+projectMatrix :: MatObsRow -> Vector (X, Y)
 projectMatrix = V.fromList . fmap toPoint . S.toRowsL . unMatObsRow
