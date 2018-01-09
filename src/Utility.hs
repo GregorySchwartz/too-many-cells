@@ -13,6 +13,7 @@ module Utility
     , getMostFrequent
     , sparseToHMat
     , hToSparseMat
+    , interpretTree
     ) where
 
 -- Remote
@@ -20,6 +21,9 @@ import Data.Function (on)
 import Data.List (maximumBy)
 import Language.R as R
 import Language.R.QQ (r)
+import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB (..))
+import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree (..), clusteringTreeToDendrogram)
+import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Csv.Streaming as SCSV
 import qualified Data.Map.Strict as Map
 import qualified Data.Sparse.Common as S
@@ -76,3 +80,11 @@ sparseToHMat mat = H.assoc (S.dimSM mat) 0
 hToSparseMat :: H.Matrix H.R -> S.SpMatrix Double
 hToSparseMat =
     S.transposeSM . S.sparsifySM . S.fromColsL . fmap S.vr . H.toLists
+
+-- | Interpret a clustering tree to a dendrogram.
+interpretTree
+    :: Either (HC.Dendrogram (V.Vector Cell)) (ClusteringTree CellInfo ShowB)
+    -> HC.Dendrogram (V.Vector Cell)
+interpretTree (Left x) = x
+interpretTree (Right x) =
+    fmap (fmap barcode . fst) . clusteringTreeToDendrogram $ x

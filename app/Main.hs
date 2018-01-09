@@ -122,7 +122,7 @@ main = do
         dend <- case dendrogramFile' of
                     Nothing  -> io . fmap clusterDend $ clusterResults
                     (Just x) -> io
-                              . fmap (read . B.unpack)
+                              . fmap (interpretTree . read . B.unpack)
                               . B.readFile
                               . unDendrogramFile
                               $ x
