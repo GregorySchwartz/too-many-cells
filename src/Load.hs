@@ -26,6 +26,8 @@ import Safe
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
+import qualified Data.Csv.Streaming as SCSV
+import qualified Data.Foldable as F
 import qualified Data.Map as Map
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
@@ -142,25 +144,24 @@ loadSparseMatrixData :: Delimiter
                      -> MatrixFile
                      -> IO (SingleCells MatObsRow)
 loadSparseMatrixData (Delimiter delim) pf mf = do
-    let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
+    let csvOpts = CSV.defaultDecodeOptions
+                    { CSV.decDelimiter = fromIntegral (ord delim) }
 
-    all <- fmap (\ x -> either error id ( CSV.decodeWith csvOpts CSV.NoHeader x
-                                       :: Either String (Vector (Vector T.Text))
-                                        )
-                )
+    all <- fmap (\x -> SCSV.decodeWith csvOpts SCSV.NoHeader x :: SCSV.Records [T.Text])
          . B.readFile
          . unMatrixFile
          $ mf
 
-    let c = fmap Cell . V.drop 1 . V.head $ all
-        g = fmap (Gene . V.head) . V.drop 1 $ all
-        nrows = V.length all - 1
-        ncols = V.length (all V.! 1) - 1
+    let c = V.fromList . fmap Cell . drop 1 . head . F.toList $ all
+        g = V.fromList . fmap (Gene . head) . drop 1 . F.toList $ all
+        nrows = V.length c
+        ncols = V.length g
         m = MatObsRow
           . S.sparsifySM
-          . S.fromColsV -- We want observations as rows
-          . fmap (S.vr . fmap (either error fst . T.double) . drop 1 . V.toList)
-          . V.drop 1
+          . S.fromColsL -- We want observations as rows
+          . fmap (S.vr . fmap (either error fst . T.double) . drop 1)
+          . drop 1
+          . F.toList
           $ all
 
     p <- maybe (return . projectMatrix $ m) loadProjectionFile pf

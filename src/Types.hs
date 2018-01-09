@@ -12,6 +12,8 @@ Collects the types used in the program
 module Types where
 
 -- Remote
+import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree)
+import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Map.Strict (Map)
 import Data.Text (Text)
@@ -84,6 +86,9 @@ data CellInfo = CellInfo
 
 data ClusterResults = ClusterResults { clusterList :: [(CellInfo, Cluster)]
                                      , clusterDend :: HC.Dendrogram (Vector Cell)
+                                     , clusterTree :: Either
+                                                        (HC.Dendrogram (Vector Cell))
+                                                        (ClusteringTree CellInfo ShowB)
                                      }
                       deriving (Read, Show)
 

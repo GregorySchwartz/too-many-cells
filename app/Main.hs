@@ -13,7 +13,7 @@ Clusters single cell data.
 module Main where
 
 -- Remote
-import Control.Monad (when, unless)
+import Control.Monad (when, unless, join)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
 import H.Prelude (io)
@@ -159,10 +159,13 @@ main = do
         case outputDendrogram' of
             Nothing  -> return ()
             (Just x) -> io
-                      . B.writeFile x
-                      . B.pack
-                      . show
-                      $ dend
+                      . join
+                      . fmap ( B.writeFile x
+                             . B.pack
+                             . show
+                             . clusterTree
+                             )
+                      $ clusterResults
 
         -- Ignore for now.
         io $ unless (isJust dendrogramFile') $ do

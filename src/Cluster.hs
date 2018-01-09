@@ -51,9 +51,11 @@ hdbscan (RMatObsRowImportant mat) = do
 hClust :: SingleCells MatObsRowImportant -> ClusterResults
 hClust sc =
     ClusterResults { clusterList = clustering
-                   , clusterDend = fmap (V.singleton . L.view L._1) dend
+                   , clusterDend = cDend
+                   , clusterTree = Left cDend
                    }
   where
+    cDend = fmap (V.singleton . L.view L._1) dend
     clustering = assignClusters
                . fmap ( fmap ((\(!x, !y, !z) -> CellInfo x (S.toListSV y) z))
                       . HC.elements
@@ -103,14 +105,15 @@ clustersToClusterList sc clustering = do
 hSpecClust :: SingleCells MatObsRow -> ClusterResults
 hSpecClust sc = ClusterResults { clusterList = clustering
                                , clusterDend = fmap (fmap barcode . fst) dend
+                               , clusterTree = Right tree
                                }
   where
     clustering = assignClusters
                . fmap V.toList
                . getClusterItemsDend
                $ dend
-    dend       = clusteringTreeToDendrogram
-               . hierarchicalSpectralCluster items
+    dend       = clusteringTreeToDendrogram tree
+    tree       = hierarchicalSpectralCluster items
                . Left
                . unMatObsRow
                . matrix

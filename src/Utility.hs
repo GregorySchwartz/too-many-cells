@@ -20,6 +20,7 @@ import Data.Function (on)
 import Data.List (maximumBy)
 import Language.R as R
 import Language.R.QQ (r)
+import qualified Data.Csv.Streaming as SCSV
 import qualified Data.Map.Strict as Map
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
