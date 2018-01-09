@@ -16,6 +16,8 @@ module Load
     ) where
 
 -- Remote
+import Control.DeepSeq (force)
+import Control.Exception (evaluate)
 import Data.Char (ord)
 import Data.Matrix.MatrixMarket (readMatrix, Matrix(RMatrix, IntMatrix))
 import Data.Maybe (fromMaybe, maybe)
@@ -26,7 +28,6 @@ import Safe
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
-import qualified Data.Csv.Streaming as SCSV
 import qualified Data.Foldable as F
 import qualified Data.Map as Map
 import qualified Data.Sparse.Common as S
@@ -146,22 +147,20 @@ loadSparseMatrixData :: Delimiter
 loadSparseMatrixData (Delimiter delim) pf mf = do
     let csvOpts = CSV.defaultDecodeOptions
                     { CSV.decDelimiter = fromIntegral (ord delim) }
+        strictRead path = (evaluate . force) =<< B.readFile path 
 
-    all <- fmap (\x -> SCSV.decodeWith csvOpts SCSV.NoHeader x :: SCSV.Records [T.Text])
-         . B.readFile
+    all <- fmap (\x -> either error id $ (CSV.decodeWith csvOpts CSV.NoHeader x :: Either String (V.Vector [T.Text])))
+         . strictRead
          . unMatrixFile
          $ mf
 
-    let c = V.fromList . fmap Cell . drop 1 . head . F.toList $ all
-        g = V.fromList . fmap (Gene . head) . drop 1 . F.toList $ all
-        nrows = V.length c
-        ncols = V.length g
+    let c = V.fromList . fmap Cell . drop 1 . V.head $ all
+        g = fmap (Gene . head) . V.drop 1 $ all
         m = MatObsRow
           . S.sparsifySM
-          . S.fromColsL -- We want observations as rows
+          . S.fromColsV -- We want observations as rows
           . fmap (S.vr . fmap (either error fst . T.double) . drop 1)
-          . drop 1
-          . F.toList
+          . V.drop 1
           $ all
 
     p <- maybe (return . projectMatrix $ m) loadProjectionFile pf

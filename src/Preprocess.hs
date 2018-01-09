@@ -13,6 +13,7 @@ module Preprocess
     , filterRMat
     , filterDenseMat
     , filterSparseMat
+    , filterSparseMatTest
     , featureSelectionRandomForest
     , removeCorrelated
     , pcaRMat
@@ -25,7 +26,6 @@ import Language.R as R
 import Language.R.QQ (r)
 import MachineLearning.PCA (getDimReducer_rv)
 import Statistics.Quantile (continuousBy, s)
-import System.IO (hPutStrLn, stderr)
 import qualified Control.Lens as L
 import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
@@ -39,8 +39,6 @@ import Utility
 -- | Scale a matrix.
 scaleRMat :: RMatObsRow s -> R s (RMatObsRow s)
 scaleRMat (RMatObsRow mat) = do
-    io $ hPutStrLn stderr "Scaling matrix."
-
     fmap
         RMatObsRow
         [r| mat = scale(t(mat_hs));
@@ -48,38 +46,30 @@ scaleRMat (RMatObsRow mat) = do
         |]
 
 -- | Scale a matrix based on the library size.
-scaleDenseMat :: MatObsRow -> IO MatObsRow
-scaleDenseMat (MatObsRow mat) = do
-    hPutStrLn stderr "Scaling matrix."
-
-    return
-        . MatObsRow
-        . hToSparseMat
-        . H.fromColumns
-        . fmap scaleDenseMol
-        . H.toColumns
-        . H.fromRows
-        . fmap scaleDenseCell
-        . H.toRows
-        . sparseToHMat
-        $ mat
+scaleDenseMat :: MatObsRow -> MatObsRow
+scaleDenseMat (MatObsRow mat) = MatObsRow
+                              . hToSparseMat
+                              . H.fromColumns
+                              . fmap scaleDenseMol
+                              . H.toColumns
+                              . H.fromRows
+                              . fmap scaleDenseCell
+                              . H.toRows
+                              . sparseToHMat
+                              $ mat
 
 -- | Scale a matrix based on the library size.
-scaleSparseMat :: MatObsRow -> IO MatObsRow
-scaleSparseMat (MatObsRow mat) = do
-    hPutStrLn stderr "Scaling matrix."
-
-    return
-        . MatObsRow
-        . S.sparsifySM
-        . S.fromColsL
-        . fmap scaleSparseMol
-        . S.toColsL
-        . S.transposeSM
-        . S.fromColsL
-        . fmap scaleSparseCell
-        . S.toRowsL
-        $ mat
+scaleSparseMat :: MatObsRow -> MatObsRow
+scaleSparseMat (MatObsRow mat) = MatObsRow
+                               . S.sparsifySM
+                               . S.fromColsL
+                               . fmap scaleSparseMol
+                               . S.toColsL
+                               . S.transposeSM
+                               . S.fromColsL
+                               . fmap scaleSparseCell
+                               . S.toRowsL
+                               $ mat
 
 -- | Scale a cell by the library size.
 scaleDenseCell :: H.Vector H.R -> H.Vector H.R
@@ -110,77 +100,94 @@ scaleSparseMol xs = fmap (/ med) xs
         $ xs
 
 -- | Filter a matrix to remove low count cells and genes.
-filterDenseMat :: SingleCells MatObsRow -> IO (SingleCells MatObsRow)
-filterDenseMat sc = do
-    hPutStrLn stderr "Filtering matrix."
-
-    let m = MatObsRow . hToSparseMat $ colFilteredMat
-        rowFilter = (>= 250) . H.sumElements
-        colFilter = (> 0) . H.sumElements
-        mat            = sparseToHMat . unMatObsRow . matrix $ sc
-        rowFilteredMat = H.fromRows
-                       . filter rowFilter
-                       . H.toRows
-                       $ mat
-        colFilteredMat = H.fromColumns
-                       . filter colFilter
-                       . H.toColumns
-                       $ rowFilteredMat
-        r = V.ifilter (\i _ -> rowFilter . (H.!) mat $ i)
-          . rowNames
-          $ sc
-        c = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
-          . colNames
-          $ sc
-        p = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
-          . projections
-          $ sc
-
-    return $ SingleCells { matrix   = m
-                         , rowNames = r
-                         , colNames = c
-                         , projections = p
-                         }
+filterDenseMat :: SingleCells MatObsRow -> SingleCells MatObsRow
+filterDenseMat sc =
+    SingleCells { matrix   = m
+                , rowNames = r
+                , colNames = c
+                , projections = p
+                }
+  where
+    m = MatObsRow . hToSparseMat $ colFilteredMat
+    rowFilter = (>= 250) . H.sumElements
+    colFilter = (> 0) . H.sumElements
+    mat            = sparseToHMat . unMatObsRow . matrix $ sc
+    rowFilteredMat = H.fromRows
+                   . filter rowFilter
+                   . H.toRows
+                   $ mat
+    colFilteredMat = H.fromColumns
+                   . filter colFilter
+                   . H.toColumns
+                   $ rowFilteredMat
+    r = V.ifilter (\i _ -> rowFilter . (H.!) mat $ i)
+      . rowNames
+      $ sc
+    c = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
+      . colNames
+      $ sc
+    p = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
+      . projections
+      $ sc
 
 -- | Filter a matrix to remove low count cells and genes.
-filterSparseMat :: SingleCells MatObsRow -> IO (SingleCells MatObsRow)
-filterSparseMat sc = do
-    hPutStrLn stderr "Filtering matrix."
+filterSparseMat :: SingleCells MatObsRow -> SingleCells MatObsRow
+filterSparseMat sc = SingleCells { matrix   = m
+                                 , rowNames = r
+                                 , colNames = c
+                                 , projections = p
+                                 }
+  where
+    m = MatObsRow colFilteredMat
+    rowFilter = (>= 250) . sum
+    colFilter = (> 0) . sum
+    mat            = unMatObsRow . matrix $ sc
+    rowFilteredMat = S.transposeSM
+                   . S.fromColsL
+                   . filter rowFilter
+                   . S.toRowsL
+                   $ mat
+    colFilteredMat = S.fromColsL
+                   . filter colFilter
+                   . S.toColsL
+                   $ rowFilteredMat
+    r = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
+      . rowNames
+      $ sc
+    c = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
+      . colNames
+      $ sc
+    p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
+      . projections
+      $ sc
 
-    let m = MatObsRow colFilteredMat
-        rowFilter = (>= 250) . sum
-        colFilter = (> 0) . sum
-        mat            = unMatObsRow . matrix $ sc
-        rowFilteredMat = S.transposeSM
-                       . S.fromColsL
-                       . filter rowFilter
-                       . S.toRowsL
-                       $ mat
-        colFilteredMat = S.fromColsL
-                       . filter colFilter
-                       . S.toColsL
-                       $ rowFilteredMat
-        r = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
-          . rowNames
-          $ sc
-        c = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
-          . colNames
-          $ sc
-        p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
-          . projections
-          $ sc
-
-    return $ SingleCells { matrix   = m
-                         , rowNames = r
-                         , colNames = c
-                         , projections = p
-                         }
+-- | Filter a matrix to remove low count cells and genes.
+filterSparseMatTest :: SingleCells MatObsRow -> SingleCells MatObsRow
+filterSparseMatTest sc = SingleCells { matrix   = m
+                                 , rowNames = r
+                                 , colNames = c
+                                 , projections = p
+                                 }
+  where
+    m = MatObsRow colFilteredMat
+    mat            = unMatObsRow . matrix $ sc
+    rowFilteredMat = S.takeRows 100
+                   $ mat
+    colFilteredMat = S.takeCols 1000
+                   $ rowFilteredMat
+    r = V.take 100
+      . rowNames
+      $ sc
+    c = V.take 1000
+      . colNames
+      $ sc
+    p = V.take 100
+      . projections
+      $ sc
 
 -- | Filter a matrix to remove low count cells. R version.
 filterRMat :: RMatObsRow s -> R s (RMatObsRow s)
-filterRMat (RMatObsRow mat) = do
-    io $ hPutStrLn stderr "Filtering matrix."
-
+filterRMat (RMatObsRow mat) =
     fmap RMatObsRow [r| mat = mat_hs[,colSums(mat_hs) >= 250] |]
 
 -- | Perform feature selection on a matrix.
@@ -206,8 +213,6 @@ removeCorrelated (RMatObsRow mat) = do
 -- | Conduct PCA on a matrix, using components > 5% of variance.
 pcaRMat :: RMatObsRow s -> R s (RMatObsRowImportant s)
 pcaRMat (RMatObsRow mat) = do
-    io $ hPutStrLn stderr "Calculating PCA."
-
     fmap
         RMatObsRowImportant
         [r| mat = prcomp(t(mat_hs), tol = 0.95)$rotation
@@ -216,8 +221,6 @@ pcaRMat (RMatObsRow mat) = do
 -- | Conduct PCA on a matrix, retaining 80% of variance.
 pcaDenseMat :: MatObsRow -> IO MatObsRowImportant
 pcaDenseMat (MatObsRow mat) = do
-    hPutStrLn stderr "Calculating PCA."
-
     return
         . MatObsRowImportant
         . hToSparseMat

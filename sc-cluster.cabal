@@ -28,6 +28,7 @@ library
                      , cassava
                      , colour
                      , containers
+                     , deepseq
                      , diagrams
                      , diagrams-lib
                      , diagrams-cairo

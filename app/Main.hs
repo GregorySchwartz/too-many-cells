@@ -97,18 +97,16 @@ main = do
             if matrixCsv
                 then loadSparseMatrixData delimiter' projectionFile' matrixFile'
                 else loadCellrangerData projectionFile' genesFile' cellsFile' matrixFile'
-        sc             = unFilteredSc >>= filterSparseMat
-        processedMat   = fmap matrix sc >>= scaleSparseMat -- >>= pcaMat
-        processedSc    = do
-            pMat <- processedMat
-            fmap (\x -> x { matrix = pMat }) sc
+        sc             = fmap filterSparseMat unFilteredSc
+        processMat     = scaleSparseMat . matrix -- >>= pcaMat
+        processedSc    = sc >>= (\x -> return $ x { matrix = processMat x })
 
     labelColorMaps <- fmap (fmap (\x -> (x, getColorMap x)))
                     . sequence
                     . fmap (loadLabelData delimiter')
                     $ labelsFile'
 
-    R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
+    --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
         -- mat         <- scToRMat processedSc
         -- clusterRes  <- hdbscan mat
@@ -117,65 +115,62 @@ main = do
         -- For agglomerative clustering.
         --let clusterResults = fmap hClust processedSc
         -- For divisive clustering.
-        let clusterResults = fmap hSpecClust processedSc
+    let clusterResults = fmap hSpecClust processedSc
 
-        dend <- case dendrogramFile' of
-                    Nothing  -> io . fmap clusterDend $ clusterResults
-                    (Just x) -> io
-                              . fmap (interpretTree . read . B.unpack)
-                              . B.readFile
-                              . unDendrogramFile
-                              $ x
+    dend <- case dendrogramFile' of
+                Nothing  -> fmap clusterDend $ clusterResults
+                (Just x) -> fmap (interpretTree . read . B.unpack)
+                                . B.readFile
+                                . unDendrogramFile
+                                $ x
 
-        -- | Plot only if needed and ignore non-tree analyses if dendrogram is
-        -- supplied.
-        case outputPlot' of
-            Nothing  -> return ()
-            (Just x) -> do
-                -- Plot dendrogram.
-                io
-                    . D.renderCairo (x <> "_dendrogram.pdf") (D.mkWidth 1000)
-                    . plotDendrogram labelColorMaps
-                    $ dend
+    case outputDendrogram' of
+        Nothing  -> return ()
+        (Just x) -> join
+                        . fmap ( B.writeFile x
+                                . B.pack
+                                . show
+                                . clusterTree
+                                )
+                        $ clusterResults
 
-                -- Find clumpiness.
-                case labelColorMaps of
-                    Nothing -> io $ hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
-                    (Just lcm) -> io
-                                . B.writeFile (x <> "_clumpiness.csv")
-                                . dendToClumpCsv (fst lcm)
-                                $ dend
 
-                io $ unless (isJust dendrogramFile') $ do
-                    -- Plot clustering.
-                    clusterResults
-                        >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
-                          . D.renderAxis
-                          . plotClusters
-                          . clusterList
+    -- | Plot only if needed and ignore non-tree analyses if dendrogram is
+    -- supplied.
+    case outputPlot' of
+        Nothing  -> return ()
+        (Just x) -> do
+            -- Plot dendrogram.
+            D.renderCairo (x <> "_dendrogram.pdf") (D.mkWidth 1000)
+                . plotDendrogram labelColorMaps
+                $ dend
 
-            --(Just x) -> plotClusters x mat $ clusterRes
+            -- Find clumpiness.
+            case labelColorMaps of
+                Nothing -> hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
+                (Just lcm) -> B.writeFile (x <> "_clumpiness.csv")
+                            . dendToClumpCsv (fst lcm)
+                            $ dend
 
-        case outputDendrogram' of
-            Nothing  -> return ()
-            (Just x) -> io
-                      . join
-                      . fmap ( B.writeFile x
-                             . B.pack
-                             . show
-                             . clusterTree
-                             )
-                      $ clusterResults
+            unless (isJust dendrogramFile') $ do
+                -- Plot clustering.
+                clusterResults
+                    >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
+                        . D.renderAxis
+                        . plotClusters
+                        . clusterList
 
-        -- Ignore for now.
-        io $ unless (isJust dendrogramFile') $ do
+        --(Just x) -> plotClusters x mat $ clusterRes
 
-            -- Header
-            B.putStrLn $ "cell,cluster"
+    -- Ignore for now.
+    unless (isJust dendrogramFile') $ do
 
-            -- Body
-            clusterResults
-                >>= B.putStrLn
-                  . CSV.encode
-                  . fmap (\(!ci, Cluster !c) -> (unCell . barcode $ ci, c))
-                  . clusterList
+        -- Header
+        B.putStrLn $ "cell,cluster"
+
+        -- Body
+        clusterResults
+            >>= B.putStrLn
+                . CSV.encode
+                . fmap (\(!ci, Cluster !c) -> (unCell . barcode $ ci, c))
+                . clusterList
