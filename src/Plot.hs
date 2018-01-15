@@ -20,7 +20,8 @@ module Plot
 import Control.Monad (forM, mapM)
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..))
-import Data.List (nub)
+import Data.Function (on)
+import Data.List (nub, sortBy)
 import Data.Maybe (fromMaybe)
 import Diagrams.Backend.Cairo
 import Diagrams.Dendrogram (dendrogram, Width(..))
@@ -53,8 +54,31 @@ plotClusters vs = r2Axis &~ do
     hideGridLines
 
 -- | Plot clusters.
-plotClustersR :: String -> RMatObsRowImportant s -> R.SomeSEXP s -> R s ()
-plotClustersR outputPlot (RMatObsRowImportant mat) clustering = do
+plotClustersR :: String -> [(CellInfo, Cluster)] -> R s ()
+plotClustersR outputPlot clusterList = do
+    let clusterListOrdered = sortBy (compare `on` snd) clusterList
+        xs = fmap (unX . fst . projection . fst) clusterListOrdered
+        ys = fmap (unY . snd . projection . fst) clusterListOrdered
+        cs = fmap (show . unCluster . snd) clusterListOrdered
+        saveFile = outputPlot <> ".pdf"
+    [r| library(ggplot2)
+        library(cowplot)
+        df = data.frame(x = xs_hs, y = ys_hs, c = cs_hs)
+        df$c = factor(df$c, unique(df$c))
+        p = ggplot(df, aes(x = x, y = y, color = factor(c))) +
+                geom_point() +
+                xlab("TNSE 1") +
+                ylab("TNSE 2") +
+                scale_color_discrete(guide = guide_legend(title = "Cluster"))
+
+        ggsave(p, file = saveFile_hs)
+    |]
+
+    return ()
+
+-- | Plot clusters using outputs from R.
+plotClustersOnlyR :: String -> RMatObsRowImportant s -> R.SomeSEXP s -> R s ()
+plotClustersOnlyR outputPlot (RMatObsRowImportant mat) clustering = do
     -- Plot hierarchy.
     [r| pdf(paste0(outputPlot_hs, "_hierarchy.pdf", sep = ""))
         plot(clustering_hs$hc)
@@ -123,24 +147,24 @@ plotClustersR outputPlot (RMatObsRowImportant mat) clustering = do
 --     heatMap values $ heatMapSize .= V2 10 10
 
 -- | Plot a dendrogram.
-plotDendrogram :: Maybe (LabelMap, ColorMap) -> HC.Dendrogram (V.Vector Cell) -> Diagram B
+plotDendrogram :: Maybe (LabelMap, ColorMap) -> HC.Dendrogram (V.Vector CellInfo) -> Diagram B
 plotDendrogram ms dend =
     dendrogram Fixed (dendrogramLeaf ms) dend # lw 0.1 # pad 1.1
 
 -- | How to plot each leaf of the dendrogram.
-dendrogramLeaf :: Maybe (LabelMap, ColorMap) -> V.Vector Cell -> Diagram B
+dendrogramLeaf :: Maybe (LabelMap, ColorMap) -> V.Vector CellInfo -> Diagram B
 dendrogramLeaf Nothing leaf =
     case V.length leaf of
-        1 -> stroke (textSVG (T.unpack . unCell . V.head $ leaf) 1) # rotateBy (1/4) # alignT # fc black # pad 1.3
-        s -> stroke (textSVG (show s) 1) # rotateBy (1/4) # alignT # fc black # pad 1.3
+        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
+        s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
 dendrogramLeaf (Just (LabelMap lm, ColorMap cm)) leaf =
     case V.length leaf of
-        1 -> stroke (textSVG (T.unpack . unCell . V.head $ leaf) 1) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
-        s -> stroke (textSVG (show s) 1) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
+        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
+        s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
   where
     color = fromMaybe black
           . (=<<) (flip Map.lookup cm . getMostFrequent)
-          . mapM (flip Map.lookup lm)
+          . mapM (flip Map.lookup lm . barcode)
           . V.toList
           $ leaf
 

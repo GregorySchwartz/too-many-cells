@@ -29,13 +29,13 @@ import qualified Data.Vector as V
 import Types
 
 -- | Convert a single cell dendrogram to a workable format for clumpiness.
-dendToClumpDend :: LabelMap -> HC.Dendrogram (V.Vector Cell) -> Tree Clump.NodeLabel
+dendToClumpDend :: LabelMap -> HC.Dendrogram (V.Vector CellInfo) -> Tree Clump.NodeLabel
 dendToClumpDend (LabelMap labelMap) =
     Clump.makeWorkable
         . fmap ( Seq.fromList
                . fmap unLabel
                . V.toList
-               . fmap (flip (Map.findWithDefault (error "Cell has no label.")) labelMap)
+               . fmap (flip (Map.findWithDefault (error "Cell has no label.")) labelMap . barcode)
                )
 
 -- | Format clumpiness output to a CSV.
@@ -44,7 +44,7 @@ clumpToCsv = (<>) "label1,label2,value\n" . CSV.encode
 
 -- | Get the clumpiness of the single cell labels and return a ready to print
 -- CSV string.
-dendToClumpCsv :: LabelMap -> HC.Dendrogram (V.Vector Cell) -> B.ByteString
+dendToClumpCsv :: LabelMap -> HC.Dendrogram (V.Vector CellInfo) -> B.ByteString
 dendToClumpCsv labelMap = clumpToCsv
                         . Clump.getClumpiness Clump.AllExclusive False False
                         . dendToClumpDend labelMap

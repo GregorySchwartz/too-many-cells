@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-10.0
+resolver: lts-10.3
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -48,6 +48,13 @@ extra-deps:
   - inline-r-0.9.0.2
   - discrimination-0.3
   - hmatrix-svdlibc-0.4.1
+  - streaming-utils-0.1.4.7
+  - aeson-1.1.2.0
+  - attoparsec-0.13.1.0
+  - streaming-0.1.4.5
+  - streaming-bytestring-0.1.4.6
+  - streaming-commons-0.1.17
+  - mmorph-1.0.9
   - /home/gw/code/utility/spectral-clustering/
   - /home/gw/code/utility/modularity/
   - /home/gw/code/utility/hierarchical-spectral-clustering/

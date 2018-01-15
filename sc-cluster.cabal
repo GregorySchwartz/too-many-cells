@@ -24,6 +24,7 @@ library
                      , Plot
                      , Utility
   build-depends:       base >= 4.7 && < 5
+                     , aeson
                      , bytestring
                      , cassava
                      , colour
@@ -41,6 +42,7 @@ library
                      , lens
                      , matrix-market-attoparsec
                      , mltool
+                     , modularity
                      , palette
                      , plots
                      , safe
@@ -59,14 +61,19 @@ executable sc-cluster
   ghc-options:         -threaded -rtsopts -O2
   build-depends:       base
                      , sc-cluster
+                     , aeson
                      , bytestring
                      , cassava
                      , diagrams-lib
                      , diagrams-cairo
+                     , hierarchical-spectral-clustering
                      , inline-r
                      , lens
                      , optparse-generic
                      , plots
+                     , streaming
+                     , streaming-bytestring
+                     , streaming-utils
                      , vector
   default-language:    Haskell2010
 

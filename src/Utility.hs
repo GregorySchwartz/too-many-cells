@@ -83,8 +83,8 @@ hToSparseMat =
 
 -- | Interpret a clustering tree to a dendrogram.
 interpretTree
-    :: Either (HC.Dendrogram (V.Vector Cell)) (ClusteringTree CellInfo ShowB)
-    -> HC.Dendrogram (V.Vector Cell)
+    :: Either (HC.Dendrogram (V.Vector CellInfo)) (ClusteringTree CellInfo ShowB)
+    -> HC.Dendrogram (V.Vector CellInfo)
 interpretTree (Left x) = x
 interpretTree (Right x) =
-    fmap (fmap barcode . fst) . clusteringTreeToDendrogram $ x
+    fmap fst . clusteringTreeToDendrogram $ x

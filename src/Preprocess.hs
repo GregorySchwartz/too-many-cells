@@ -64,8 +64,7 @@ scaleSparseMat (MatObsRow mat) = MatObsRow
                                . S.sparsifySM
                                . S.fromColsL
                                . fmap scaleSparseMol
-                               . S.toColsL
-                               . S.transposeSM
+                               . S.toRowsL -- A bit confusing, but this returns the original columns due to the earlier fromColsL . toRowsL.
                                . S.fromColsL
                                . fmap scaleSparseCell
                                . S.toRowsL
@@ -142,6 +141,7 @@ filterSparseMat sc = SingleCells { matrix   = m
     rowFilter = (>= 250) . sum
     colFilter = (> 0) . sum
     mat            = unMatObsRow . matrix $ sc
+    mat'           = S.transposeSM mat
     rowFilteredMat = S.transposeSM
                    . S.fromColsL
                    . filter rowFilter
@@ -149,12 +149,13 @@ filterSparseMat sc = SingleCells { matrix   = m
                    $ mat
     colFilteredMat = S.fromColsL
                    . filter colFilter
-                   . S.toColsL
+                   . S.toRowsL -- Rows of transpose are faster.
+                   . S.transposeSM
                    $ rowFilteredMat
     r = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
       . rowNames
       $ sc
-    c = V.ifilter (\i _ -> colFilter . S.extractCol mat $ i)
+    c = V.ifilter (\i _ -> colFilter . S.extractRow mat' $ i) -- Rows of transpose are faster.
       . colNames
       $ sc
     p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)

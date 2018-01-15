@@ -12,6 +12,7 @@ module Cluster
     , clustersToClusterList
     , hClust
     , hSpecClust
+    , assignClusters
     ) where
 
 -- Remote
@@ -55,7 +56,11 @@ hClust sc =
                    , clusterTree = Left cDend
                    }
   where
-    cDend = fmap (V.singleton . L.view L._1) dend
+    cDend = fmap ( V.singleton
+                 . (\x -> CellInfo { barcode = x, features = [], projection = (X 0, Y 0) })
+                 . L.view L._1
+                 )
+            dend
     clustering = assignClusters
                . fmap ( fmap ((\(!x, !y, !z) -> CellInfo x (S.toListSV y) z))
                       . HC.elements
@@ -102,18 +107,19 @@ clustersToClusterList sc clustering = do
         $ (R.fromSomeSEXP clusters :: [Int32])
 
 -- | Hierarchical spectral clustering
-hSpecClust :: SingleCells MatObsRow -> ClusterResults
-hSpecClust sc = ClusterResults { clusterList = clustering
-                               , clusterDend = fmap (fmap barcode . fst) dend
-                               , clusterTree = Right tree
-                               }
+hSpecClust :: MinClusterSize -> SingleCells MatObsRow -> ClusterResults
+hSpecClust (MinClusterSize minSize) sc =
+    ClusterResults { clusterList = clustering
+                   , clusterDend = fmap fst dend
+                   , clusterTree = Right tree
+                   }
   where
     clustering = assignClusters
                . fmap V.toList
                . getClusterItemsDend
                $ dend
     dend       = clusteringTreeToDendrogram tree
-    tree       = hierarchicalSpectralCluster items
+    tree       = hierarchicalSpectralCluster (Just minSize) items
                . Left
                . unMatObsRow
                . matrix
