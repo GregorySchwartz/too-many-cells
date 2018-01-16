@@ -198,7 +198,7 @@ loadSparseMatrixDataStream (Delimiter delim) pf mf = do
         cS = S.toList . S.map (fmap Cell . drop 1) . S.take 1
         gS = S.toList . S.map (Gene . head) . S.drop 1
         mS = S.toList
-           . S.map (HS.vr . fmap (either error fst . T.double) . drop 1)
+           . S.map (HS.sparsifySV . HS.vr . fmap (either error fst . T.double) . drop 1)
            . S.drop 1
            
     (c S.:> _) <- fmap (either (error . show) id)
