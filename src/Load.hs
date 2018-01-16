@@ -9,17 +9,21 @@ cellranger.
 {-# LANGUAGE OverloadedStrings #-}
 
 module Load
-    ( loadCellrangerData
+    ( matToSpMat
+    , spMatToMat
+    , loadCellrangerData
     , loadHMatrixData
     , loadSparseMatrixData
+    , loadSparseMatrixDataStream
     , loadLabelData
     ) where
 
 -- Remote
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
+import Control.Monad.Except (runExceptT)
 import Data.Char (ord)
-import Data.Matrix.MatrixMarket (readMatrix, Matrix(RMatrix, IntMatrix))
+import Data.Matrix.MatrixMarket (readMatrix, Matrix(RMatrix, IntMatrix), Structure (..))
 import Data.Maybe (fromMaybe, maybe)
 import Data.Monoid ((<>))
 import Data.Scientific (toRealFloat, Scientific)
@@ -27,14 +31,18 @@ import Data.Vector (Vector)
 import Safe
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.Map as Map
-import qualified Data.Sparse.Common as S
+import qualified Data.Sparse.Common as HS
 import qualified Data.Text as T
 import qualified Data.Text.Read as T
 import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
+import qualified Streaming as S
+import qualified Streaming.Cassava as S
+import qualified Streaming.Prelude as S
 
 -- Local
 import Types
@@ -53,16 +61,22 @@ matToHMat (IntMatrix size _ _ xs) =
 matToHMat _ = error "Input matrix is not a Real matrix."
 
 -- | Convert a Matrix to a sparse matrix.
-matToSpMat :: Matrix Scientific -> S.SpMatrix Double
+matToSpMat :: Matrix Scientific -> HS.SpMatrix Double
 matToSpMat (RMatrix size _ _ xs) =
-    S.fromListSM size
+    HS.fromListSM size
         . fmap (\(!x, !y, !z) -> (fromIntegral x - 1, fromIntegral y - 1, toRealFloat z))
         $ xs
 matToSpMat (IntMatrix size _ _ xs) =
-    S.fromListSM size
+    HS.fromListSM size
         . fmap (\(!x, !y, !z) -> (fromIntegral x - 1, fromIntegral y - 1, fromIntegral z))
         $ xs
 matToSpMat _ = error "Input matrix is not a Real matrix."
+
+-- | Convert a sparse matrix to a Matrix.
+spMatToMat :: HS.SpMatrix Double -> Matrix Double
+spMatToMat mat = RMatrix (HS.dimSM mat) (HS.nzSM mat) General
+               . fmap (\(!x, !y, !z) -> (x + 1, y + 1, z)) . HS.toListSM
+               $ mat
 
 -- | Load output of cellranger.
 loadCellrangerData
@@ -74,7 +88,7 @@ loadCellrangerData
 loadCellrangerData pf gf cf mf = do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
-    m <- fmap (MatObsRow . S.transposeSM . matToSpMat)  -- We want observations as rows
+    m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
        . unMatrixFile
        $ mf
@@ -147,7 +161,7 @@ loadSparseMatrixData :: Delimiter
 loadSparseMatrixData (Delimiter delim) pf mf = do
     let csvOpts = CSV.defaultDecodeOptions
                     { CSV.decDelimiter = fromIntegral (ord delim) }
-        strictRead path = (evaluate . force) =<< B.readFile path 
+        strictRead path = (evaluate . force) =<< B.readFile path
 
     all <- fmap (\x -> either error id $ (CSV.decodeWith csvOpts CSV.NoHeader x :: Either String (V.Vector [T.Text])))
          . strictRead
@@ -157,9 +171,9 @@ loadSparseMatrixData (Delimiter delim) pf mf = do
     let c = V.fromList . fmap Cell . drop 1 . V.head $ all
         g = fmap (Gene . head) . V.drop 1 $ all
         m = MatObsRow
-          . S.sparsifySM
-          . S.fromColsV -- We want observations as rows
-          . fmap (S.vr . fmap (either error fst . T.double) . drop 1)
+          . HS.sparsifySM
+          . HS.fromColsV -- We want observations as rows
+          . fmap (HS.vr . fmap (either error fst . T.double) . drop 1)
           . V.drop 1
           $ all
 
@@ -169,6 +183,52 @@ loadSparseMatrixData (Delimiter delim) pf mf = do
         SingleCells { matrix   = m
                     , rowNames = c
                     , colNames = g
+                    , projections = p
+                    }
+
+-- | Load a sparse matrix streaming in CSV format (rows were features) with row
+-- names and column names.
+loadSparseMatrixDataStream :: Delimiter
+                           -> Maybe ProjectionFile
+                           -> MatrixFile
+                           -> IO (SingleCells MatObsRow)
+loadSparseMatrixDataStream (Delimiter delim) pf mf = do
+    let csvOpts = S.defaultDecodeOptions
+                    { S.decDelimiter = fromIntegral (ord delim) }
+        cS = S.toList . S.map (fmap Cell . drop 1) . S.take 1
+        gS = S.toList . S.map (Gene . head) . S.drop 1
+        mS = S.toList
+           . S.map (HS.vr . fmap (either error fst . T.double) . drop 1)
+           . S.drop 1
+           
+    (c S.:> _) <- fmap (either (error . show) id)
+                . S.runResourceT
+                . runExceptT
+                . cS
+                . S.decode S.NoHeader
+                . BS.readFile
+                . unMatrixFile
+                $ mf
+
+    (g S.:> m S.:> _) <- fmap (either (error . show) id)
+                       . S.runResourceT
+                       . runExceptT
+                       $ gS
+                       $ mS
+                       $ S.copy
+                       . S.decode S.NoHeader
+                       . BS.readFile
+                       . unMatrixFile
+                       $ mf
+
+    let finalMat = MatObsRow . HS.sparsifySM . HS.fromColsL $ m -- We want observations as rows
+
+    p <- maybe (return . projectMatrix $ finalMat) loadProjectionFile pf
+
+    return $
+        SingleCells { matrix   = finalMat
+                    , rowNames = V.fromList . head $ c
+                    , colNames = V.fromList g
                     , projections = p
                     }
 
@@ -210,9 +270,9 @@ loadProjectionFile =
         error $ "Unrecognized projection row: " <> show xs
 
 -- | Decide to use first two values as the projection.
-toPoint :: S.SpVector Double -> (X, Y)
-toPoint = (\[!x, !y] -> (X x, Y y)) . S.toDenseListSV . S.takeSV 2
+toPoint :: HS.SpVector Double -> (X, Y)
+toPoint = (\[!x, !y] -> (X x, Y y)) . HS.toDenseListSV . HS.takeSV 2
 
 -- | Project a matrix to first two dimensions.
 projectMatrix :: MatObsRow -> Vector (X, Y)
-projectMatrix = V.fromList . fmap toPoint . S.toRowsL . unMatObsRow
+projectMatrix = V.fromList . fmap toPoint . HS.toRowsL . unMatObsRow

@@ -60,7 +60,6 @@ plotClustersR outputPlot clusterList = do
         xs = fmap (unX . fst . projection . fst) clusterListOrdered
         ys = fmap (unY . snd . projection . fst) clusterListOrdered
         cs = fmap (show . unCluster . snd) clusterListOrdered
-        saveFile = outputPlot <> ".pdf"
     [r| library(ggplot2)
         library(cowplot)
         df = data.frame(x = xs_hs, y = ys_hs, c = cs_hs)
@@ -71,7 +70,7 @@ plotClustersR outputPlot clusterList = do
                 ylab("TNSE 2") +
                 scale_color_discrete(guide = guide_legend(title = "Cluster"))
 
-        ggsave(p, file = saveFile_hs)
+        ggsave(p, file = outputPlot_hs)
     |]
 
     return ()

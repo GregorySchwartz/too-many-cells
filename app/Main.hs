@@ -15,15 +15,16 @@ module Main where
 
 -- Remote
 import Control.Monad (when, unless, join)
+import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
 import Language.R as R
 import Language.R.QQ (r)
+import Math.Clustering.Hierarchical.Spectral.Sparse (B (..))
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend)
 import Options.Generic
+import System.Directory (createDirectoryIfMissing)
 import System.IO (hPutStrLn, stderr)
-import qualified Data.ByteString.Streaming as BS
-import qualified Data.ByteString.Streaming.Aeson as S
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -32,9 +33,8 @@ import qualified Data.Vector as V
 import qualified Diagrams.Backend.Cairo as D
 import qualified Diagrams.Prelude as D
 import qualified H.Prelude as H
+import qualified System.FilePath as FP
 import qualified Plots as D
-import qualified Streaming as S
-import qualified Streaming.Prelude as S
 
 -- Local
 import Types
@@ -56,25 +56,22 @@ data Options = Options { matrixFile  :: Maybe String
                                <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
                        , labelsFile :: Maybe String
                                <?> "([Nothing] | FILE) The input file containing the label for each cell, with \"cell,label\" header."
-                       , dendrogramFile :: Maybe String
-                               <?> "([Nothing] | STRING) The input file for a precalculated dendrogram. If specified, skip all other files (except labels-file) and continue from the dendrogram analysis."
                        , delimiter :: Maybe Char
                                <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                        , minSize   :: Maybe Int
                                <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
-                       , outputPlot :: Maybe String
-                               <?> "([Nothing] | STRING) The prefix for the output plots. No plots generated if not specified."
-                       , outputDendrogram :: Maybe String
-                               <?> "([Nothing] | STRING) The output file for the dendrogram. No file generated if not specified."
+                       , prior :: Maybe String
+                               <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
+                       , output :: Maybe String
+                               <?> "([out] | STRING) The folder containing output."
                        }
                deriving (Generic)
 
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
-    short "dendrogramFile"   = Just 'D'
-    short "outputDendrogram" = Just 'O'
     short "minSize"          = Just 'M'
+    short "prior"            = Just 'P'
     short x                  = firstLetter x
 
 instance ParseRecord Options where
@@ -85,30 +82,39 @@ main = do
     opts <- getRecord "sc-cluster, Gregory W. Schwartz.\
                       \ Clusters single cell data."
 
-    let matrixFile' =
+    let matrixFile'     =
             MatrixFile . fromMaybe "matrix.mtx" . unHelpful . matrixFile $ opts
-        genesFile'  =
+        genesFile'      =
             GeneFile . fromMaybe "genes.tsv" . unHelpful . genesFile $ opts
-        cellsFile'  =
+        cellsFile'      =
             CellFile . fromMaybe "barcodes.tsv" . unHelpful . cellsFile $ opts
         projectionFile' =
             fmap ProjectionFile . unHelpful . projectionFile $ opts
-        labelsFile'  =
+        labelsFile'     =
             fmap LabelFile . unHelpful . labelsFile $ opts
-        dendrogramFile'  =
-            fmap DendrogramFile . unHelpful . dendrogramFile $ opts
-        delimiter'   = Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        minSize'     = MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
-        outputPlot'  = unHelpful . outputPlot $ opts
-        outputDendrogram' = unHelpful . outputDendrogram $ opts
-        matrixCsv    =
+        prior'          =
+            fmap PriorDirectory . unHelpful . prior $ opts
+        delimiter'      =
+            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        minSize'        =
+            MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
+        output'         =
+            OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
+        matrixCsv       =
             any
                 isNothing
                 [unHelpful . genesFile $ opts, unHelpful . cellsFile $ opts]
         unFilteredSc   =
             if matrixCsv
-                then loadSparseMatrixData delimiter' projectionFile' matrixFile'
-                else loadCellrangerData projectionFile' genesFile' cellsFile' matrixFile'
+                then loadSparseMatrixDataStream
+                        delimiter'
+                        projectionFile'
+                        matrixFile'
+                else loadCellrangerData
+                        projectionFile'
+                        genesFile'
+                        cellsFile'
+                        matrixFile'
         sc             = fmap filterSparseMat unFilteredSc
         processMat     = scaleSparseMat . matrix -- >>= pcaMat
         processedSc    = sc >>= (\x -> return $ x { matrix = processMat x })
@@ -126,82 +132,74 @@ main = do
 
         -- For agglomerative clustering.
         --let clusterResults = fmap hClust processedSc
-        -- For divisive clustering.
-    let clusterResults = fmap (hSpecClust minSize') processedSc
 
-    dend <- case dendrogramFile' of
-                Nothing  -> fmap clusterDend $ clusterResults
-                -- (Just x) -> fmap (interpretTree . head)
-                --                 . S.runResourceT
-                --                 . S.toList_
-                --                 . S.void
-                --                 . S.decoded
-                --                 . BS.readFile
-                --                 . unDendrogramFile
-                --                 $ x
-                (Just x) -> fmap (interpretTree . either error id . A.eitherDecode')
-                          . B.readFile
-                          . unDendrogramFile
-                          $ x
+    -- Load previous results or write if first run.
+    (clusterResults, bMat) <-
+        case prior' of
+            Nothing -> do
+                createDirectoryIfMissing True . unOutputDirectory $ output'
+                (cr, b) <- fmap (hSpecClust minSize') processedSc
+                B.writeFile
+                    (unOutputDirectory output' FP.</> "cluster_results.json")
+                    . A.encode
+                    $ cr
+                writeMatrix (unOutputDirectory output' FP.</> "b.mtx")
+                    . spMatToMat
+                    . unB
+                    $ b
+                return (return cr, return b)
+            (Just x) -> do
+                let cr = fmap (either error id . A.eitherDecode')
+                       . B.readFile
+                       . (FP.</> "cluster_results.json")
+                       . unPriorDirectory
+                       $ x
+                    b  = fmap (B . matToSpMat)
+                       . readMatrix
+                       . (FP.</> "b.mtx")
+                       . unPriorDirectory
+                       $ x
+                return (cr, b)
 
-    case outputDendrogram' of
-        Nothing  -> return ()
-        (Just x) -> join
-                        . fmap ( B.writeFile x
-                               . A.encode
-                               . clusterTree
-                               )
-                        $ clusterResults
+    -- Find clumpiness.
+    case labelColorMaps of
+        Nothing ->
+            hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
+        (Just lcm) ->
+            clusterResults
+              >>= B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
+                . dendToClumpCsv (fst lcm)
+                . clusterDend
+
+
+    -- Header
+    B.putStrLn $ "cell,cluster"
+
+    -- Body
+    clusterResults
+        >>= B.putStrLn
+          . CSV.encode
+          . fmap (\(!ci, Cluster !c) -> (unCell . barcode $ ci, c))
+          . clusterList
 
     -- | Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
-        case outputPlot' of
-            Nothing  -> return ()
-            (Just x) -> do
-                -- Plot dendrogram.
-                H.io
-                    . D.renderCairo (x <> "_dendrogram.pdf") (D.mkWidth 1000)
-                    . plotDendrogram labelColorMaps
-                    $ dend
+        -- Plot dendrogram.
+        H.io
+            $ clusterResults
+          >>= D.renderCairo
+                (unOutputDirectory output' FP.</> "dendrogram.pdf")
+                (D.mkWidth 1000)
+            . plotDendrogram labelColorMaps
+            . clusterDend
 
-                -- Find clumpiness.
-                case labelColorMaps of
-                    Nothing -> H.io $ hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
-                    (Just lcm) -> H.io
-                                . B.writeFile (x <> "_clumpiness.csv")
-                                . dendToClumpCsv (fst lcm)
-                                $ dend
-
-                -- Plot clustering.
-                case dendrogramFile' of
-                    Nothing  -> (H.io clusterResults)
-                            -- >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
-                            -- . D.renderAxis
-                            -- . plotClusters
-                            >>= plotClustersR x
-                              . clusterList
-                    (Just _) -> -- D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
-                            -- . D.renderAxis
-                            -- . plotClusters
-                                plotClustersR x
-                              . assignClusters
-                              . fmap V.toList
-                              . getClusterItemsDend
-                              . fmap (,Nothing)
-                              $ dend
+        -- Plot clustering.
+        (H.io clusterResults)
+          >>= plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
+            . clusterList
+            -- >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
+            -- . D.renderAxis
+            -- . plotClusters
 
         return ()
-
-    -- Ignore for now if only the dendrogram is provided.
-    unless (isJust dendrogramFile') $ do
-
-        -- Header
-        B.putStrLn $ "cell,cluster"
-
-        -- Body
-        clusterResults
-            >>= B.putStrLn
-                . CSV.encode
-                . fmap (\(!ci, Cluster !c) -> (unCell . barcode $ ci, c))
-                . clusterList

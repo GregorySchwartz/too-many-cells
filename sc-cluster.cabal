@@ -43,12 +43,16 @@ library
                      , matrix-market-attoparsec
                      , mltool
                      , modularity
+                     , mtl
                      , palette
                      , plots
                      , safe
                      , scientific
                      , sparse-linear-algebra
                      , statistics
+                     , streaming
+                     , streaming-bytestring
+                     , streaming-cassava
                      , SVGFonts
                      , text
                      , vector
@@ -66,9 +70,12 @@ executable sc-cluster
                      , cassava
                      , diagrams-lib
                      , diagrams-cairo
+                     , directory
+                     , filepath
                      , hierarchical-spectral-clustering
                      , inline-r
                      , lens
+                     , matrix-market-attoparsec
                      , optparse-generic
                      , plots
                      , streaming

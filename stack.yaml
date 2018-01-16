@@ -53,6 +53,7 @@ extra-deps:
   - attoparsec-0.13.1.0
   - streaming-0.1.4.5
   - streaming-bytestring-0.1.4.6
+  - streaming-cassava-0.1.0.0
   - streaming-commons-0.1.17
   - mmorph-1.0.9
   - /home/gw/code/utility/spectral-clustering/

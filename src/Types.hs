@@ -53,7 +53,8 @@ newtype MatrixFile = MatrixFile
     } deriving (Read,Show)
 newtype ProjectionFile  = ProjectionFile { unProjectionFile :: FilePath }
 newtype LabelFile       = LabelFile { unLabelFile :: FilePath }
-newtype DendrogramFile  = DendrogramFile { unDendrogramFile :: FilePath }
+newtype PriorDirectory  = PriorDirectory { unPriorDirectory :: FilePath }
+newtype OutputDirectory  = OutputDirectory { unOutputDirectory :: FilePath }
 newtype X = X
     { unX :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
@@ -67,6 +68,9 @@ newtype RMatObsRowImportant s = RMatObsRowImportant
     { unRMatObsRowImportant :: R.SomeSEXP s
     }
 newtype RMatScaled s    = RMatScaled { unRMatScaled :: R.SomeSEXP s }
+newtype Row = Row
+    { unRow :: Int
+    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 newtype Rows            = Rows { unRows :: [Double] }
 newtype Vals            = Vals { unVals :: [Double] }
 newtype AdjacencyMat = AdjacencyMat
@@ -95,14 +99,13 @@ data SingleCells a = SingleCells { matrix :: a
 
 data CellInfo = CellInfo
     { barcode :: Cell
-    , features :: [(Int, Double)]
+    , cellRow :: Row
     , projection :: (X, Y)
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 
 data ClusterResults = ClusterResults
     { clusterList :: [(CellInfo, Cluster)]
     , clusterDend :: HC.Dendrogram (Vector CellInfo)
-    , clusterTree :: Either (HC.Dendrogram (Vector CellInfo)) (ClusteringTree CellInfo ShowB)
     } deriving (Read,Show,Generic,A.ToJSON,A.FromJSON)
 
 deriving instance (Read a) => Read (HC.Dendrogram a)
@@ -118,6 +121,6 @@ instance (A.ToJSON a, Generic a) => A.ToJSON (HC.Dendrogram a) where
     toEncoding = A.genericToEncoding A.defaultOptions
 instance (A.FromJSON a, Generic a) => A.FromJSON (HC.Dendrogram a)
 
-instance (A.ToJSON a, A.ToJSON b, Generic a, Generic b) => A.ToJSON (ClusteringVertex a b) where
+instance (A.ToJSON a, Generic a) => A.ToJSON (ClusteringVertex a) where
     toEncoding = A.genericToEncoding A.defaultOptions
-instance (A.FromJSON a, A.FromJSON b, Generic a, Generic b) => A.FromJSON (ClusteringVertex a b)
+instance (A.FromJSON a, Generic a) => A.FromJSON (ClusteringVertex a)

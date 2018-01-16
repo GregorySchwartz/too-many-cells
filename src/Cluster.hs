@@ -16,13 +16,14 @@ module Cluster
     ) where
 
 -- Remote
+import Data.List (zip4)
 import Data.Foldable (toList)
 import Data.Int (Int32)
 import Data.Maybe (catMaybes)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
-import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster)
+import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster, B (..))
 import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram, getClusterItemsDend)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
@@ -53,16 +54,16 @@ hClust :: SingleCells MatObsRowImportant -> ClusterResults
 hClust sc =
     ClusterResults { clusterList = clustering
                    , clusterDend = cDend
-                   , clusterTree = Left cDend
                    }
   where
     cDend = fmap ( V.singleton
-                 . (\x -> CellInfo { barcode = x, features = [], projection = (X 0, Y 0) })
-                 . L.view L._1
+                 . (\ (!w, _, !y, !z)
+                   -> CellInfo { barcode = w, cellRow = y, projection = z }
+                   )
                  )
             dend
     clustering = assignClusters
-               . fmap ( fmap ((\(!x, !y, !z) -> CellInfo x (S.toListSV y) z))
+               . fmap ( fmap ((\(!w, _, !y, !z) -> CellInfo w y z))
                       . HC.elements
                       )
                . flip HC.cutAt (findCut dend)
@@ -71,9 +72,10 @@ hClust sc =
     euclDist x y =
         sqrt . sum . fmap (** 2) $ S.liftU2 (-) (L.view L._2 y) (L.view L._2 x)
     items = (\ fs
-            -> zip3
+            -> zip4
                    (V.toList $ rowNames sc)
                    fs
+                   (fmap Row . take (V.length . rowNames $ sc) . iterate (+ 1) $ 0)
                    (V.toList $ projections sc)
             )
           . S.toRowsL
@@ -107,32 +109,26 @@ clustersToClusterList sc clustering = do
         $ (R.fromSomeSEXP clusters :: [Int32])
 
 -- | Hierarchical spectral clustering
-hSpecClust :: MinClusterSize -> SingleCells MatObsRow -> ClusterResults
+hSpecClust :: MinClusterSize -> SingleCells MatObsRow -> (ClusterResults, B)
 hSpecClust (MinClusterSize minSize) sc =
-    ClusterResults { clusterList = clustering
-                   , clusterDend = fmap fst dend
-                   , clusterTree = Right tree
-                   }
+    ( ClusterResults { clusterList = clustering
+                     , clusterDend = dend
+                     }
+    , b
+    )
   where
     clustering = assignClusters
                . fmap V.toList
                . getClusterItemsDend
                $ dend
     dend       = clusteringTreeToDendrogram tree
-    tree       = hierarchicalSpectralCluster (Just minSize) items
+    (tree, b)  = hierarchicalSpectralCluster (Just minSize) items
                . Left
                . unMatObsRow
                . matrix
                $ sc
-    items      = (\ fs
-                 -> V.zipWith3
-                        (\x y z -> CellInfo x (S.toListSV y) z)
-                        (rowNames sc)
-                        fs
-                        (projections sc)
-                 )
-               . V.fromList
-               . S.toRowsL
-               . unMatObsRow
-               . matrix
-               $ sc
+    items      = V.zipWith3
+                    (\x y z -> CellInfo x y z)
+                    (rowNames sc)
+                    (fmap Row . flip V.generate id . V.length . rowNames $ sc)
+                    (projections sc)
