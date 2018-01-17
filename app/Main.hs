@@ -119,6 +119,9 @@ main = do
         processMat     = scaleSparseMat . matrix -- >>= pcaMat
         processedSc    = sc >>= (\x -> return $ x { matrix = processMat x })
 
+    -- Where to place output files.
+    createDirectoryIfMissing True . unOutputDirectory $ output'
+
     labelColorMaps <- fmap (fmap (\x -> (x, getColorMap x)))
                     . sequence
                     . fmap (loadLabelData delimiter')
@@ -137,7 +140,6 @@ main = do
     (clusterResults, bMat) <-
         case prior' of
             Nothing -> do
-                createDirectoryIfMissing True . unOutputDirectory $ output'
                 (cr, b) <- fmap (hSpecClust minSize') processedSc
                 B.writeFile
                     (unOutputDirectory output' FP.</> "cluster_results.json")
@@ -149,7 +151,7 @@ main = do
                     $ b
                 return (return cr, return b)
             (Just x) -> do
-                let cr = fmap (either error id . A.eitherDecode')
+                let cr = fmap (either error id . A.eitherDecode)
                        . B.readFile
                        . (FP.</> "cluster_results.json")
                        . unPriorDirectory

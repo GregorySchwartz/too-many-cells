@@ -21,7 +21,8 @@ module Load
 -- Remote
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
-import Control.Monad.Except (runExceptT)
+import Control.Monad.Except (runExceptT, ExceptT (..))
+import Control.Monad.Managed (with, liftIO, Managed (..))
 import Data.Char (ord)
 import Data.Matrix.MatrixMarket (readMatrix, Matrix(RMatrix, IntMatrix), Structure (..))
 import Data.Maybe (fromMaybe, maybe)
@@ -43,6 +44,7 @@ import qualified Numeric.LinearAlgebra as H
 import qualified Streaming as S
 import qualified Streaming.Cassava as S
 import qualified Streaming.Prelude as S
+import qualified Streaming.With.Lifted as SW
 
 -- Local
 import Types
@@ -195,42 +197,39 @@ loadSparseMatrixDataStream :: Delimiter
 loadSparseMatrixDataStream (Delimiter delim) pf mf = do
     let csvOpts = S.defaultDecodeOptions
                     { S.decDelimiter = fromIntegral (ord delim) }
-        cS = S.toList . S.map (fmap Cell . drop 1) . S.take 1
+        cS = fmap (S.first (fmap Cell . drop 1 . fromMaybe (error "No header.")))
+           . S.head
         gS = S.toList . S.map (Gene . head) . S.drop 1
         mS = S.toList
            . S.map (HS.sparsifySV . HS.vr . fmap (either error fst . T.double) . drop 1)
            . S.drop 1
-           
-    (c S.:> _) <- fmap (either (error . show) id)
-                . S.runResourceT
+
+    res <- flip with return $ do
+
+        contents <- SW.withBinaryFileContents . unMatrixFile $ mf
+
+        (c S.:> g S.:> m S.:> _) <-
+            fmap (either (error . show) id)
                 . runExceptT
                 . cS
+                . (S.store gS)
+                . (S.store mS)
                 . S.decode S.NoHeader
-                . BS.readFile
-                . unMatrixFile
-                $ mf
+                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ()) 
 
-    (g S.:> m S.:> _) <- fmap (either (error . show) id)
-                       . S.runResourceT
-                       . runExceptT
-                       $ gS
-                       $ mS
-                       $ S.copy
-                       . S.decode S.NoHeader
-                       . BS.readFile
-                       . unMatrixFile
-                       $ mf
+        let finalMat = MatObsRow . HS.sparsifySM . HS.fromColsL $ m -- We want observations as rows
 
-    let finalMat = MatObsRow . HS.sparsifySM . HS.fromColsL $ m -- We want observations as rows
+        p <- liftIO
+           $ maybe (return . projectMatrix $ finalMat) loadProjectionFile pf
 
-    p <- maybe (return . projectMatrix $ finalMat) loadProjectionFile pf
+        return $
+            SingleCells { matrix   = finalMat
+                        , rowNames = V.fromList c
+                        , colNames = V.fromList g
+                        , projections = p
+                        }
 
-    return $
-        SingleCells { matrix   = finalMat
-                    , rowNames = V.fromList . head $ c
-                    , colNames = V.fromList g
-                    , projections = p
-                    }
+    return res
 
 -- | Load a CSV containing the label of each cell.
 loadLabelData :: Delimiter -> LabelFile -> IO LabelMap

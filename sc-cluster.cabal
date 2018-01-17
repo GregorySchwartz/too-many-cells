@@ -40,6 +40,7 @@ library
                      , hmatrix
                      , inline-r
                      , lens
+                     , managed
                      , matrix-market-attoparsec
                      , mltool
                      , modularity
@@ -53,6 +54,7 @@ library
                      , streaming
                      , streaming-bytestring
                      , streaming-cassava
+                     , streaming-with
                      , SVGFonts
                      , text
                      , vector

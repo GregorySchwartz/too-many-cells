@@ -55,6 +55,7 @@ extra-deps:
   - streaming-bytestring-0.1.4.6
   - streaming-cassava-0.1.0.0
   - streaming-commons-0.1.17
+  - streaming-with-0.2.0.0
   - mmorph-1.0.9
   - /home/gw/code/utility/spectral-clustering/
   - /home/gw/code/utility/modularity/

@@ -148,15 +148,32 @@ plotClustersOnlyR outputPlot (RMatObsRowImportant mat) clustering = do
 -- | Plot a dendrogram.
 plotDendrogram :: Maybe (LabelMap, ColorMap) -> HC.Dendrogram (V.Vector CellInfo) -> Diagram B
 plotDendrogram ms dend =
-    dendrogram Fixed (dendrogramLeaf ms) dend # lw 0.1 # pad 1.1
+    dendrogram Fixed (dendrogramLeafLabel ms) dend # lw 0.1 # pad 1.1
 
--- | How to plot each leaf of the dendrogram.
-dendrogramLeaf :: Maybe (LabelMap, ColorMap) -> V.Vector CellInfo -> Diagram B
-dendrogramLeaf Nothing leaf =
+-- | Plot the leaf of a dendrogram as a text label.
+dendrogramLeafLabel :: Maybe (LabelMap, ColorMap) -> V.Vector CellInfo -> Diagram B
+dendrogramLeafLabel Nothing leaf =
     case V.length leaf of
         1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
         s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
-dendrogramLeaf (Just (LabelMap lm, ColorMap cm)) leaf =
+dendrogramLeafLabel (Just (LabelMap lm, ColorMap cm)) leaf =
+    case V.length leaf of
+        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
+        s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
+  where
+    color = fromMaybe black
+          . (=<<) (flip Map.lookup cm . getMostFrequent)
+          . mapM (flip Map.lookup lm . barcode)
+          . V.toList
+          $ leaf
+
+-- | Plot the leaf of a dendrogram as a collection of cells.
+dendrogramLeafCell :: Maybe (LabelMap, ColorMap) -> V.Vector CellInfo -> Diagram B
+dendrogramLeafCell Nothing leaf =
+    case V.length leaf of
+        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
+        s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
+dendrogramLeafCell (Just (LabelMap lm, ColorMap cm)) leaf =
     case V.length leaf of
         1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
         s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
