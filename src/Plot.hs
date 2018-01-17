@@ -13,13 +13,15 @@ module Plot
     ( plotClusters
     , plotClustersR
     , plotDendrogram
-    , getColorMap
+    , getLabelColorMap
+    , labelToCellColorMap
     ) where
 
 -- Remote
 import Control.Monad (forM, mapM)
+import Data.Colour.SRGB (RGB (..), toSRGB)
 import Data.Colour.Names (black)
-import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..))
+import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..), Kolor)
 import Data.Function (on)
 import Data.List (nub, sortBy)
 import Data.Maybe (fromMaybe)
@@ -31,6 +33,7 @@ import Language.R as R
 import Language.R.QQ (r)
 import Plots
 import qualified Data.Clustering.Hierarchical as HC
+import qualified Data.List.Split as Split
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
@@ -146,50 +149,66 @@ plotClustersOnlyR outputPlot (RMatObsRowImportant mat) clustering = do
 --     heatMap values $ heatMapSize .= V2 10 10
 
 -- | Plot a dendrogram.
-plotDendrogram :: Maybe (LabelMap, ColorMap) -> HC.Dendrogram (V.Vector CellInfo) -> Diagram B
-plotDendrogram ms dend =
-    dendrogram Fixed (dendrogramLeafLabel ms) dend # lw 0.1 # pad 1.1
+plotDendrogram :: DrawLeaf -> Maybe CellColorMap -> HC.Dendrogram (V.Vector CellInfo) -> Diagram B
+plotDendrogram drawLeaf ms dend =
+    dendrogram Fixed (whichLeaf drawLeaf $ ms) dend # lw 0.1 # pad 1.1
+  where
+    whichLeaf DrawText     = dendrogramLeafLabel
+    whichLeaf (DrawCell _) = dendrogramLeafCell
 
 -- | Plot the leaf of a dendrogram as a text label.
-dendrogramLeafLabel :: Maybe (LabelMap, ColorMap) -> V.Vector CellInfo -> Diagram B
+dendrogramLeafLabel :: Maybe CellColorMap -> V.Vector CellInfo -> Diagram B
 dendrogramLeafLabel Nothing leaf =
     case V.length leaf of
         1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
         s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
-dendrogramLeafLabel (Just (LabelMap lm, ColorMap cm)) leaf =
+dendrogramLeafLabel (Just (CellColorMap cm)) leaf =
     case V.length leaf of
         1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
         s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
   where
-    color = fromMaybe black
-          . (=<<) (flip Map.lookup cm . getMostFrequent)
-          . mapM (flip Map.lookup lm . barcode)
+    color = flip (Map.findWithDefault black) cm
+          . getMostFrequent
+          . fmap barcode
           . V.toList
           $ leaf
 
 -- | Plot the leaf of a dendrogram as a collection of cells.
-dendrogramLeafCell :: Maybe (LabelMap, ColorMap) -> V.Vector CellInfo -> Diagram B
-dendrogramLeafCell Nothing leaf =
-    case V.length leaf of
-        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
-        s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT # fc black # pad 1.3
-dendrogramLeafCell (Just (LabelMap lm, ColorMap cm)) leaf =
-    case V.length leaf of
-        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
-        s -> stroke (textSVG (show s) 0.01) # rotateBy (1/4) # alignT #  fc color # lw none # pad 1.3
+dendrogramLeafCell :: Maybe CellColorMap -> V.Vector CellInfo -> Diagram B
+dendrogramLeafCell Nothing leaf = getCell black # alignT # pad 1.3
+dendrogramLeafCell (Just (CellColorMap cm)) leaf =
+        (vcat . fmap hcat . Split.chunksOf 10 $ cells) # alignT # pad 1.3
   where
-    color = fromMaybe black
-          . (=<<) (flip Map.lookup cm . getMostFrequent)
-          . mapM (flip Map.lookup lm . barcode)
-          . V.toList
-          $ leaf
+    cells  = fmap getCell colors
+    colors = sortBy ( compare
+                 `on` (
+                        ( \x -> ( channelRed x
+                                , channelGreen x
+                                , channelBlue x
+                                )
+                        )
+                        . toSRGB
+                      )
+                    )
+           . fmap (flip (Map.findWithDefault black) cm . barcode)
+           . V.toList
+           $ leaf
+
+-- | Draw a single cell.
+getCell :: Kolor -> Diagram B
+getCell color = circle 1 # lc black # fc color
 
 -- | Get the colors of each label.
-getColorMap :: LabelMap -> ColorMap
-getColorMap = ColorMap
-            . Map.fromList
-            . flip zip (cycle (brewerSet Set1 9))
-            . Set.toList
-            . Set.fromList
-            . Map.elems
-            . unLabelMap
+getLabelColorMap :: LabelMap -> LabelColorMap
+getLabelColorMap = LabelColorMap
+                 . Map.fromList
+                 . flip zip (cycle (brewerSet Set1 9))
+                 . Set.toList
+                 . Set.fromList
+                 . Map.elems
+                 . unLabelMap
+
+-- | Get the colors of each cell from a label.
+labelToCellColorMap :: LabelColorMap -> LabelMap -> CellColorMap
+labelToCellColorMap (LabelColorMap lm) =
+    CellColorMap . Map.map (\x -> Map.findWithDefault black x lm) . unLabelMap

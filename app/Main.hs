@@ -60,6 +60,8 @@ data Options = Options { matrixFile  :: Maybe String
                                <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                        , minSize   :: Maybe Int
                                <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
+                       , drawLeaf :: Maybe String
+                               <?> "([DrawText] | DrawCell) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawCell is the collection of cells represented by circles, consisting of: DrawCell DrawLabel, where each cell is colored by its label, and DrawCell (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
                        , prior :: Maybe String
                                <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                        , output :: Maybe String
@@ -98,6 +100,7 @@ main = do
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         minSize'        =
             MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
+        drawLeaf'       = maybe DrawText read . unHelpful . drawLeaf $ opts
         output'         =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
         matrixCsv       =
@@ -122,10 +125,9 @@ main = do
     -- Where to place output files.
     createDirectoryIfMissing True . unOutputDirectory $ output'
 
-    labelColorMaps <- fmap (fmap (\x -> (x, getColorMap x)))
-                    . sequence
-                    . fmap (loadLabelData delimiter')
-                    $ labelsFile'
+    labelMap     <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
+    let cellColorMap =
+            fmap (\x -> labelToCellColorMap (getLabelColorMap x) x) labelMap
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -164,13 +166,13 @@ main = do
                 return (cr, b)
 
     -- Find clumpiness.
-    case labelColorMaps of
+    case labelMap of
         Nothing ->
             hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
         (Just lcm) ->
             clusterResults
               >>= B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
-                . dendToClumpCsv (fst lcm)
+                . dendToClumpCsv lcm 
                 . clusterDend
 
 
@@ -193,7 +195,7 @@ main = do
           >>= D.renderCairo
                 (unOutputDirectory output' FP.</> "dendrogram.pdf")
                 (D.mkWidth 1000)
-            . plotDendrogram labelColorMaps
+            . plotDendrogram drawLeaf' cellColorMap
             . clusterDend
 
         -- Plot clustering.

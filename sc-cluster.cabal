@@ -50,6 +50,7 @@ library
                      , safe
                      , scientific
                      , sparse-linear-algebra
+                     , split
                      , statistics
                      , streaming
                      , streaming-bytestring

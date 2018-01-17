@@ -85,11 +85,17 @@ newtype MatObsRowImportant = MatObsRowImportant
 newtype LabelMap = LabelMap
     { unLabelMap :: Map Cell Label
     } deriving (Read,Show)
-newtype ColorMap = ColorMap
-    { unColorMap :: Map Label Kolor
+newtype LabelColorMap = LabelColorMap
+    { unLabelColorMap :: Map Label Kolor
+    } deriving (Read,Show)
+newtype CellColorMap = CellColorMap
+    { unCellColorMap :: Map Cell Kolor
     } deriving (Read,Show)
 
 -- Advanced
+data DrawCellType = DrawLabel | DrawExpression String deriving (Read, Show)
+data DrawLeaf = DrawCell DrawCellType | DrawText deriving (Read, Show)
+
 data SingleCells a = SingleCells { matrix :: a
                                  , rowNames :: Vector Cell
                                  , colNames :: Vector Gene
