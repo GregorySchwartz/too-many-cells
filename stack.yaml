@@ -61,7 +61,7 @@ extra-deps:
   - /home/gw/code/utility/modularity/
   - /home/gw/code/utility/hierarchical-spectral-clustering/
   - git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git
-    commit: ba162fc797aef930d7a9d886c20668352b413359
+    commit: b92d8cc9b5275df38198ede27b58f7e35aaf69d1
 
 # Override default flag values for local packages and extra-deps
 flags: {}

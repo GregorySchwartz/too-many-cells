@@ -16,6 +16,7 @@ module Types where
 import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
 import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Data.Colour.Palette.BrewerSet (Kolor)
+import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
 import Data.Map.Strict (Map)
 import Math.Modularity.Types (Q (..))
 import Data.Text (Text)
@@ -43,9 +44,12 @@ newtype Cluster = Cluster
 newtype MinClusterSize = MinClusterSize
     { unMinClusterSize :: Int
     } deriving (Read,Show)
+newtype NoPreNormalization = NoPreNormalization
+    { unNoPreNormalization :: Bool
+    } deriving (Read,Show)
 newtype Cols            = Cols { unCols :: [Double] }
 newtype Delimiter       = Delimiter { unDelimiter :: Char }
-newtype Gene            = Gene { unGene :: Text } deriving (Read, Show)
+newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show)
 newtype CellFile        = CellFile { unCellFile :: FilePath }
 newtype GeneFile        = GeneFile { unGeneFile :: FilePath }
 newtype MatrixFile = MatrixFile
@@ -93,7 +97,7 @@ newtype CellColorMap = CellColorMap
     } deriving (Read,Show)
 
 -- Advanced
-data DrawCellType = DrawLabel | DrawExpression String deriving (Read, Show)
+data DrawCellType = DrawLabel | DrawExpression Text deriving (Read, Show)
 data DrawLeaf = DrawCell DrawCellType | DrawText deriving (Read, Show)
 
 data SingleCells a = SingleCells { matrix :: a
@@ -130,3 +134,7 @@ instance (A.FromJSON a, Generic a) => A.FromJSON (HC.Dendrogram a)
 instance (A.ToJSON a, Generic a) => A.ToJSON (ClusteringVertex a) where
     toEncoding = A.genericToEncoding A.defaultOptions
 instance (A.FromJSON a, Generic a) => A.FromJSON (ClusteringVertex a)
+
+instance (Ord a, Floating a) => Ord (Colour a) where
+    compare x y = ((\a -> (channelRed a, channelGreen a, channelBlue a)) . toSRGB $ y)
+        `compare` ((\a -> (channelRed a, channelGreen a, channelBlue a)) . toSRGB $ x)

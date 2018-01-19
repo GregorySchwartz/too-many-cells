@@ -15,6 +15,7 @@ module Main where
 
 -- Remote
 import Control.Monad (when, unless, join)
+import Data.Bool (bool)
 import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
@@ -23,7 +24,7 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (B (..))
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend)
 import Options.Generic
-import System.Directory (createDirectoryIfMissing)
+import System.Directory (createDirectoryIfMissing, copyFile)
 import System.IO (hPutStrLn, stderr)
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
@@ -58,6 +59,8 @@ data Options = Options { matrixFile  :: Maybe String
                                <?> "([Nothing] | FILE) The input file containing the label for each cell, with \"cell,label\" header."
                        , delimiter :: Maybe Char
                                <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+                       , noPreNormalization :: Bool
+                               <?> "Do not pre-normalize matrix before cluster normalization."
                        , minSize   :: Maybe Int
                                <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                        , drawLeaf :: Maybe String
@@ -98,6 +101,8 @@ main = do
             fmap PriorDirectory . unHelpful . prior $ opts
         delimiter'      =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        noPreNormalization' =
+            NoPreNormalization . unHelpful . noPreNormalization $ opts
         minSize'        =
             MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
         drawLeaf'       = maybe DrawText read . unHelpful . drawLeaf $ opts
@@ -119,15 +124,31 @@ main = do
                         cellsFile'
                         matrixFile'
         sc             = fmap filterSparseMat unFilteredSc
-        processMat     = scaleSparseMat . matrix -- >>= pcaMat
+        processMat     = bool (scaleSparseMat . matrix) matrix
+                       . unNoPreNormalization
+                       $ noPreNormalization'
         processedSc    = sc >>= (\x -> return $ x { matrix = processMat x })
 
     -- Where to place output files.
     createDirectoryIfMissing True . unOutputDirectory $ output'
 
     labelMap     <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
-    let cellColorMap =
-            fmap (\x -> labelToCellColorMap (getLabelColorMap x) x) labelMap
+
+    let labelColorMap = fmap getLabelColorMap labelMap
+        cellColorMap =
+            case drawLeaf' of
+                DrawText           ->
+                    return $ do
+                        lcm <- labelColorMap
+                        lm  <- labelMap
+                        return $ labelToCellColorMap lcm lm
+                DrawCell DrawLabel ->
+                    return $ do
+                        lcm <- labelColorMap
+                        lm  <- labelMap
+                        return $ labelToCellColorMap lcm lm
+                DrawCell (DrawExpression x) ->
+                    fmap (Just . getCellColorMapExpression (Gene x)) processedSc
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -153,17 +174,28 @@ main = do
                     $ b
                 return (return cr, return b)
             (Just x) -> do
-                let cr = fmap (either error id . A.eitherDecode)
+                let crInput =
+                        (FP.</> "cluster_results.json") . unPriorDirectory $ x
+                    bInput  = (FP.</> "b.mtx") . unPriorDirectory $ x
+                    cr :: IO ClusterResults
+                    cr = fmap (either error id . A.eitherDecode)
                        . B.readFile
-                       . (FP.</> "cluster_results.json")
-                       . unPriorDirectory
-                       $ x
+                       $ crInput
+                    b :: IO B
                     b  = fmap (B . matToSpMat)
                        . readMatrix
-                       . (FP.</> "b.mtx")
-                       . unPriorDirectory
-                       $ x
-                return (cr, b)
+                       $ bInput
+
+                copyFile crInput
+                    . (FP.</> "cluster_results.json")
+                    . unOutputDirectory
+                    $ output'
+                copyFile bInput
+                    . (FP.</> "b.mtx")
+                    . unOutputDirectory
+                    $ output'
+
+                return ((cr, b) :: (IO ClusterResults, IO B))
 
     -- Find clumpiness.
     case labelMap of
@@ -172,7 +204,7 @@ main = do
         (Just lcm) ->
             clusterResults
               >>= B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
-                . dendToClumpCsv lcm 
+                . dendToClumpCsv lcm
                 . clusterDend
 
 
@@ -190,13 +222,22 @@ main = do
     -- supplied.
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         -- Plot dendrogram.
-        H.io
-            $ clusterResults
-          >>= D.renderCairo
+        H.io $ do
+          cr <- clusterResults
+          cm <- cellColorMap
+          legend <- case drawLeaf' of
+                        (DrawCell (DrawExpression g)) ->
+                            fmap
+                                (Just . plotExpressionLegend (Gene g))
+                                processedSc
+                        _ -> return $ fmap plotLabelLegend labelColorMap
+
+          D.renderCairo
                 (unOutputDirectory output' FP.</> "dendrogram.pdf")
-                (D.mkWidth 1000)
-            . plotDendrogram drawLeaf' cellColorMap
+                (D.mkHeight 1000)
+            . plotDendrogram legend drawLeaf' cm
             . clusterDend
+            $ cr
 
         -- Plot clustering.
         (H.io clusterResults)

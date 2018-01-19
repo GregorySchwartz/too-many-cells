@@ -35,7 +35,7 @@ dendToClumpDend (LabelMap labelMap) =
         . fmap ( Seq.fromList
                . fmap unLabel
                . V.toList
-               . fmap (flip (Map.findWithDefault (error "Cell has no label.")) labelMap . barcode)
+               . fmap ((\x -> Map.findWithDefault (error ("Cell has no label: " <> show x)) x labelMap) . barcode)
                )
 
 -- | Format clumpiness output to a CSV.

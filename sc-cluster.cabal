@@ -34,6 +34,7 @@ library
                      , diagrams-lib
                      , diagrams-cairo
                      , find-clumpiness
+                     , foldl
                      , hierarchical-clustering
                      , hierarchical-clustering-diagrams
                      , hierarchical-spectral-clustering
