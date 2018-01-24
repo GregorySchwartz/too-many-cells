@@ -59,7 +59,7 @@ data Options = Options { matrixFile  :: Maybe String
                                <?> "([Nothing] | FILE) The input file containing the label for each cell, with \"cell,label\" header."
                        , delimiter :: Maybe Char
                                <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-                       , noPreNormalization :: Bool
+                       , preNormalization :: Bool
                                <?> "Do not pre-normalize matrix before cluster normalization."
                        , minSize   :: Maybe Int
                                <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
@@ -75,9 +75,10 @@ data Options = Options { matrixFile  :: Maybe String
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
-    short "minSize"          = Just 'M'
-    short "prior"            = Just 'P'
-    short x                  = firstLetter x
+    short "minSize"           = Just 'M'
+    short "prior"             = Just 'P'
+    short "pre-normalization" = Just 'n'
+    short x                   = firstLetter x
 
 instance ParseRecord Options where
     parseRecord = parseRecordWithModifiers modifiers
@@ -101,8 +102,8 @@ main = do
             fmap PriorDirectory . unHelpful . prior $ opts
         delimiter'      =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        noPreNormalization' =
-            NoPreNormalization . unHelpful . noPreNormalization $ opts
+        preNormalization' =
+            PreNormalization . unHelpful . preNormalization $ opts
         minSize'        =
             MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
         drawLeaf'       = maybe DrawText read . unHelpful . drawLeaf $ opts
@@ -124,9 +125,9 @@ main = do
                         cellsFile'
                         matrixFile'
         sc             = fmap filterSparseMat unFilteredSc
-        processMat     = bool (scaleSparseMat . matrix) matrix
-                       . unNoPreNormalization
-                       $ noPreNormalization'
+        processMat     = bool matrix (scaleSparseMat . matrix)
+                       . unPreNormalization
+                       $ preNormalization'
         processedSc    = sc >>= (\x -> return $ x { matrix = processMat x })
 
     -- Where to place output files.

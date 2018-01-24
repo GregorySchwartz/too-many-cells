@@ -170,7 +170,7 @@ plotDendrogram Nothing drawLeaf cm dend =
             Variable
             (whichLeaf drawLeaf $ cm)
             (dendrogramPathLabel drawLeaf cm)
-            ((\tree items -> lw 0.1 . scaleToY (3 * height items) $ tree), curry snd)
+            ((\tree items -> lw 0.3 . scaleToY (3 * height items) $ tree), curry snd)
         $ dend
   where
     whichLeaf DrawText     = dendrogramLeafLabel
@@ -184,9 +184,9 @@ plotDendrogram (Just legend) drawLeaf cm dend =
                 Variable
                 (whichLeaf drawLeaf $ cm)
                 (dendrogramPathLabel drawLeaf cm)
-                ((\tree items -> lw 0.1 . scaleToY (2 * height items) $ tree), curry snd)
+                ((\tree items -> lw 0.3 . scaleToY (2 * height items) $ tree), curry snd)
             $ dend
-            , alignT . center . scaleUToY (height tree / 6) $ legend
+            , pad 2 . alignT . lw 0.3 center . scaleUToY (height tree / 6) $ legend
             ]
   where
     tree = alignT
@@ -269,7 +269,7 @@ plotExpressionLegend g sc =
         (L.set visible True defColourBar)
         cm
         (fromMaybe 0 minVal, fromMaybe 0 maxVal)
-        1
+        100
   where
     cm =
         colourMap . zip [1..] . fmap (\x -> sRGB 1 (1 - x) (1 - x)) $ [1,0.9..0]

@@ -44,8 +44,8 @@ newtype Cluster = Cluster
 newtype MinClusterSize = MinClusterSize
     { unMinClusterSize :: Int
     } deriving (Read,Show)
-newtype NoPreNormalization = NoPreNormalization
-    { unNoPreNormalization :: Bool
+newtype PreNormalization = PreNormalization
+    { unPreNormalization :: Bool
     } deriving (Read,Show)
 newtype Cols            = Cols { unCols :: [Double] }
 newtype Delimiter       = Delimiter { unDelimiter :: Char }

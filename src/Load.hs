@@ -24,10 +24,9 @@ import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
 import Control.Monad.Managed (with, liftIO, Managed (..))
 import Data.Char (ord)
-import Data.Matrix.MatrixMarket (readMatrix, Matrix(RMatrix, IntMatrix), Structure (..))
+import Data.Matrix.MatrixMarket (readMatrix)
 import Data.Maybe (fromMaybe, maybe)
 import Data.Monoid ((<>))
-import Data.Scientific (toRealFloat, Scientific)
 import Data.Vector (Vector)
 import Safe
 import qualified Control.Lens as L
@@ -49,36 +48,6 @@ import qualified Streaming.With.Lifted as SW
 -- Local
 import Types
 import Utility
-
--- | Convert a Matrix to an hmatrix Matrix. Assumes matrix market is 1 indexed.
-matToHMat :: Matrix Scientific -> H.Matrix H.R
-matToHMat (RMatrix size _ _ xs) =
-    H.assoc size 0
-        . fmap (\(!x, !y, !z) -> ((fromIntegral x - 1, fromIntegral y - 1), toRealFloat z))
-        $ xs
-matToHMat (IntMatrix size _ _ xs) =
-    H.assoc size 0
-        . fmap (\(!x, !y, !z) -> ((fromIntegral x - 1, fromIntegral y - 1), fromIntegral z))
-        $ xs
-matToHMat _ = error "Input matrix is not a Real matrix."
-
--- | Convert a Matrix to a sparse matrix.
-matToSpMat :: Matrix Scientific -> HS.SpMatrix Double
-matToSpMat (RMatrix size _ _ xs) =
-    HS.fromListSM size
-        . fmap (\(!x, !y, !z) -> (fromIntegral x - 1, fromIntegral y - 1, toRealFloat z))
-        $ xs
-matToSpMat (IntMatrix size _ _ xs) =
-    HS.fromListSM size
-        . fmap (\(!x, !y, !z) -> (fromIntegral x - 1, fromIntegral y - 1, fromIntegral z))
-        $ xs
-matToSpMat _ = error "Input matrix is not a Real matrix."
-
--- | Convert a sparse matrix to a Matrix.
-spMatToMat :: HS.SpMatrix Double -> Matrix Double
-spMatToMat mat = RMatrix (HS.dimSM mat) (HS.nzSM mat) General
-               . fmap (\(!x, !y, !z) -> (x + 1, y + 1, z)) . HS.toListSM
-               $ mat
 
 -- | Load output of cellranger.
 loadCellrangerData
