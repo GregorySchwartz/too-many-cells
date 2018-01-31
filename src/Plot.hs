@@ -496,14 +496,6 @@ drawGraphPath dnn cm gr (n1, _) p1 (n2, _) p2 _ _ =
     c2           = getGraphColor cm $ getGraphLeafCells gr n2
     trail        = getEdgeTrail p1 p2 (height draw1) (height draw2)
     drawNode n p = drawGraphNode dnn DrawText cm gr (n, Nothing) p -- DrawText is irrelevant here.
-    -- stroke (fromVertices [p1, p2] :: Path V2 Double)
-    --     # ( lc
-    --         . getGraphColor cm
-    --         $ getGraphLeafCells gr n1
-    --         <> getGraphLeafCells gr n2
-    --         )
-    --     # lw 1
-    --     # lineCap LineCapRound
 
 -- | Draw the final node of a graph.
 drawGraphNode :: DrawNodeNumber
