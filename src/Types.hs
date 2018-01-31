@@ -13,21 +13,23 @@ Collects the types used in the program
 module Types where
 
 -- Remote
-import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
-import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
 import Data.Map.Strict (Map)
-import Math.Modularity.Types (Q (..))
 import Data.Text (Text)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
 import Language.R as R
 import Language.R.QQ (r)
+import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
+import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
+import Math.Modularity.Types (Q (..))
 import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
-import qualified Numeric.LinearAlgebra as H
+import qualified Data.Graph.Inductive as G
+import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
+import qualified Numeric.LinearAlgebra as H
 
 -- Local
 
@@ -47,6 +49,10 @@ newtype MinClusterSize = MinClusterSize
 newtype PreNormalization = PreNormalization
     { unPreNormalization :: Bool
     } deriving (Read,Show)
+newtype DrawNodeNumber = DrawNodeNumber
+    { unDrawNodeNumber :: Bool
+    } deriving (Read,Show)
+newtype IsLeaf = IsLeaf {unIsLeaf :: Bool} deriving (Eq, Ord, Read, Show)
 newtype Cols            = Cols { unCols :: [Double] }
 newtype Delimiter       = Delimiter { unDelimiter :: Char }
 newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show)
@@ -95,6 +101,9 @@ newtype LabelColorMap = LabelColorMap
 newtype CellColorMap = CellColorMap
     { unCellColorMap :: Map Cell Kolor
     } deriving (Read,Show)
+newtype CellGraph = CellGraph
+    { unCellGraph :: G.Gr (G.Node, Maybe (Seq.Seq CellInfo)) HC.Distance
+    } deriving (Read, Show)
 
 -- Advanced
 data DrawCellType = DrawLabel | DrawExpression Text deriving (Read, Show)
@@ -114,7 +123,7 @@ data CellInfo = CellInfo
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 
 data ClusterResults = ClusterResults
-    { clusterList :: [(CellInfo, Cluster)]
+    { clusterList :: [(CellInfo, [Cluster])] -- Thanks to hierarchical clustering, we can have multiple clusters per cell.
     , clusterDend :: HC.Dendrogram (Vector CellInfo)
     } deriving (Read,Show,Generic,A.ToJSON,A.FromJSON)
 

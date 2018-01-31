@@ -33,8 +33,11 @@ library
                      , diagrams
                      , diagrams-lib
                      , diagrams-cairo
+                     , diagrams-graphviz
                      , find-clumpiness
+                     , fgl
                      , foldl
+                     , graphviz
                      , hierarchical-clustering
                      , hierarchical-clustering-diagrams
                      , hierarchical-spectral-clustering
@@ -72,10 +75,13 @@ executable sc-cluster
                      , aeson
                      , bytestring
                      , cassava
+                     , containers
                      , diagrams-lib
                      , diagrams-cairo
                      , directory
+                     , fgl
                      , filepath
+                     , graphviz
                      , hierarchical-spectral-clustering
                      , inline-r
                      , lens
@@ -85,6 +91,8 @@ executable sc-cluster
                      , streaming
                      , streaming-bytestring
                      , streaming-utils
+                     , text
+                     , text-show
                      , vector
   default-language:    Haskell2010
 

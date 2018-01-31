@@ -26,16 +26,20 @@ import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend)
 import Options.Generic
 import System.Directory (createDirectoryIfMissing, copyFile)
 import System.IO (hPutStrLn, stderr)
+import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
+import qualified Data.GraphViz as G
+import qualified Data.Text as T
+import qualified Data.Text.Lazy.IO as T
 import qualified Data.Vector as V
 import qualified Diagrams.Backend.Cairo as D
 import qualified Diagrams.Prelude as D
 import qualified H.Prelude as H
-import qualified System.FilePath as FP
 import qualified Plots as D
+import qualified System.FilePath as FP
 
 -- Local
 import Types
@@ -65,6 +69,10 @@ data Options = Options { matrixFile  :: Maybe String
                                <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                        , drawLeaf :: Maybe String
                                <?> "([DrawText] | DrawCell) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawCell is the collection of cells represented by circles, consisting of: DrawCell DrawLabel, where each cell is colored by its label, and DrawCell (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
+                       , drawDendrogram :: Bool
+                               <?> "Draw a dendrogram instead of a graph."
+                       , drawNodeNumber :: Bool
+                               <?> "Draw the node numbers on top of each vertex in the graph."
                        , prior :: Maybe String
                                <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                        , output :: Maybe String
@@ -77,7 +85,10 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
   where
     short "minSize"           = Just 'M'
     short "prior"             = Just 'P'
-    short "pre-normalization" = Just 'n'
+    short "preNormalization"  = Just 'n'
+    short "drawLeaf"          = Just 'L'
+    short "drawDendrogram"    = Just 'D'
+    short "drawNodeNumber"    = Just 'N'
     short x                   = firstLetter x
 
 instance ParseRecord Options where
@@ -107,6 +118,8 @@ main = do
         minSize'        =
             MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
         drawLeaf'       = maybe DrawText read . unHelpful . drawLeaf $ opts
+        drawDendrogram' = unHelpful . drawDendrogram $ opts
+        drawNodeNumber' = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
         output'         =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
         matrixCsv       =
@@ -161,10 +174,11 @@ main = do
         --let clusterResults = fmap hClust processedSc
 
     -- Load previous results or write if first run.
-    (clusterResults, bMat) <-
+    (clusterResults, bMat, graph) <-
         case prior' of
             Nothing -> do
-                (cr, b) <- fmap (hSpecClust minSize') processedSc
+                (cr, b, gr) <- fmap (hSpecClust minSize') processedSc
+
                 B.writeFile
                     (unOutputDirectory output' FP.</> "cluster_results.json")
                     . A.encode
@@ -173,11 +187,19 @@ main = do
                     . spMatToMat
                     . unB
                     $ b
-                return (return cr, return b)
+                T.writeFile
+                    (unOutputDirectory output' FP.</> "graph.dot")
+                    . G.printDotGraph
+                    . G.graphToDot G.nonClusteredParams
+                    . unCellGraph
+                    $ gr
+
+                return ((return cr, return b, return gr) :: (IO ClusterResults, IO B, IO CellGraph))
             (Just x) -> do
                 let crInput =
                         (FP.</> "cluster_results.json") . unPriorDirectory $ x
                     bInput  = (FP.</> "b.mtx") . unPriorDirectory $ x
+                    grInput  = (FP.</> "graph.dot") . unPriorDirectory $ x
                     cr :: IO ClusterResults
                     cr = fmap (either error id . A.eitherDecode)
                        . B.readFile
@@ -195,8 +217,14 @@ main = do
                     . (FP.</> "b.mtx")
                     . unOutputDirectory
                     $ output'
+                copyFile grInput
+                    . (FP.</> "graph.dot")
+                    . unOutputDirectory
+                    $ output'
 
-                return ((cr, b) :: (IO ClusterResults, IO B))
+                gr <- fmap (dendrogramToGraph . clusterDend) cr
+
+                return (cr, b, return gr)
 
     -- Find clumpiness.
     case labelMap of
@@ -210,13 +238,18 @@ main = do
 
 
     -- Header
-    B.putStrLn $ "cell,cluster"
+    B.putStrLn $ "cell,cluster,path"
 
     -- Body
     clusterResults
         >>= B.putStrLn
           . CSV.encode
-          . fmap (\(!ci, Cluster !c) -> (unCell . barcode $ ci, c))
+          . fmap (\ (!ci, !(c:cs))
+                 -> ( unCell . barcode $ ci
+                    , showt $ unCluster c
+                    , T.intercalate "," . fmap (showt . unCluster) $ c:cs
+                    )
+                 )
           . clusterList
 
     -- | Plot only if needed and ignore non-tree analyses if dendrogram is
@@ -224,21 +257,25 @@ main = do
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         -- Plot dendrogram.
         H.io $ do
-          cr <- clusterResults
-          cm <- cellColorMap
-          legend <- case drawLeaf' of
+            cr <- clusterResults
+            gr <- graph
+            cm <- cellColorMap
+            legend <- case drawLeaf' of
                         (DrawCell (DrawExpression g)) ->
                             fmap
                                 (Just . plotExpressionLegend (Gene g))
                                 processedSc
                         _ -> return $ fmap plotLabelLegend labelColorMap
 
-          D.renderCairo
-                (unOutputDirectory output' FP.</> "dendrogram.pdf")
-                (D.mkHeight 1000)
-            . plotDendrogram legend drawLeaf' cm
-            . clusterDend
-            $ cr
+            plot <- if drawDendrogram'
+                    then return . plotDendrogram legend drawLeaf' cm . clusterDend $ cr
+                    else do
+                        plotGraph legend drawNodeNumber' drawLeaf' cm gr
+
+            D.renderCairo
+                    (unOutputDirectory output' FP.</> "dendrogram.pdf")
+                    (D.mkHeight 1000)
+                    plot
 
         -- Plot clustering.
         (H.io clusterResults)

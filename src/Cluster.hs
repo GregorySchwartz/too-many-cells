@@ -17,7 +17,6 @@ module Cluster
 
 -- Remote
 import Data.List (zip4)
-import Data.Foldable (toList)
 import Data.Int (Int32)
 import Data.Maybe (catMaybes)
 import H.Prelude (io)
@@ -29,6 +28,7 @@ import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
 import qualified Control.Lens as L
 import qualified Data.Clustering.Hierarchical as HC
+import qualified Data.Foldable as F
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
@@ -83,14 +83,15 @@ hClust sc =
           . matrix
           $ sc
 
--- | Assign clusters to values.
-assignClusters :: [[a]] -> [(a, Cluster)]
+-- | Assign clusters to values. Thanks to hierarchical clustering, we can have
+-- a cell belong to multiple clusters.
+assignClusters :: [[a]] -> [(a, [Cluster])]
 assignClusters =
-    concat . zipWith (\c -> flip zip (repeat c)) (fmap Cluster [1..])
+    concat . zipWith (\c -> flip zip (repeat c)) (fmap ((:[]) . Cluster) [1..])
 
 -- | Find cut value.
 findCut :: HC.Dendrogram a -> HC.Distance
-findCut = continuousBy s 9 10 . VU.fromList . toList . flattenDist
+findCut = continuousBy s 9 10 . VU.fromList . F.toList . flattenDist
   where
     flattenDist (HC.Leaf _)          = Seq.empty
     flattenDist (HC.Branch !d !l !r) =
@@ -108,19 +109,28 @@ clustersToClusterList sc clustering = do
         . fmap (Cluster . fromIntegral)
         $ (R.fromSomeSEXP clusters :: [Int32])
 
--- | Hierarchical spectral clustering
-hSpecClust :: MinClusterSize -> SingleCells MatObsRow -> (ClusterResults, B)
+-- | Hierarchical spectral clustering.
+hSpecClust :: MinClusterSize
+           -> SingleCells MatObsRow
+           -> (ClusterResults, B, CellGraph)
 hSpecClust (MinClusterSize minSize) sc =
     ( ClusterResults { clusterList = clustering
                      , clusterDend = dend
                      }
     , b
+    , gr
     )
   where
-    clustering = assignClusters
-               . fmap V.toList
-               . getClusterItemsDend
-               $ dend
+    clustering :: [(CellInfo, [Cluster])]
+    clustering =
+        concatMap (\ (!ns, (_, !xs))
+                  -> zip (maybe [] F.toList xs) . repeat . fmap Cluster $ ns
+                  )
+            . F.toList
+            . flip getGraphLeavesWithParents 0
+            . unCellGraph
+            $ gr
+    gr         = dendrogramToGraph dend
     dend       = clusteringTreeToDendrogram tree
     (tree, b)  = hierarchicalSpectralCluster (Just minSize) items
                . Left
