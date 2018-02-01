@@ -1,4 +1,4 @@
-{- Preprocess
+{- TooManyCells.MakeTree.Preprocess
 Gregory W. Schwartz
 
 Collects functions pertaining to preprocessing the data.
@@ -6,7 +6,7 @@ Collects functions pertaining to preprocessing the data.
 
 {-# LANGUAGE QuasiQuotes #-}
 
-module Preprocess
+module TooManyCells.MakeTree.Preprocess
     ( scaleRMat
     , scaleDenseMat
     , scaleSparseMat
@@ -33,8 +33,8 @@ import qualified Data.Vector.Storable as VS
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
-import Types
-import Utility
+import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
 
 -- | Scale a matrix.
 scaleRMat :: RMatObsRow s -> R s (RMatObsRow s)

@@ -1,13 +1,13 @@
-name:                sc-cluster
+name:                too-many-cells
 version:             0.1.0.0
-synopsis:            Cluster single cells.
-description:         Different methods to cluster and analyze single cell data.
-homepage:            http://github.com/GregorySchwartz/sc-cluster#readme
+synopsis:            Cluster single cells and analyze them.
+description:         Different methods to cluster and analyze single cell data with diversity indices and differential expression.
+homepage:            http://github.com/GregorySchwartz/too-many-cells#readme
 license:             GPL-3
 license-file:        LICENSE
 author:              Gregory W. Schwartz
 maintainer:          gsch@pennmedicine.upenn.edu
-copyright:           2017 Gregory W. Schwartz
+copyright:           2018 Gregory W. Schwartz
 category:            Bioinformatics
 build-type:          Simple
 -- extra-source-files:
@@ -15,14 +15,18 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Types
-                     , Load
-                     , Preprocess
-                     , Adjacency
-                     , Cluster
-                     , Clumpiness
-                     , Plot
-                     , Utility
+  exposed-modules:     TooManyCells.MakeTree.Types
+                     , TooManyCells.MakeTree.Load
+                     , TooManyCells.MakeTree.Preprocess
+                     , TooManyCells.MakeTree.Adjacency
+                     , TooManyCells.MakeTree.Cluster
+                     , TooManyCells.MakeTree.Clumpiness
+                     , TooManyCells.MakeTree.Plot
+                     , TooManyCells.MakeTree.Utility
+                     , TooManyCells.Diversity.Types
+                     , TooManyCells.Diversity.Diversity
+                     , TooManyCells.Diversity.Load
+                     , TooManyCells.Diversity.Plot
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , bytestring
@@ -34,7 +38,10 @@ library
                      , diagrams-lib
                      , diagrams-cairo
                      , diagrams-graphviz
+                     , directory
+                     , diversity
                      , find-clumpiness
+                     , filepath
                      , fgl
                      , foldl
                      , graphviz
@@ -45,6 +52,7 @@ library
                      , inline-r
                      , lens
                      , managed
+                     , matplotlib
                      , matrix-market-attoparsec
                      , mltool
                      , modularity
@@ -66,12 +74,12 @@ library
   ghc-options:         -O2
   default-language:    Haskell2010
 
-executable sc-cluster
+executable too-many-cells
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -O2
   build-depends:       base
-                     , sc-cluster
+                     , too-many-cells
                      , aeson
                      , bytestring
                      , cassava
@@ -85,6 +93,7 @@ executable sc-cluster
                      , hierarchical-spectral-clustering
                      , inline-r
                      , lens
+                     , matplotlib
                      , matrix-market-attoparsec
                      , optparse-generic
                      , plots
@@ -98,4 +107,4 @@ executable sc-cluster
 
 source-repository head
   type:     git
-  location: https://github.com/GregorySchwartz/sc-cluster
+  location: https://github.com/GregorySchwartz/too-many-cells

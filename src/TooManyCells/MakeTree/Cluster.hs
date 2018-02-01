@@ -1,4 +1,4 @@
-{- Cluster
+{- TooManyCells.MakeTree.Cluster
 Gregory W. Schwartz
 
 Collects the functions pertaining to the clustering of columns.
@@ -7,7 +7,7 @@ Collects the functions pertaining to the clustering of columns.
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE BangPatterns #-}
 
-module Cluster
+module TooManyCells.MakeTree.Cluster
     ( hdbscan
     , clustersToClusterList
     , hClust
@@ -36,9 +36,9 @@ import qualified Data.Vector.Unboxed as VU
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
-import Types
-import Utility
-import Adjacency
+import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
+import TooManyCells.MakeTree.Adjacency
 
 -- | Cluster cLanguage.R.QQ (r)olumns of a sparse matrix using HDBSCAN.
 hdbscan :: RMatObsRowImportant s -> R s (R.SomeSEXP s)

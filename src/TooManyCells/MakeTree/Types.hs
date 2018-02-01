@@ -1,4 +1,4 @@
-{- Types
+{- TooManyCells.MakeTree.Types
 Gregory W. Schwartz
 
 Collects the types used in the program
@@ -10,7 +10,7 @@ Collects the types used in the program
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Types where
+module TooManyCells.MakeTree.Types where
 
 -- Remote
 import Data.Colour.Palette.BrewerSet (Kolor)
@@ -63,7 +63,9 @@ newtype MatrixFile = MatrixFile
     } deriving (Read,Show)
 newtype ProjectionFile  = ProjectionFile { unProjectionFile :: FilePath }
 newtype LabelFile       = LabelFile { unLabelFile :: FilePath }
-newtype PriorDirectory  = PriorDirectory { unPriorDirectory :: FilePath }
+newtype PriorPath   = PriorPath
+    { unPriorPath :: FilePath
+    } deriving (Eq,Ord,Read,Show)
 newtype OutputDirectory  = OutputDirectory { unOutputDirectory :: FilePath }
 newtype X = X
     { unX :: Double

@@ -1,11 +1,11 @@
-{- Adjacency
+{- TooManyCells.MakeTree.Adjacency
 Gregory W. Schwartz
 
 Collects functions pertaining to calculating similarities and adjacency
 matrices.
 -}
 
-module Adjacency
+module TooManyCells.MakeTree.Adjacency
     ( cosineSimilarityDense
     , cosineSimilaritySparse
     , getDenseAdjacencyMat
@@ -17,8 +17,8 @@ import qualified Numeric.LinearAlgebra as H
 import qualified Data.Sparse.Common as S
 
 -- Local
-import Types
-import Utility
+import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
 
 -- | Get the cosine similarity between two vectors.
 cosineSimilarityDense :: H.Vector Double -> H.Vector Double -> Double

@@ -1,4 +1,4 @@
-{- Utility
+{- TooManyCells.MakeTree.Utility
 Gregory W. Schwartz
 
 Collects helper functions in the program.
@@ -8,7 +8,7 @@ Collects helper functions in the program.
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Utility
+module TooManyCells.MakeTree.Utility
     ( matToRMat
     , scToRMat
     , getMostFrequent
@@ -44,7 +44,7 @@ import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
-import Types
+import TooManyCells.MakeTree.Types
 
 -- | Convert a mat to an RMatrix.
 matToRMat :: MatObsRow -> R s (RMatObsRow s)

@@ -24,7 +24,6 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (B (..))
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend)
 import Options.Generic
-import System.Directory (createDirectoryIfMissing, copyFile)
 import System.IO (hPutStrLn, stderr)
 import TextShow (showt)
 import qualified Control.Lens as L
@@ -37,21 +36,27 @@ import qualified Data.Text.Lazy.IO as T
 import qualified Data.Vector as V
 import qualified Diagrams.Backend.Cairo as D
 import qualified Diagrams.Prelude as D
+import qualified Graphics.Matplotlib as P
 import qualified H.Prelude as H
 import qualified Plots as D
+import qualified System.Directory as FP
 import qualified System.FilePath as FP
 
 -- Local
-import Types
-import Utility
-import Load
-import Preprocess
-import Cluster
-import Clumpiness
-import Plot
+import TooManyCells.Diversity.Diversity
+import TooManyCells.Diversity.Load
+import TooManyCells.Diversity.Plot
+import TooManyCells.Diversity.Types
+import TooManyCells.MakeTree.Clumpiness
+import TooManyCells.MakeTree.Cluster
+import TooManyCells.MakeTree.Load
+import TooManyCells.MakeTree.Plot
+import TooManyCells.MakeTree.Preprocess
+import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
 
 -- | Command line arguments
-data Options = Options { matrixFile  :: Maybe String
+data Options = MakeTree { matrixFile  :: Maybe String
                                <?> "([matrix.mtx] | FILE) The input file containing the matrix output of cellranger or, if genes-file and cells-file are not specified, a csv containing gene row names and cell column names."
                        , genesFile :: Maybe String
                                <?> "([genes.tsv] | FILE) The input file containing gene information from cellranger. Matches row order in the matrix file."
@@ -75,30 +80,44 @@ data Options = Options { matrixFile  :: Maybe String
                                <?> "Draw the node numbers on top of each vertex in the graph."
                        , prior :: Maybe String
                                <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
+                       , vertices :: String
+                                 <?> "([VERTEX], [VERTEX]) Find the differential expression between cells belonging downstream of a list of vertices versus another list of vertices. Supports only one population."
                        , output :: Maybe String
                                <?> "([out] | STRING) The folder containing output."
                        }
-               deriving (Generic)
+            | Diversity { priors   :: [String]
+                                 <?> "(PATH) Either input folders containing the output from a run of sc-cluster or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case."
+                         , start    :: Maybe Integer
+                                 <?> "([0] | INT) For the rarefaction curve, start the curve at this subsampling."
+                         , interval :: Maybe Integer
+                                 <?> "([1] | INT) For the rarefaction curve, the amount to increase each subsampling. For instance, starting at 0 with an interval of 4, we would sampling 0, 4, 8, 12, ..."
+                         , end      :: Maybe Integer
+                                 <?> "([N] | INT) For the rarefaction curve, which subsample to stop at. By default, the curve stops at the observed number of species for each population."
+                         , order    :: Maybe Double
+                                 <?> "([1] | DOUBLE) The order of diversity."
+                         , output   :: Maybe String
+                                 <?> "([out] | STRING) The folder containing output."
+                         }
+              deriving (Generic)
 
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
     short "minSize"           = Just 'M'
-    short "prior"             = Just 'P'
+    short "projectionFile"    = Just 'j'
+    short "priors"            = Just 'P'
     short "preNormalization"  = Just 'n'
     short "drawLeaf"          = Just 'L'
     short "drawDendrogram"    = Just 'D'
     short "drawNodeNumber"    = Just 'N'
+    short "order"             = Just 'O'
     short x                   = firstLetter x
 
 instance ParseRecord Options where
     parseRecord = parseRecordWithModifiers modifiers
 
-main :: IO ()
-main = do
-    opts <- getRecord "sc-cluster, Gregory W. Schwartz.\
-                      \ Clusters single cell data."
-
+makeTreeMain :: Options -> IO ()
+makeTreeMain opts = do
     let matrixFile'     =
             MatrixFile . fromMaybe "matrix.mtx" . unHelpful . matrixFile $ opts
         genesFile'      =
@@ -110,7 +129,7 @@ main = do
         labelsFile'     =
             fmap LabelFile . unHelpful . labelsFile $ opts
         prior'          =
-            fmap PriorDirectory . unHelpful . prior $ opts
+            fmap PriorPath . unHelpful . prior $ opts
         delimiter'      =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         preNormalization' =
@@ -144,7 +163,7 @@ main = do
         processedSc    = sc >>= (\x -> return $ x { matrix = processMat x })
 
     -- Where to place output files.
-    createDirectoryIfMissing True . unOutputDirectory $ output'
+    FP.createDirectoryIfMissing True . unOutputDirectory $ output'
 
     labelMap     <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
 
@@ -197,9 +216,9 @@ main = do
                 return ((return cr, return b, return gr) :: (IO ClusterResults, IO B, IO CellGraph))
             (Just x) -> do
                 let crInput =
-                        (FP.</> "cluster_results.json") . unPriorDirectory $ x
-                    bInput  = (FP.</> "b.mtx") . unPriorDirectory $ x
-                    grInput  = (FP.</> "graph.dot") . unPriorDirectory $ x
+                        (FP.</> "cluster_results.json") . unPriorPath $ x
+                    bInput  = (FP.</> "b.mtx") . unPriorPath $ x
+                    grInput  = (FP.</> "graph.dot") . unPriorPath $ x
                     cr :: IO ClusterResults
                     cr = fmap (either error id . A.eitherDecode)
                        . B.readFile
@@ -209,15 +228,15 @@ main = do
                        . readMatrix
                        $ bInput
 
-                copyFile crInput
+                FP.copyFile crInput
                     . (FP.</> "cluster_results.json")
                     . unOutputDirectory
                     $ output'
-                copyFile bInput
+                FP.copyFile bInput
                     . (FP.</> "b.mtx")
                     . unOutputDirectory
                     $ output'
-                copyFile grInput
+                FP.copyFile grInput
                     . (FP.</> "graph.dot")
                     . unOutputDirectory
                     $ output'
@@ -286,3 +305,72 @@ main = do
             -- . plotClusters
 
         return ()
+
+-- | Diversity path.
+diversityMain :: Options -> IO ()
+diversityMain opts = do
+    let priors'         =
+            fmap PriorPath . unHelpful . priors $ opts
+        output'         =
+            OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
+        order'       = Order . fromMaybe 1 . unHelpful . order $ opts
+        start'       = Start . fromMaybe 0 . unHelpful . start $ opts
+        interval'    = Interval . fromMaybe 1 . unHelpful . interval $ opts
+        endMay'      = fmap End . unHelpful . end $ opts
+
+    -- Where to place output files.
+    FP.createDirectoryIfMissing True . unOutputDirectory $ output'
+
+    pops <- sequence
+          . fmap (\x -> do
+                            pop <- fmap (L.view L._1) . loadPopulation $ x
+                            return (Label . T.pack . unPriorPath $ x , pop)
+                 )
+          $ priors'
+
+    popDiversities <-
+        mapM
+            (\ (l, pop) -> getPopulationDiversity
+                                l
+                                order'
+                                start'
+                                interval'
+                                endMay'
+                                pop
+            )
+            pops
+
+    D.renderCairo (unOutputDirectory output' FP.</> "diversity.pdf") D.absolute
+        . plotDiversity
+        $ popDiversities
+
+    D.renderCairo (unOutputDirectory output' FP.</> "chao1.pdf") D.absolute
+        . plotChao1
+        $ popDiversities
+
+    D.renderCairo (unOutputDirectory output' FP.</> "rarefaction.pdf") D.absolute
+        . plotRarefaction
+        $ popDiversities
+
+    P.file (unOutputDirectory output' FP.</> "diversity_py.pdf")
+        . plotDiversityPy
+        $ popDiversities
+
+    P.file (unOutputDirectory output' FP.</> "chao1_py.pdf")
+        . plotChao1Py
+        $ popDiversities
+
+    P.file (unOutputDirectory output' FP.</> "rarefaction_py.pdf")
+        . plotRarefactionPy
+        $ popDiversities
+
+    return ()
+
+main :: IO ()
+main = do
+    opts <- getRecord "too-many-cells, Gregory W. Schwartz.\
+                      \ Clusters and analyzes single cell data."
+
+    case opts of
+        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
+        (Main.Diversity _ _ _ _ _ _) -> diversityMain opts

@@ -1,4 +1,4 @@
-{- Clumpiness
+{- TooManyCells.MakeTree.Clumpiness
 Gregory W. Schwartz
 
 Collects the functions pertaining to finding the clumpiness from a single cell
@@ -8,7 +8,7 @@ dendrogram.
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Clumpiness
+module TooManyCells.MakeTree.Clumpiness
     ( dendToClumpCsv
     ) where
 
@@ -26,7 +26,7 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 
 -- Local
-import Types
+import TooManyCells.MakeTree.Types
 
 -- | Convert a single cell dendrogram to a workable format for clumpiness.
 dendToClumpDend :: LabelMap -> HC.Dendrogram (V.Vector CellInfo) -> Tree Clump.NodeLabel

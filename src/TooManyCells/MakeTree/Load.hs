@@ -1,4 +1,4 @@
-{- Load
+{- TooManyCells.MakeTree.Load
 Gregory W. Schwartz
 
 Collects the functions pertaining to loading the single cell data output from
@@ -8,7 +8,7 @@ cellranger.
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Load
+module TooManyCells.MakeTree.Load
     ( matToSpMat
     , spMatToMat
     , loadCellrangerData
@@ -46,8 +46,8 @@ import qualified Streaming.Prelude as S
 import qualified Streaming.With.Lifted as SW
 
 -- Local
-import Types
-import Utility
+import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
 
 -- | Load output of cellranger.
 loadCellrangerData
@@ -184,7 +184,7 @@ loadSparseMatrixDataStream (Delimiter delim) pf mf = do
                 . (S.store gS)
                 . (S.store mS)
                 . S.decode S.NoHeader
-                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ()) 
+                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
 
         let finalMat = MatObsRow . HS.sparsifySM . HS.fromColsL $ m -- We want observations as rows
 

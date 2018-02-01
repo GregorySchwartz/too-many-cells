@@ -1,4 +1,4 @@
-{- Plot
+{- TooManyCells.MakeTree.Plot
 Gregory W. Schwartz
 
 Collects the functions pertaining to plotting the clusterings.
@@ -12,7 +12,7 @@ Collects the functions pertaining to plotting the clusterings.
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE GADTs #-}
 
-module Plot
+module TooManyCells.MakeTree.Plot
     ( plotClusters
     , plotClustersR
     , plotDendrogram
@@ -61,8 +61,8 @@ import qualified Diagrams.TwoD.GraphViz as G hiding (mkGraph)
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
-import Types
-import Utility
+import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
 
 -- | Plot clusters on a 2D axis.
 plotClusters :: [(CellInfo, Cluster)] -> Axis B V2 Double
