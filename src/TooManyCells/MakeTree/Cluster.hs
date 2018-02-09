@@ -36,9 +36,10 @@ import qualified Data.Vector.Unboxed as VU
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
+import TooManyCells.MakeTree.Adjacency
 import TooManyCells.MakeTree.Types
 import TooManyCells.MakeTree.Utility
-import TooManyCells.MakeTree.Adjacency
+import TooManyCells.Matrix.Types
 
 -- | Cluster cLanguage.R.QQ (r)olumns of a sparse matrix using HDBSCAN.
 hdbscan :: RMatObsRowImportant s -> R s (R.SomeSEXP s)

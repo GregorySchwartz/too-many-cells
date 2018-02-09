@@ -29,6 +29,7 @@ import qualified Data.Text as T
 -- Local
 import TooManyCells.Diversity.Types
 import TooManyCells.MakeTree.Types
+import TooManyCells.Matrix.Types
 
 -- | Get the label of a population diversity as a String.
 getLabel :: PopulationDiversity -> String

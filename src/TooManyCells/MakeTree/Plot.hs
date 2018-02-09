@@ -26,6 +26,7 @@ module TooManyCells.MakeTree.Plot
 
 -- Remote
 import Control.Monad (forM, mapM, join)
+import Control.Monad.State (State (..))
 import Data.Colour (AffineSpace (..))
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..), Kolor)
@@ -63,6 +64,7 @@ import qualified Numeric.LinearAlgebra as H
 -- Local
 import TooManyCells.MakeTree.Types
 import TooManyCells.MakeTree.Utility
+import TooManyCells.Matrix.Types
 
 -- | Plot clusters on a 2D axis.
 plotClusters :: [(CellInfo, Cluster)] -> Axis B V2 Double
@@ -307,16 +309,37 @@ drawGraphLabel cm cells =
 
 -- | Plot the node of a graph as a collection of cells.
 drawGraphCell :: Maybe CellColorMap -> Seq.Seq CellInfo -> Diagram B
-drawGraphCell Nothing leaf = getCell black # centerX # pad 1.3 # center
+drawGraphCell Nothing _ = getCell black # centerX # pad 1.3 # center
 drawGraphCell (Just (CellColorMap cm)) node =
     (vcat . fmap hcat . Split.chunksOf boxSize $ cells) # center
   where
-    boxSize = ceiling . sqrt . fromIntegral . Seq.length $ node
+    boxSize = floor . sqrt . fromIntegral . Seq.length $ node
     cells  = fmap getCell colors
     colors = sort
            . fmap (flip (Map.findWithDefault black) cm . barcode)
            . F.toList
            $ node
+
+-- | Plot a pie chart of cells.
+drawPieCell :: DrawPie -> Maybe CellColorMap -> Seq.Seq CellInfo -> Diagram B
+drawPieCell _ Nothing _ = mempty
+drawPieCell drawPie (Just (CellColorMap cm)) node =
+    renderAxis $ polarAxis &~ do
+        let colorWedge :: (Kolor, Double) -> State (Plot (Wedge Double) b) ()
+            colorWedge colorPair = do
+                plotColor .= fst colorPair
+                areaStyle . _lw .= none
+            colorPairs = sortBy (compare `on` snd)
+                       . getFractions
+                       . fmap (flip (Map.findWithDefault black) cm . barcode)
+                       . F.toList
+                       $ node
+
+        piePlot colorPairs snd $ onWedges colorWedge
+        case drawPie of
+            PieChart -> return ()
+            _        -> wedgeInnerRadius .= 0.9
+        hide (axes . traversed)
 
 -- | Draw a single cell.
 getCell :: Kolor -> Diagram B
@@ -418,9 +441,9 @@ getGraphLeafCells (CellGraph gr) =
 -- diameter of each node (36) and the maximum size of a cluster.
 getScaledLeafSize :: Int -> Seq.Seq CellInfo -> Double
 getScaledLeafSize maxLen =
-    isTo (fromIntegral . ceiling . sqrt . fromIntegral $ maxLen) 36
+    isTo (fromIntegral . floor . sqrt . fromIntegral $ maxLen) 36
         . fromIntegral
-        . ceiling
+        . floor
         . sqrt
         . fromIntegral
         . Seq.length
@@ -446,7 +469,7 @@ getEdgeTrail p1 p2 h1 h2 = fromVertices
 -- | Distance d away from p on perpendicular line from p to q, by byorgey.
 perpendicular :: P2 Double -> P2 Double -> Double -> P2 Double
 perpendicular p q d = p .+^ ((q .-. p) # perp # normalize # scale d)
-              
+
 -- | Get the linear gradient of an edge.
 getEdgeGrad :: P2 Double
             -> Kolor
@@ -465,10 +488,10 @@ getEdgeGrad p1 c1 p2 c2 h1 h2 =
     origin = perpendicular p1 p2 d1
     d1     = h1 / 2
     d2     = h2 / 2
-            
+
 -- | The function to draw a path connection two nodes in a graph.
 drawGraphPath
-    :: DrawNodeNumber
+    :: DrawConfig
     -> Maybe CellColorMap
     -> CellGraph
     -> (G.Node, Maybe (Seq.Seq CellInfo))
@@ -478,7 +501,7 @@ drawGraphPath
     -> HC.Distance
     -> Path V2 Double
     -> Diagram B
-drawGraphPath dnn cm gr (n1, _) p1 (n2, _) p2 _ _ =
+drawGraphPath opts cm gr (n1, _) p1 (n2, _) p2 _ _ =
     strokeLoop trail
         -- # fc ( getGraphColor cm
         --      $ getGraphLeafCells gr n1
@@ -495,36 +518,51 @@ drawGraphPath dnn cm gr (n1, _) p1 (n2, _) p2 _ _ =
     c1           = getGraphColor cm $ getGraphLeafCells gr n1
     c2           = getGraphColor cm $ getGraphLeafCells gr n2
     trail        = getEdgeTrail p1 p2 (height draw1) (height draw2)
-    drawNode n p = drawGraphNode dnn DrawText cm gr (n, Nothing) p -- DrawText is irrelevant here.
+    drawNode n p = drawGraphNode opts cm gr (n, Nothing) p -- DrawText is irrelevant here.
 
 -- | Draw the final node of a graph.
-drawGraphNode :: DrawNodeNumber
-              -> DrawLeaf
+drawGraphNode :: DrawConfig
               -> Maybe CellColorMap
               -> CellGraph
               -> (G.Node, Maybe (Seq.Seq CellInfo))
               -> P2 Double
               -> Diagram B
-drawGraphNode (DrawNodeNumber dnn) DrawText cm _ (n, Just cells) pos =
+drawGraphNode opts@(DrawConfig { _drawLeaf = DrawText }) cm _ (n, Just cells) pos =
     (textDia dnn <> drawGraphLabel cm cells)
         # scaleUToY 36
         # moveTo pos
   where
     textDia True  = text (show n) # fc black
     textDia False = mempty
-drawGraphNode (DrawNodeNumber dnn) (DrawCell _) cm gr (n, Just cells) pos         =
-    (textDia dnn <> drawGraphCell cm cells)
-        # scaleUToY (getScaledLeafSize maxClusterSize' cells)
+    dnn = unDrawNodeNumber . _drawNodeNumber $ opts
+drawGraphNode opts@(DrawConfig { _drawLeaf = (DrawCell _) }) cm gr (n, Just cells) pos =
+    ( pieDia (_drawPie opts)
+   <> cellsDia
+   <> background (_drawPie opts)
+    )
         # moveTo pos
   where
+    background PieNone = roundedRect (width cellsDia) (height cellsDia) 1 # fc white # lw none # scaleUToY (scaleVal * 1.1)
+    background _       = circle 1 # fc white # lw none # scaleUToY scaleVal
+    cellsDia              = getCellsDia $ _drawPie opts
+    getCellsDia PieNone   = scaleUToY scaleVal
+                          $ textDia dnn <> drawGraphCell cm cells
+    getCellsDia PieChart  = mempty
+    getCellsDia _         = scaleUToY (0.50 * scaleVal)
+                          $ textDia dnn <> drawGraphCell cm cells
+    pieDia PieNone     = mempty
+    pieDia x           = scaleUToY scaleVal $ drawPieCell x cm cells
+    scaleVal   = getScaledLeafSize maxClusterSize' cells
     maxClusterSize' = maxClusterSize . unCellGraph $ gr
     textDia True  = text (show n) # fc black
     textDia False = mempty
-drawGraphNode (DrawNodeNumber dnn) _ cm gr (n, Nothing) pos               =
+    dnn = unDrawNodeNumber . _drawNodeNumber $ opts
+drawGraphNode opts cm gr (n, Nothing) pos               =
     (textDia dnn <> (circle 1 # fc color # rootDiffer n))
         # scaleUToY (2 * getNodeSize cells) -- We want the branches to be a little thicker.
         # moveTo pos
   where
+    dnn = unDrawNodeNumber . _drawNodeNumber $ opts
     textDia True  = text (show n) # fc black
     textDia False = mempty
     rootDiffer 0 = lw none
@@ -540,12 +578,11 @@ drawGraphNode (DrawNodeNumber dnn) _ cm gr (n, Nothing) pos               =
 -- rather than a tree which stores all leaves.
 plotGraph
     :: Maybe (Diagram B)
-    -> DrawNodeNumber
-    -> DrawLeaf
+    -> DrawConfig
     -> Maybe CellColorMap
     -> CellGraph
     -> IO (Diagram B)
-plotGraph legend drawNodeNumber drawLeaf cm (CellGraph gr) = do
+plotGraph legend opts cm (CellGraph gr) = do
     let numClusters :: Double
         numClusters = fromIntegral . Seq.length $ getGraphLeaves gr 0
         params :: G.GraphvizParams Int (G.Node, Maybe (Seq.Seq CellInfo)) HC.Distance () (G.Node, Maybe (Seq.Seq CellInfo))
@@ -558,8 +595,8 @@ plotGraph legend drawNodeNumber drawLeaf cm (CellGraph gr) = do
 
     let treeDia =
             G.drawGraph'
-                (drawGraphNode drawNodeNumber drawLeaf cm (CellGraph gr))
-                (drawGraphPath drawNodeNumber cm (CellGraph gr))
+                (drawGraphNode opts cm (CellGraph gr))
+                (drawGraphPath opts cm (CellGraph gr))
                 layout
         dia = case legend of
                 Nothing  -> pad 1 . center $ treeDia

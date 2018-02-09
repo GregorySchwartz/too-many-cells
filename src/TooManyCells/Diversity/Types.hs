@@ -10,13 +10,13 @@ Collects the types used in the program
 module TooManyCells.Diversity.Types where
 
 -- Remote
-import TooManyCells.MakeTree.Types (Cluster (..), Cell (..))
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 
 -- Local
 import TooManyCells.MakeTree.Types
+import TooManyCells.Matrix.Types
 
 
 -- Basic

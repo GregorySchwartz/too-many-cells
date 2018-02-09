@@ -21,6 +21,7 @@ import qualified Data.Sequence as Seq
 -- Local
 import TooManyCells.Diversity.Types
 import TooManyCells.MakeTree.Types
+import TooManyCells.Matrix.Types
 
 -- | Find the diversity, Chao1 estimator, and rarefaction curve of a population.
 getPopulationDiversity :: Label

@@ -27,6 +27,7 @@ import qualified Data.Vector as V
 
 -- Local
 import TooManyCells.MakeTree.Types
+import TooManyCells.Matrix.Types
 
 -- | Convert a single cell dendrogram to a workable format for clumpiness.
 dendToClumpDend :: LabelMap -> HC.Dendrogram (V.Vector CellInfo) -> Tree Clump.NodeLabel

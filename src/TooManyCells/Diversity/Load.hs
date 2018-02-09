@@ -36,8 +36,10 @@ import qualified System.FilePath as FP
 
 -- Local
 import TooManyCells.Diversity.Types
+import TooManyCells.File.Types
 import TooManyCells.MakeTree.Types
-import TooManyCells.MakeTree.Utility (matToSpMat)
+import TooManyCells.Matrix.Utility
+import TooManyCells.Matrix.Types
 
 -- | Load a population representation from a cluster file
 loadPopulationCsv :: PriorPath -> IO Population

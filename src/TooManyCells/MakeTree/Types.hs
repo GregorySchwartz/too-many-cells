@@ -32,14 +32,12 @@ import qualified Data.Sparse.Common as S
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
+import TooManyCells.Matrix.Types
 
 -- Basic
 newtype Label = Label
     { unLabel :: Text
     } deriving (Eq,Ord,Read,Show)
-newtype Cell = Cell
-    { unCell :: Text
-    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON, A.FromJSON)
 newtype Cluster = Cluster
     { unCluster :: Int
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
@@ -53,47 +51,9 @@ newtype DrawNodeNumber = DrawNodeNumber
     { unDrawNodeNumber :: Bool
     } deriving (Read,Show)
 newtype IsLeaf = IsLeaf {unIsLeaf :: Bool} deriving (Eq, Ord, Read, Show)
-newtype Cols            = Cols { unCols :: [Double] }
-newtype Delimiter       = Delimiter { unDelimiter :: Char }
-newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show)
-newtype CellFile        = CellFile { unCellFile :: FilePath }
-newtype GeneFile        = GeneFile { unGeneFile :: FilePath }
-newtype MatrixFile = MatrixFile
-    { unMatrixFile :: FilePath
-    } deriving (Read,Show)
-newtype ProjectionFile  = ProjectionFile { unProjectionFile :: FilePath }
-newtype LabelFile       = LabelFile { unLabelFile :: FilePath }
-newtype PriorPath   = PriorPath
-    { unPriorPath :: FilePath
-    } deriving (Eq,Ord,Read,Show)
-newtype OutputDirectory  = OutputDirectory { unOutputDirectory :: FilePath }
-newtype X = X
-    { unX :: Double
-    } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
-newtype Y = Y
-    { unY :: Double
-    } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
-newtype RMat s          = RMat { unRMat :: R.SomeSEXP s }
-newtype RMatObsRow s    = RMatObsRow { unRMatObsRow :: R.SomeSEXP s }
-newtype RMatFeatRow s   = RMatFeatRow { unRMatFeatRow :: R.SomeSEXP s }
-newtype RMatObsRowImportant s = RMatObsRowImportant
-    { unRMatObsRowImportant :: R.SomeSEXP s
-    }
-newtype RMatScaled s    = RMatScaled { unRMatScaled :: R.SomeSEXP s }
-newtype Row = Row
-    { unRow :: Int
-    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
-newtype Rows            = Rows { unRows :: [Double] }
-newtype Vals            = Vals { unVals :: [Double] }
 newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)
-newtype MatObsRow = MatObsRow
-    { unMatObsRow :: S.SpMatrix Double
-    } deriving (Show)
-newtype MatObsRowImportant = MatObsRowImportant
-    { unMatObsRowImportant :: S.SpMatrix Double
-    } deriving (Show)
 newtype LabelMap = LabelMap
     { unLabelMap :: Map Cell Label
     } deriving (Read,Show)
@@ -108,21 +68,15 @@ newtype CellGraph = CellGraph
     } deriving (Read, Show)
 
 -- Advanced
-data DrawCellType = DrawLabel | DrawExpression Text deriving (Read, Show)
-data DrawLeaf = DrawCell DrawCellType | DrawText deriving (Read, Show)
+data DrawCellColor = DrawLabel | DrawExpression Text deriving (Read, Show)
+data DrawLeaf = DrawCell DrawCellColor | DrawText deriving (Read, Show)
+data DrawPie  = PieRing | PieChart | PieNone deriving (Read, Show)
 
-data SingleCells a = SingleCells { matrix :: a
-                                 , rowNames :: Vector Cell
-                                 , colNames :: Vector Gene
-                                 , projections :: Vector (X, Y)
-                                 }
-                     deriving (Read, Show)
-
-data CellInfo = CellInfo
-    { barcode :: Cell
-    , cellRow :: Row
-    , projection :: (X, Y)
-    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
+data DrawConfig = DrawConfig
+    { _drawLeaf :: DrawLeaf
+    , _drawPie :: DrawPie
+    , _drawNodeNumber :: DrawNodeNumber
+    } deriving (Read,Show)
 
 data ClusterResults = ClusterResults
     { clusterList :: [(CellInfo, [Cluster])] -- Thanks to hierarchical clustering, we can have multiple clusters per cell.
@@ -131,8 +85,6 @@ data ClusterResults = ClusterResults
 
 deriving instance (Read a) => Read (HC.Dendrogram a)
 deriving instance (Generic a) => Generic (HC.Dendrogram a)
-
-instance (Generic a) => Generic (Vector a)
 
 instance A.ToJSON Q where
     toEncoding = A.genericToEncoding A.defaultOptions
