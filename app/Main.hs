@@ -79,7 +79,7 @@ data Options = MakeTree { matrixFile  :: Maybe String
                        , minSize   :: Maybe Int
                                <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                        , drawLeaf :: Maybe String
-                               <?> "([DrawText] | DrawCell) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawCell is the collection of cells represented by circles, consisting of: DrawCell DrawLabel, where each cell is colored by its label, and DrawCell (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
+                               <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, and DrawItem (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
                        , drawPie :: Maybe String
                                <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                        , drawDendrogram :: Bool
@@ -208,20 +208,20 @@ makeTreeMain opts = do
     labelMap     <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
 
     let labelColorMap = fmap getLabelColorMap labelMap
-        cellColorMap =
+        itemColorMap =
             case drawLeaf' of
                 DrawText           ->
                     return $ do
                         lcm <- labelColorMap
                         lm  <- labelMap
-                        return $ labelToCellColorMap lcm lm
-                DrawCell DrawLabel ->
+                        return $ labelToItemColorMap lcm lm
+                DrawItem DrawLabel ->
                     return $ do
                         lcm <- labelColorMap
                         lm  <- labelMap
-                        return $ labelToCellColorMap lcm lm
-                DrawCell (DrawExpression x) ->
-                    fmap (Just . getCellColorMapExpression (Gene x)) processedSc
+                        return $ labelToItemColorMap lcm lm
+                DrawItem (DrawExpression x) ->
+                    fmap (Just . getItemColorMapExpression (Gene x)) processedSc
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -250,10 +250,10 @@ makeTreeMain opts = do
                     (unOutputDirectory output' FP.</> "graph.dot")
                     . G.printDotGraph
                     . G.graphToDot G.nonClusteredParams
-                    . unCellGraph
+                    . unClusterGraph
                     $ gr
 
-                return ((return cr, return b, return gr) :: (IO ClusterResults, IO B, IO CellGraph))
+                return ((return cr, return b, return gr) :: (IO ClusterResults, IO B, IO (ClusterGraph CellInfo)))
             (Just x) -> do
                 let crInput =
                         (FP.</> "cluster_results.json") . unPriorPath $ x
@@ -318,9 +318,9 @@ makeTreeMain opts = do
         H.io $ do
             cr <- clusterResults
             gr <- graph
-            cm <- cellColorMap
+            cm <- itemColorMap
             legend <- case drawLeaf' of
-                        (DrawCell (DrawExpression g)) ->
+                        (DrawItem (DrawExpression g)) ->
                             fmap
                                 (Just . plotExpressionLegend (Gene g))
                                 processedSc

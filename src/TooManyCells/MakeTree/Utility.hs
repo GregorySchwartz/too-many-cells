@@ -64,16 +64,18 @@ isTo x y a = a / (x / y)
 -- plotting with leaves containing all information. This also means that the
 -- node must be in the label as well.
 dendrogramToGraph
-    :: HC.Dendrogram (V.Vector CellInfo)
-    -> CellGraph
+    :: (TreeItem a)
+    => HC.Dendrogram (V.Vector a)
+    -> ClusterGraph a
 dendrogramToGraph =
-    CellGraph
+    ClusterGraph
         . snd
         . flip execState (0, G.empty)
         . go
   where
-    go :: HC.Dendrogram (V.Vector CellInfo)
-       -> State (Int, G.Gr (G.Node, Maybe (Seq.Seq CellInfo)) HC.Distance) Int
+    go :: (TreeItem a)
+       => HC.Dendrogram (V.Vector a)
+       -> State (Int, G.Gr (G.Node, Maybe (Seq.Seq a)) HC.Distance) Int
     go (HC.Branch d l r) = do
         (n, gr) <- get
         modify (L.over L._1 (+ 1))
@@ -88,10 +90,10 @@ dendrogramToGraph =
         modify (L.over L._2 setGr)
 
         return n
-    go (HC.Leaf cells) = do
+    go (HC.Leaf items) = do
         (n, gr) <- get
 
-        modify (L.over L._1 (+ 1) . L.over L._2 (G.insNode (n, (n, Just . Seq.fromList . V.toList $ cells))))
+        modify (L.over L._1 (+ 1) . L.over L._2 (G.insNode (n, (n, Just . Seq.fromList . V.toList $ items))))
 
         return n
 

@@ -55,8 +55,9 @@ scToTwoD cellGroups sc =
                 $ cellGroups
 
 -- | Get the indices and statuses for two lists of vertices.
-getStatuses :: [G.Node] -> [G.Node] -> CellGraph -> [(Int, Cell, Diff.Status)]
-getStatuses v1 v2 (CellGraph gr) =
+getStatuses
+    :: [G.Node] -> [G.Node] -> ClusterGraph CellInfo -> [(Int, Cell, Diff.Status)]
+getStatuses v1 v2 (ClusterGraph gr) =
     sort
         . F.toList
         $ (Seq.><) (collapseStatus (1 :: Int) v1) (collapseStatus (2 :: Int) v2)
@@ -72,7 +73,7 @@ getDEGraph :: TopN
            -> SingleCells MatObsRow
            -> [G.Node]
            -> [G.Node]
-           -> CellGraph
+           -> ClusterGraph CellInfo
            -> R.R s [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
 getDEGraph (TopN topN) sc v1 v2 gr = do
     let cellGroups = getStatuses v1 v2 gr

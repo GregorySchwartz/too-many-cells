@@ -32,13 +32,13 @@ import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Types
 
 -- | Get the label of a population diversity as a String.
-getLabel :: PopulationDiversity -> String
-getLabel = T.unpack . unLabel . popLabel
+getPopLabel :: PopulationDiversity -> String
+getPopLabel = T.unpack . unLabel . popLabel
 
 -- | Plot the diversity of a group of populations.
 plotDiversity :: [PopulationDiversity] -> Diagram B
 plotDiversity xs = renderAxis $ r2Axis &~ do
-    namedBarPlot (fmap (\x -> (getLabel x, unDiversity . popDiversity $ x)) xs) $ do
+    namedBarPlot (fmap (\x -> (getPopLabel x, unDiversity . popDiversity $ x)) xs) $ do
         vertical .= True
     yMin ?= 0
     hideGridLines
@@ -50,7 +50,7 @@ plotDiversity xs = renderAxis $ r2Axis &~ do
 -- | Plot the Chao1 of a group of populations.
 plotChao1 :: [PopulationDiversity] -> Diagram B
 plotChao1 xs = renderAxis $ r2Axis &~ do
-    namedBarPlot (fmap (\x -> (getLabel x, unChao1 . popChao1 $ x)) xs) $ do
+    namedBarPlot (fmap (\x -> (getPopLabel x, unChao1 . popChao1 $ x)) xs) $ do
         vertical .= True
     hideGridLines
     yMin ?= 0
@@ -64,7 +64,7 @@ plotRarefaction :: [PopulationDiversity] -> Diagram B
 plotRarefaction xs = renderAxis $ r2Axis &~ do
     forM xs $ \pop -> do
         linePlot (fmap (over _2 unY . over _1 unX) . unRarefaction . popRarefaction $ pop) $ do
-            key . getLabel $ pop
+            key . getPopLabel $ pop
 
     hideGridLines
     xAxis.axisLineType .= LeftAxisLine
@@ -78,7 +78,7 @@ plotDiversityPy :: [PopulationDiversity] -> P.Matplotlib
 plotDiversityPy pops =
     mconcat
         $ fmap
-            (\pop -> P.bar (getLabel pop) (unDiversity . popDiversity $ pop))
+            (\pop -> P.bar (getPopLabel pop) (unDiversity . popDiversity $ pop))
             pops
 
 -- | Plot the Chao1 of a group of populations.
@@ -86,7 +86,7 @@ plotChao1Py :: [PopulationDiversity] -> P.Matplotlib
 plotChao1Py pops =
     mconcat
         $ fmap
-            (\pop -> P.bar (getLabel pop) (unChao1 . popChao1 $ pop))
+            (\pop -> P.bar (getPopLabel pop) (unChao1 . popChao1 $ pop))
             pops
 
 -- | Plot the rarefaction curves of a group of populations.
@@ -96,7 +96,7 @@ plotRarefactionPy pops =
         . mconcat
         $ fmap
             (\ pop -> uncurry P.line (getVals pop)
-                P.@@ [P.o2 "label" $ getLabel pop]
+                P.@@ [P.o2 "label" $ getPopLabel pop]
             )
             pops
   where

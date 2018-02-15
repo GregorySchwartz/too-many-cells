@@ -30,13 +30,15 @@ import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Types
 
 -- | Convert a single cell dendrogram to a workable format for clumpiness.
-dendToClumpDend :: LabelMap -> HC.Dendrogram (V.Vector CellInfo) -> Tree Clump.NodeLabel
+dendToClumpDend
+    :: (TreeItem a)
+    => LabelMap -> HC.Dendrogram (V.Vector a) -> Tree Clump.NodeLabel
 dendToClumpDend (LabelMap labelMap) =
     Clump.makeWorkable
         . fmap ( Seq.fromList
                . fmap unLabel
                . V.toList
-               . fmap ((\x -> Map.findWithDefault (error ("Cell has no label: " <> show x)) x labelMap) . barcode)
+               . fmap ((\x -> Map.findWithDefault (error ("Cell has no label: " <> show x)) x labelMap) . getId)
                )
 
 -- | Format clumpiness output to a CSV.

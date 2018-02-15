@@ -40,6 +40,7 @@ import TooManyCells.MakeTree.Adjacency
 import TooManyCells.MakeTree.Types
 import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Types
+import TooManyCells.Diversity.Types
 
 -- | Cluster cLanguage.R.QQ (r)olumns of a sparse matrix using HDBSCAN.
 hdbscan :: RMatObsRowImportant s -> R s (R.SomeSEXP s)
@@ -113,7 +114,7 @@ clustersToClusterList sc clustering = do
 -- | Hierarchical spectral clustering.
 hSpecClust :: MinClusterSize
            -> SingleCells MatObsRow
-           -> (ClusterResults, B, CellGraph)
+           -> (ClusterResults, B, ClusterGraph CellInfo)
 hSpecClust (MinClusterSize minSize) sc =
     ( ClusterResults { clusterList = clustering
                      , clusterDend = dend
@@ -129,7 +130,7 @@ hSpecClust (MinClusterSize minSize) sc =
                   )
             . F.toList
             . flip getGraphLeavesWithParents 0
-            . unCellGraph
+            . unClusterGraph
             $ gr
     gr         = dendrogramToGraph dend
     dend       = clusteringTreeToDendrogram tree
@@ -143,3 +144,9 @@ hSpecClust (MinClusterSize minSize) sc =
                     (rowNames sc)
                     (fmap Row . flip V.generate id . V.length . rowNames $ sc)
                     (projections sc)
+
+-- | Find the diversity of each leaf cluster.
+-- clusterDiversity :: Order -> ClusterResults -> [(Cluster, Diversity)]
+-- clusterDiversity (Order order) = clusterList
+--   where
+--     groupByLabels = 

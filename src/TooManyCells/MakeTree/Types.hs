@@ -38,6 +38,9 @@ import TooManyCells.Matrix.Types
 newtype Label = Label
     { unLabel :: Text
     } deriving (Eq,Ord,Read,Show)
+newtype Id = Id
+    { unId :: Text
+    } deriving (Eq,Ord,Read,Show)
 newtype Cluster = Cluster
     { unCluster :: Int
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
@@ -55,21 +58,21 @@ newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)
 newtype LabelMap = LabelMap
-    { unLabelMap :: Map Cell Label
+    { unLabelMap :: Map Id Label
     } deriving (Read,Show)
 newtype LabelColorMap = LabelColorMap
     { unLabelColorMap :: Map Label Kolor
     } deriving (Read,Show)
-newtype CellColorMap = CellColorMap
-    { unCellColorMap :: Map Cell Kolor
+newtype ItemColorMap = ItemColorMap
+    { unItemColorMap :: Map Id Kolor
     } deriving (Read,Show)
-newtype CellGraph = CellGraph
-    { unCellGraph :: G.Gr (G.Node, Maybe (Seq.Seq CellInfo)) HC.Distance
+newtype ClusterGraph a = ClusterGraph
+    { unClusterGraph :: G.Gr (G.Node, Maybe (Seq.Seq a)) HC.Distance
     } deriving (Read, Show)
 
 -- Advanced
-data DrawCellColor = DrawLabel | DrawExpression Text deriving (Read, Show)
-data DrawLeaf = DrawCell DrawCellColor | DrawText deriving (Read, Show)
+data DrawItemType = DrawLabel | DrawExpression Text deriving (Read, Show)
+data DrawLeaf = DrawItem DrawItemType | DrawText deriving (Read, Show)
 data DrawPie  = PieRing | PieChart | PieNone deriving (Read, Show)
 
 data DrawConfig = DrawConfig
@@ -82,6 +85,12 @@ data ClusterResults = ClusterResults
     { clusterList :: [(CellInfo, [Cluster])] -- Thanks to hierarchical clustering, we can have multiple clusters per cell.
     , clusterDend :: HC.Dendrogram (Vector CellInfo)
     } deriving (Read,Show,Generic,A.ToJSON,A.FromJSON)
+
+class TreeItem a where
+    getId :: a -> Id
+
+instance TreeItem CellInfo where
+    getId = Id . unCell . barcode
 
 deriving instance (Read a) => Read (HC.Dendrogram a)
 deriving instance (Generic a) => Generic (HC.Dendrogram a)

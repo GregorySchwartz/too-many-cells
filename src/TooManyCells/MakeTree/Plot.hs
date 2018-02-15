@@ -18,8 +18,8 @@ module TooManyCells.MakeTree.Plot
     , plotDendrogram
     , plotGraph
     , getLabelColorMap
-    , labelToCellColorMap
-    , getCellColorMapExpression
+    , labelToItemColorMap
+    , getItemColorMapExpression
     , plotLabelLegend
     , plotExpressionLegend
     ) where
@@ -172,10 +172,11 @@ plotClustersOnlyR outputPlot (RMatObsRowImportant mat) clustering = do
 
 -- | Plot a dendrogram.
 plotDendrogram
-    :: Maybe (Diagram B)
+    :: (TreeItem a)
+    => Maybe (Diagram B)
     -> DrawLeaf
-    -> Maybe CellColorMap
-    -> HC.Dendrogram (V.Vector CellInfo)
+    -> Maybe ItemColorMap
+    -> HC.Dendrogram (V.Vector a)
     -> Diagram B
 plotDendrogram Nothing drawLeaf cm dend =
     pad 1
@@ -188,7 +189,7 @@ plotDendrogram Nothing drawLeaf cm dend =
         $ dend
   where
     whichLeaf DrawText     = dendrogramLeafLabel
-    whichLeaf (DrawCell _) = dendrogramLeafCell
+    whichLeaf (DrawItem _) = dendrogramLeafItem
 plotDendrogram (Just legend) drawLeaf cm dend =
     pad 1
         . hsep 1
@@ -212,40 +213,43 @@ plotDendrogram (Just legend) drawLeaf cm dend =
              ((\tree items -> lw 0.1 . scaleToY (3 * height items) $ tree), curry snd)
          $ dend
     whichLeaf DrawText     = dendrogramLeafLabel
-    whichLeaf (DrawCell _) = dendrogramLeafCell
+    whichLeaf (DrawItem _) = dendrogramLeafItem
 
 -- | Get the most frequent color of a dendrogram.
-getMostFrequentColorDend :: CellColorMap
-                    -> HC.Dendrogram (V.Vector CellInfo)
-                    -> Kolor
-getMostFrequentColorDend (CellColorMap cm) (HC.Leaf leaf) =
+getMostFrequentColorDend
+    :: (TreeItem a)
+    => ItemColorMap -> HC.Dendrogram (V.Vector a) -> Kolor
+getMostFrequentColorDend (ItemColorMap cm) (HC.Leaf leaf) =
     getMostFrequent
-        . fmap (flip (Map.findWithDefault black) cm . barcode)
+        . fmap (flip (Map.findWithDefault black) cm . getId)
         . V.toList
         $ leaf
-getMostFrequentColorDend (CellColorMap cm) dend =
+getMostFrequentColorDend (ItemColorMap cm) dend =
     getMostFrequent
-        . concatMap ( fmap (flip (Map.findWithDefault black) cm . barcode)
+        . concatMap ( fmap (flip (Map.findWithDefault black) cm . getId)
                     . V.toList
                     )
         . getClusterItemsDend
         $ dend
 
 -- | Get the most frequent color of a list.
-getMostFrequentColorList :: Maybe CellColorMap -> [CellInfo] -> Kolor
+getMostFrequentColorList
+    :: (TreeItem a)
+    => Maybe ItemColorMap -> [a] -> Kolor
 getMostFrequentColorList Nothing                  = const black
-getMostFrequentColorList (Just (CellColorMap cm)) =
-    getMostFrequent . fmap (flip (Map.findWithDefault black) cm . barcode)
+getMostFrequentColorList (Just (ItemColorMap cm)) =
+    getMostFrequent . fmap (flip (Map.findWithDefault black) cm . getId)
 
 -- | Get the fraction of each element in a list.
-getEachFractionColorList :: Maybe CellColorMap
-                         -> [CellInfo]
+getEachFractionColorList :: (TreeItem a)
+                         => Maybe ItemColorMap
+                         -> [a]
                          -> [(Double, Kolor)]
 getEachFractionColorList Nothing                  = const [(1, black)]
-getEachFractionColorList (Just (CellColorMap cm)) =
+getEachFractionColorList (Just (ItemColorMap cm)) =
     fmap swap
         . getFractions
-        . fmap (flip (Map.findWithDefault black) cm . barcode)
+        . fmap (flip (Map.findWithDefault black) cm . getId)
 
 -- | Get the a color from a fractional list of colors.
 blendColors :: [(Double, Kolor)] -> Colour Double
@@ -253,77 +257,86 @@ blendColors []     = black
 blendColors (x:xs) = affineCombo xs . snd $ x
 
 -- | Get the the blended color from a graph node.
-getBlendedColor :: Maybe CellColorMap -> [CellInfo] -> Kolor
+getBlendedColor :: (TreeItem a) => Maybe ItemColorMap -> [a] -> Kolor
 getBlendedColor cm = blendColors . getEachFractionColorList cm
 
 -- | How to draw the path at each junction.
 dendrogramPathLabel
-    :: DrawLeaf
-    -> Maybe CellColorMap
-    -> HC.Dendrogram (V.Vector CellInfo)
+    :: (TreeItem a)
+    => DrawLeaf
+    -> Maybe ItemColorMap
+    -> HC.Dendrogram (V.Vector a)
     -> Diagram B
     -> Diagram B
 dendrogramPathLabel _ Nothing _ d                       = d
-dendrogramPathLabel (DrawCell (DrawExpression _)) _ _ d = d
+dendrogramPathLabel (DrawItem (DrawExpression _)) _ _ d = d
 dendrogramPathLabel _ (Just cm) dend d                  = lc color d
   where
     color = getMostFrequentColorDend cm dend
 
 -- | Plot the leaf of a dendrogram as a text label.
-dendrogramLeafLabel :: Maybe CellColorMap -> V.Vector CellInfo -> Diagram B
+dendrogramLeafLabel
+    :: (TreeItem a)
+    => Maybe ItemColorMap -> V.Vector a -> Diagram B
 dendrogramLeafLabel Nothing leaf =
     case V.length leaf of
-        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 1) # rotateBy (1/4) # fc black # centerX # pad 1.3 # alignT
+        1 -> stroke (textSVG (T.unpack . unId . getId . V.head $ leaf) 1) # rotateBy (1/4) # fc black # centerX # pad 1.3 # alignT
         s -> stroke (textSVG (show s) 1) # rotateBy (1/4) # fc black # centerX # pad 1.3 # alignT
 dendrogramLeafLabel cm leaf =
     case V.length leaf of
-        1 -> stroke (textSVG (T.unpack . unCell . barcode . V.head $ leaf) 1) # rotateBy (1/4) # fc black # lw none # centerX # pad 1.3 # alignT
+        1 -> stroke (textSVG (T.unpack . unId . getId . V.head $ leaf) 1) # rotateBy (1/4) # fc black # lw none # centerX # pad 1.3 # alignT
         s -> stroke (textSVG (show s) 1) # rotateBy (1/4) # fc color # lw none # centerX # pad 1.3 # alignT
   where
     color = getMostFrequentColorList cm . V.toList $ leaf
 
--- | Plot the leaf of a dendrogram as a collection of cells.
-dendrogramLeafCell :: Maybe CellColorMap -> V.Vector CellInfo -> Diagram B
-dendrogramLeafCell Nothing leaf = getCell black # centerX # pad 1.3 # alignT
-dendrogramLeafCell (Just (CellColorMap cm)) leaf =
-    (vcat . fmap hcat . Split.chunksOf 10 $ cells) # centerX # pad 1.3 # alignT
+-- | Plot the leaf of a dendrogram as a collection of items.
+dendrogramLeafItem
+    :: (TreeItem a)
+    => Maybe ItemColorMap -> V.Vector a -> Diagram B
+dendrogramLeafItem Nothing leaf = getItem black # centerX # pad 1.3 # alignT
+dendrogramLeafItem (Just (ItemColorMap cm)) leaf =
+    (vcat . fmap hcat . Split.chunksOf 10 $ items) # centerX # pad 1.3 # alignT
   where
-    cells  = fmap getCell colors
+    items  = fmap getItem colors
     colors = sort
-           . fmap (flip (Map.findWithDefault black) cm . barcode)
+           . fmap (flip (Map.findWithDefault black) cm . getId)
            . V.toList
            $ leaf
 
 -- | Plot the node of a graph as a text label.
-drawGraphLabel :: Maybe CellColorMap -> Seq.Seq CellInfo -> Diagram B
-drawGraphLabel Nothing cells =
-    case Seq.length cells of
-        1 -> stroke (textSVG (T.unpack . unCell . barcode . flip Seq.index 0 $ cells) 1) # rotateBy (1/4) # fc black # center
+drawGraphLabel
+    :: (TreeItem a)
+    => Maybe ItemColorMap -> Seq.Seq a -> Diagram B
+drawGraphLabel Nothing items =
+    case Seq.length items of
+        1 -> stroke (textSVG (T.unpack . unId . getId . flip Seq.index 0 $ items) 1) # rotateBy (1/4) # fc black # center
         s -> stroke (textSVG (show s) 1) # rotateBy (1/4) # fc black # center
-drawGraphLabel cm cells =
-    case Seq.length cells of
-        1 -> stroke (textSVG (T.unpack . unCell . barcode . flip Seq.index 0 $ cells) 1) # rotateBy (1/4) # fc black # lw none # center
+drawGraphLabel cm items =
+    case Seq.length items of
+        1 -> stroke (textSVG (T.unpack . unId . getId . flip Seq.index 0 $ items) 1) # rotateBy (1/4) # fc black # lw none # center
         s -> stroke (textSVG (show s) 1) # rotateBy (1/4) # fc color # lw none # center
   where
-    color = getMostFrequentColorList cm . F.toList $ cells
+    color = getMostFrequentColorList cm . F.toList $ items
 
--- | Plot the node of a graph as a collection of cells.
-drawGraphCell :: Maybe CellColorMap -> Seq.Seq CellInfo -> Diagram B
-drawGraphCell Nothing _ = getCell black # centerX # pad 1.3 # center
-drawGraphCell (Just (CellColorMap cm)) node =
-    (vcat . fmap hcat . Split.chunksOf boxSize $ cells) # center
+-- | Plot the node of a graph as a collection of items.
+drawGraphItem :: (TreeItem a) => Maybe ItemColorMap -> Seq.Seq a -> Diagram B
+drawGraphItem Nothing _ = getItem black # centerX # pad 1.3 # center
+drawGraphItem (Just (ItemColorMap cm)) node =
+    (vcat . fmap hcat . Split.chunksOf boxSize $ items) # center
   where
     boxSize = floor . sqrt . fromIntegral . Seq.length $ node
-    cells  = fmap getCell colors
+    items  = fmap getItem colors
     colors = sort
-           . fmap (flip (Map.findWithDefault black) cm . barcode)
+           . fmap (flip (Map.findWithDefault black) cm . getId)
            . F.toList
            $ node
 
--- | Plot a pie chart of cells.
-drawPieCell :: DrawPie -> Maybe CellColorMap -> Seq.Seq CellInfo -> Diagram B
-drawPieCell _ Nothing _ = mempty
-drawPieCell drawPie (Just (CellColorMap cm)) node =
+-- | Plot a pie chart of items.
+drawPieItem
+    :: (TreeItem a)
+    => DrawPie -> Maybe ItemColorMap -> Seq.Seq a -> Diagram B
+drawPieItem _ Nothing _ = mempty
+drawPieItem drawPie (Just (ItemColorMap cm)) node =
     renderAxis $ polarAxis &~ do
         let colorWedge :: (Kolor, Double) -> State (Plot (Wedge Double) b) ()
             colorWedge colorPair = do
@@ -331,7 +344,7 @@ drawPieCell drawPie (Just (CellColorMap cm)) node =
                 areaStyle . _lw .= none
             colorPairs = sortBy (compare `on` snd)
                        . getFractions
-                       . fmap (flip (Map.findWithDefault black) cm . barcode)
+                       . fmap (flip (Map.findWithDefault black) cm . getId)
                        . F.toList
                        $ node
 
@@ -341,9 +354,9 @@ drawPieCell drawPie (Just (CellColorMap cm)) node =
             _        -> wedgeInnerRadius .= 0.9
         hide (axes . traversed)
 
--- | Draw a single cell.
-getCell :: Kolor -> Diagram B
-getCell color = circle 1 # lc black # fc color # lw 0.1
+-- | Draw a single item.
+getItem :: Kolor -> Diagram B
+getItem color = circle 1 # lc black # fc color # lw 0.1
 
 -- | Get the legend for labels.
 plotLabelLegend :: LabelColorMap -> Diagram B
@@ -388,10 +401,10 @@ getLabelColorMap = LabelColorMap
                  . Map.elems
                  . unLabelMap
 
--- | Get the colors of each cell from a label.
-labelToCellColorMap :: LabelColorMap -> LabelMap -> CellColorMap
-labelToCellColorMap (LabelColorMap lm) =
-    CellColorMap . Map.map (\x -> Map.findWithDefault black x lm) . unLabelMap
+-- | Get the colors of each item from a label.
+labelToItemColorMap :: LabelColorMap -> LabelMap -> ItemColorMap
+labelToItemColorMap (LabelColorMap lm) =
+    ItemColorMap . Map.map (\x -> Map.findWithDefault black x lm) . unLabelMap
 
 -- | Get the colors from a list of expressions.
 getExpressionColor :: [Double] -> [Kolor]
@@ -403,12 +416,12 @@ getExpressionColor =
                     <*> Fold.maximum
             )
 
--- | Get the colors of each label.
-getCellColorMapExpression :: Gene -> SingleCells MatObsRow -> CellColorMap
-getCellColorMapExpression g sc =
-    CellColorMap
+-- | Get the colors of each item, where the color is determined by expression.
+getItemColorMapExpression :: Gene -> SingleCells MatObsRow -> ItemColorMap
+getItemColorMapExpression g sc =
+    ItemColorMap
         . Map.fromList
-        . zip (V.toList . rowNames $ sc)
+        . zip (fmap (Id . unCell) . V.toList . rowNames $ sc)
         . getExpressionColor
         . S.toDenseListSV
         . flip S.extractCol col
@@ -422,24 +435,24 @@ getCellColorMapExpression g sc =
         $ sc
 
 -- | Get the maximum cluster size from a graph.
-maxClusterSize :: G.Gr (G.Node, Maybe (Seq.Seq CellInfo)) e -> Int
+maxClusterSize :: G.Gr (G.Node, Maybe (Seq.Seq a)) e -> Int
 maxClusterSize = maximum
                . fmap (maybe 0 Seq.length . snd)
                . F.toList
                . flip getGraphLeaves 0
 
--- | Get the collection of cells in a leaf.
-getGraphLeafCells :: CellGraph -> G.Node -> Seq.Seq CellInfo
-getGraphLeafCells (CellGraph gr) =
+-- | Get the collection of items in a leaf.
+getGraphLeafItems :: ClusterGraph a -> G.Node -> Seq.Seq a
+getGraphLeafItems (ClusterGraph gr) =
     join
-        . fmap ( fromMaybe (error "No cells in leaf.")
+        . fmap ( fromMaybe (error "No items in leaf.")
             . snd
             )
         . getGraphLeaves gr
 
 -- | Get the size of a leaf for graph plotting. Determines the size based on the
 -- diameter of each node (36) and the maximum size of a cluster.
-getScaledLeafSize :: Int -> Seq.Seq CellInfo -> Double
+getScaledLeafSize :: Int -> Seq.Seq a -> Double
 getScaledLeafSize maxLen =
     isTo (fromIntegral . floor . sqrt . fromIntegral $ maxLen) 36
         . fromIntegral
@@ -449,7 +462,7 @@ getScaledLeafSize maxLen =
         . Seq.length
 
 -- | Get the color of a path or node in a graph.
-getGraphColor :: Maybe CellColorMap -> Seq.Seq CellInfo -> Kolor
+getGraphColor :: (TreeItem a) => Maybe ItemColorMap -> Seq.Seq a -> Kolor
 getGraphColor cm = getBlendedColor cm . F.toList
 
 -- | Get the trail making the edge.
@@ -491,22 +504,19 @@ getEdgeGrad p1 c1 p2 c2 h1 h2 =
 
 -- | The function to draw a path connection two nodes in a graph.
 drawGraphPath
-    :: DrawConfig
-    -> Maybe CellColorMap
-    -> CellGraph
-    -> (G.Node, Maybe (Seq.Seq CellInfo))
+    :: (TreeItem a)
+    => DrawConfig
+    -> Maybe ItemColorMap
+    -> ClusterGraph a
+    -> (G.Node, Maybe (Seq.Seq a))
     -> P2 Double
-    -> (G.Node, Maybe (Seq.Seq CellInfo))
+    -> (G.Node, Maybe (Seq.Seq a))
     -> P2 Double
     -> HC.Distance
     -> Path V2 Double
     -> Diagram B
 drawGraphPath opts cm gr (n1, _) p1 (n2, _) p2 _ _ =
     strokeLoop trail
-        -- # fc ( getGraphColor cm
-        --      $ getGraphLeafCells gr n1
-        --     <> getGraphLeafCells gr n2
-        --      )
         # lw none
         # fillTexture gradient
         # flip place (perpendicular p1 p2 d1)
@@ -515,51 +525,52 @@ drawGraphPath opts cm gr (n1, _) p1 (n2, _) p2 _ _ =
     d1           = height draw1 / 2
     draw1        = drawNode n1 p1
     draw2        = drawNode n2 p2
-    c1           = getGraphColor cm $ getGraphLeafCells gr n1
-    c2           = getGraphColor cm $ getGraphLeafCells gr n2
+    c1           = getGraphColor cm $ getGraphLeafItems gr n1
+    c2           = getGraphColor cm $ getGraphLeafItems gr n2
     trail        = getEdgeTrail p1 p2 (height draw1) (height draw2)
     drawNode n p = drawGraphNode opts cm gr (n, Nothing) p -- DrawText is irrelevant here.
 
 -- | Draw the final node of a graph.
-drawGraphNode :: DrawConfig
-              -> Maybe CellColorMap
-              -> CellGraph
-              -> (G.Node, Maybe (Seq.Seq CellInfo))
+drawGraphNode :: (TreeItem a)
+              => DrawConfig
+              -> Maybe ItemColorMap
+              -> ClusterGraph a
+              -> (G.Node, Maybe (Seq.Seq a))
               -> P2 Double
               -> Diagram B
-drawGraphNode opts@(DrawConfig { _drawLeaf = DrawText }) cm _ (n, Just cells) pos =
-    (textDia dnn <> drawGraphLabel cm cells)
+drawGraphNode opts@(DrawConfig { _drawLeaf = DrawText }) cm _ (n, Just items) pos =
+    (textDia dnn <> drawGraphLabel cm items)
         # scaleUToY 36
         # moveTo pos
   where
     textDia True  = text (show n) # fc black
     textDia False = mempty
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
-drawGraphNode opts@(DrawConfig { _drawLeaf = (DrawCell _) }) cm gr (n, Just cells) pos =
+drawGraphNode opts@(DrawConfig { _drawLeaf = (DrawItem _) }) cm gr (n, Just items) pos =
     ( pieDia (_drawPie opts)
-   <> cellsDia
+   <> itemsDia
    <> background (_drawPie opts)
     )
         # moveTo pos
   where
-    background PieNone = roundedRect (width cellsDia) (height cellsDia) 1 # fc white # lw none # scaleUToY (scaleVal * 1.1)
+    background PieNone = roundedRect (width itemsDia) (height itemsDia) 1 # fc white # lw none # scaleUToY (scaleVal * 1.1)
     background _       = circle 1 # fc white # lw none # scaleUToY scaleVal
-    cellsDia              = getCellsDia $ _drawPie opts
-    getCellsDia PieNone   = scaleUToY scaleVal
-                          $ textDia dnn <> drawGraphCell cm cells
-    getCellsDia PieChart  = mempty
-    getCellsDia _         = scaleUToY (0.50 * scaleVal)
-                          $ textDia dnn <> drawGraphCell cm cells
+    itemsDia              = getItemsDia $ _drawPie opts
+    getItemsDia PieNone   = scaleUToY scaleVal
+                          $ textDia dnn <> drawGraphItem cm items
+    getItemsDia PieChart  = mempty
+    getItemsDia _         = scaleUToY (0.50 * scaleVal)
+                          $ textDia dnn <> drawGraphItem cm items
     pieDia PieNone     = mempty
-    pieDia x           = scaleUToY scaleVal $ drawPieCell x cm cells
-    scaleVal   = getScaledLeafSize maxClusterSize' cells
-    maxClusterSize' = maxClusterSize . unCellGraph $ gr
+    pieDia x           = scaleUToY scaleVal $ drawPieItem x cm items
+    scaleVal   = getScaledLeafSize maxClusterSize' items
+    maxClusterSize' = maxClusterSize . unClusterGraph $ gr
     textDia True  = text (show n) # fc black
     textDia False = mempty
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
 drawGraphNode opts cm gr (n, Nothing) pos               =
     (textDia dnn <> (circle 1 # fc color # rootDiffer n))
-        # scaleUToY (2 * getNodeSize cells) -- We want the branches to be a little thicker.
+        # scaleUToY (2 * getNodeSize items) -- We want the branches to be a little thicker.
         # moveTo pos
   where
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
@@ -567,25 +578,26 @@ drawGraphNode opts cm gr (n, Nothing) pos               =
     textDia False = mempty
     rootDiffer 0 = lw none
     rootDiffer n = lw none
-    color = getGraphColor cm cells
-    cells = getGraphLeafCells gr n
-    getNodeSize :: Seq.Seq CellInfo -> Double
+    color = getGraphColor cm items
+    items = getGraphLeafItems gr n
+    getNodeSize :: Seq.Seq a -> Double
     getNodeSize =
-        isTo totalCells 36 . fromIntegral . Seq.length
-    totalCells = fromIntegral . Seq.length . getGraphLeafCells gr $ 0
+        isTo totalItems 36 . fromIntegral . Seq.length
+    totalItems = fromIntegral . Seq.length . getGraphLeafItems gr $ 0
 
 -- | Plot a graph rather than a traditional tree. Uses only info in leaves
 -- rather than a tree which stores all leaves.
 plotGraph
-    :: Maybe (Diagram B)
+    :: (Ord a, TreeItem a)
+    => Maybe (Diagram B)
     -> DrawConfig
-    -> Maybe CellColorMap
-    -> CellGraph
+    -> Maybe ItemColorMap
+    -> ClusterGraph a
     -> IO (Diagram B)
-plotGraph legend opts cm (CellGraph gr) = do
+plotGraph legend opts cm (ClusterGraph gr) = do
     let numClusters :: Double
         numClusters = fromIntegral . Seq.length $ getGraphLeaves gr 0
-        params :: G.GraphvizParams Int (G.Node, Maybe (Seq.Seq CellInfo)) HC.Distance () (G.Node, Maybe (Seq.Seq CellInfo))
+        params :: (TreeItem a) => G.GraphvizParams Int (G.Node, Maybe (Seq.Seq a)) HC.Distance () (G.Node, Maybe (Seq.Seq a))
         params = G.defaultDiaParams
             { G.fmtEdge = (\(_, _, w) -> [G.Len w])
             , G.globalAttributes = [G.GraphAttrs { G.attrs = [G.Sep $ G.DVal 36] }]
@@ -595,8 +607,8 @@ plotGraph legend opts cm (CellGraph gr) = do
 
     let treeDia =
             G.drawGraph'
-                (drawGraphNode opts cm (CellGraph gr))
-                (drawGraphPath opts cm (CellGraph gr))
+                (drawGraphNode opts cm (ClusterGraph gr))
+                (drawGraphPath opts cm (ClusterGraph gr))
                 layout
         dia = case legend of
                 Nothing  -> pad 1 . center $ treeDia
