@@ -390,16 +390,15 @@ plotExpressionLegend g sc =
         . colNames
         $ sc
 
-
 -- | Get the colors of each label.
-getLabelColorMap :: LabelMap -> LabelColorMap
-getLabelColorMap = LabelColorMap
-                 . Map.fromList
-                 . flip zip (cycle (brewerSet Set1 9))
-                 . Set.toList
-                 . Set.fromList
-                 . Map.elems
-                 . unLabelMap
+getLabelColorMap9 :: LabelMap -> LabelColorMap
+getLabelColorMap9 (LabelMap lm) =
+    LabelColorMap
+        . Map.fromList
+        . flip zip (cycle (brewerSet Set1 9))
+        $ labels
+  where
+    labels = Set.toAscList . Set.fromList . Map.elems $ lm
 
 -- | Get the colors of each item from a label.
 labelToItemColorMap :: LabelColorMap -> LabelMap -> ItemColorMap

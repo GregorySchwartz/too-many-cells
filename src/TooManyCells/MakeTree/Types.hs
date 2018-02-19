@@ -69,6 +69,11 @@ newtype ItemColorMap = ItemColorMap
 newtype ClusterGraph a = ClusterGraph
     { unClusterGraph :: G.Gr (G.Node, Maybe (Seq.Seq a)) HC.Distance
     } deriving (Read, Show)
+newtype L = L Double
+newtype C = C Double
+newtype H = H Double
+newtype U = U Double
+newtype V = V Double
 
 -- Advanced
 data DrawItemType = DrawLabel | DrawExpression Text deriving (Read, Show)

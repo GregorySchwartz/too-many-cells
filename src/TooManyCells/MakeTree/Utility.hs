@@ -15,12 +15,15 @@ module TooManyCells.MakeTree.Utility
     , dendrogramToGraph
     , getGraphLeaves
     , getGraphLeavesWithParents
+    , lchPalette
+    , getLabelColorMap
     ) where
 
 -- Remote
 import Control.Monad.State (MonadState (..), State (..), evalState, execState, modify)
 import Data.Function (on)
-import Data.List (maximumBy)
+import Data.Int (Int32)
+import Data.List (genericLength, maximumBy)
 import Data.Maybe (fromMaybe)
 import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..))
 import Data.Scientific (toRealFloat, Scientific)
@@ -28,9 +31,13 @@ import Language.R as R
 import Language.R.QQ (r)
 import qualified Control.Lens as L
 import qualified Data.Clustering.Hierarchical as HC
+import qualified Data.Colour.SRGB as Colour
+import qualified Data.Colour.CIE as Colour
+import qualified Data.Colour.CIE.Illuminant as Colour
 import qualified Data.Graph.Inductive as G
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
 import qualified Data.Vector as V
@@ -124,3 +131,38 @@ getGraphLeavesWithParents gr root = go [] root
                 . G.lab gr
                 $ n
             xs -> mconcat . fmap (go (n:acc)) $ xs
+
+-- | Degree to radian.
+degreeToRadian :: Double -> Double
+degreeToRadian x = x / pi * 180
+
+-- | Convert CIE-LCH(uv) to Luv.
+lchToKolor :: L -> C -> H -> Colour.Colour Double
+lchToKolor (L l) (C c) (H h) = Colour.cieLAB Colour.d65 l a b
+  where
+    a = cos (degreeToRadian h) * c
+    b = sin (degreeToRadian h) * c
+
+-- | LCH color palette. Equally spaced hues starting from 30.
+lchPalette :: Int -> [Colour.Colour Double]
+lchPalette n = fmap
+                (\h -> lchToKolor (L 65) (C 100) (H h))
+                [30, 30 + (360 / fromIntegral (n - 1)) .. fromIntegral 390]
+
+-- | Get the colors of each label using R to interpolate additional colors.
+getLabelColorMap :: LabelMap -> R.R s LabelColorMap
+getLabelColorMap (LabelMap lm) = do
+    let labels    = Set.toAscList . Set.fromList . Map.elems $ lm
+        labelsLen = genericLength labels :: Int32
+
+    colorsHex <- [r| library(RColorBrewer)
+                     colorRampPalette(brewer.pal(9, "Set1"))(labelsLen_hs)
+                 |]
+
+    let colors = fmap Colour.sRGB24read . R.dynSEXP $ colorsHex
+              
+    return
+        . LabelColorMap
+        . Map.fromList
+        . flip zip colors
+        $ labels

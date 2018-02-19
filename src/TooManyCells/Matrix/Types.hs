@@ -13,6 +13,7 @@ Collects the types used in the program concerning the matrix.
 module TooManyCells.Matrix.Types where
 
 -- Remote
+import Data.Monoid (Monoid (..), mempty, mappend)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
 import Data.Map.Strict (Map)
@@ -28,7 +29,9 @@ import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
+import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
@@ -39,6 +42,9 @@ newtype Cell = Cell
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON, A.FromJSON)
 newtype Cols            = Cols { unCols :: [Double] }
 newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show)
+newtype CellWhitelist = CellWhitelist
+    { unCellWhitelist :: Set.Set Cell
+    } deriving (Eq,Ord,Read,Show)
 newtype X = X
     { unX :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
@@ -79,3 +85,25 @@ data CellInfo = CellInfo
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 
 instance (Generic a) => Generic (Vector a)
+
+instance Monoid MatObsRow where
+    mempty  = MatObsRow $ S.zeroSM 0 0
+    mappend (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
+
+instance Monoid MatObsRowImportant where
+    mempty  = MatObsRowImportant $ S.zeroSM 0 0
+    mappend (MatObsRowImportant x) (MatObsRowImportant y) =
+        MatObsRowImportant $ S.vertStackSM x y
+
+instance (Monoid a) => Monoid (SingleCells a) where
+    mempty  = SingleCells { matrix = mempty :: (Monoid a) => a
+                          , rowNames = V.empty
+                          , colNames = V.empty
+                          , projections = V.empty
+                          }
+    mappend x y =
+        SingleCells { matrix      = mappend (matrix x) (matrix y)
+                    , rowNames    = (V.++) (rowNames x) (rowNames y)
+                    , colNames    = colNames x
+                    , projections = (V.++) (projections x) (projections y)
+                    }

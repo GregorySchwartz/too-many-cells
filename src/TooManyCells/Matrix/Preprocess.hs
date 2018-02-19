@@ -4,6 +4,7 @@ Gregory W. Schwartz
 Collects functions pertaining to preprocessing the data.
 -}
 
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module TooManyCells.Matrix.Preprocess
@@ -12,8 +13,9 @@ module TooManyCells.Matrix.Preprocess
     , scaleSparseMat
     , filterRMat
     , filterDenseMat
-    , filterSparseMat
-    , filterSparseMatTest
+    , filterNumSparseMat
+    , filterWhitelistSparseMat
+    , getCellWhitelist
     , featureSelectionRandomForest
     , removeCorrelated
     , pcaRMat
@@ -21,18 +23,23 @@ module TooManyCells.Matrix.Preprocess
     ) where
 
 -- Remote
+import Data.List (sort)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
 import MachineLearning.PCA (getDimReducer_rv)
 import Statistics.Quantile (continuousBy, s)
 import qualified Control.Lens as L
+import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Storable as VS
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
+import TooManyCells.File.Types
 import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Utility
 
@@ -130,12 +137,13 @@ filterDenseMat sc =
       $ sc
 
 -- | Filter a matrix to remove low count cells and genes.
-filterSparseMat :: SingleCells MatObsRow -> SingleCells MatObsRow
-filterSparseMat sc = SingleCells { matrix   = m
-                                 , rowNames = r
-                                 , colNames = c
-                                 , projections = p
-                                 }
+filterNumSparseMat :: SingleCells MatObsRow -> SingleCells MatObsRow
+filterNumSparseMat sc =
+    SingleCells { matrix   = m
+                , rowNames = r
+                , colNames = c
+                , projections = p
+                }
   where
     m = MatObsRow colFilteredMat
     rowFilter = (>= 250) . sum
@@ -161,30 +169,46 @@ filterSparseMat sc = SingleCells { matrix   = m
     p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
       . projections
       $ sc
-
--- | Filter a matrix to remove low count cells and genes.
-filterSparseMatTest :: SingleCells MatObsRow -> SingleCells MatObsRow
-filterSparseMatTest sc = SingleCells { matrix   = m
-                                 , rowNames = r
-                                 , colNames = c
-                                 , projections = p
-                                 }
+      
+-- | Filter a matrix to keep whitelist cells.
+filterWhitelistSparseMat :: CellWhitelist
+                         -> SingleCells MatObsRow
+                         -> SingleCells MatObsRow
+filterWhitelistSparseMat (CellWhitelist wl) sc =
+    sc { matrix   = m
+       , rowNames = r
+       , projections = p
+       }
   where
-    m = MatObsRow colFilteredMat
+    m = MatObsRow rowFilteredMat
     mat            = unMatObsRow . matrix $ sc
-    rowFilteredMat = S.takeRows 100
-                   $ mat
-    colFilteredMat = S.takeCols 1000
-                   $ rowFilteredMat
-    r = V.take 100
-      . rowNames
-      $ sc
-    c = V.take 1000
-      . colNames
-      $ sc
-    p = V.take 100
-      . projections
-      $ sc
+    validIdx       = sort
+                   . fmap fst
+                   . filter (\(_, !c) -> Set.member c wl)
+                   . zip [0..]
+                   . V.toList
+                   . rowNames
+                   $ sc
+    rowFilteredMat = S.transposeSM
+                   . S.fromColsL
+                   . fmap (S.extractRow mat)
+                   $ validIdx
+    r = V.fromList . fmap ((V.!) (rowNames sc)) $ validIdx
+    p = V.fromList . fmap ((V.!) (projections sc)) $ validIdx
+
+-- | Get a cell white list from a file.
+getCellWhitelist :: CellWhitelistFile -> IO CellWhitelist
+getCellWhitelist (CellWhitelistFile file) = do
+    contents <- T.readFile file
+
+    let whiteList = CellWhitelist
+                  . Set.fromList
+                  . fmap Cell
+                  . filter (not . T.null)
+                  . T.lines
+                  $ contents
+
+    return whiteList
 
 -- | Filter a matrix to remove low count cells. R version.
 filterRMat :: RMatObsRow s -> R s (RMatObsRow s)

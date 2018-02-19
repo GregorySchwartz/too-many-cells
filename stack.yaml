@@ -63,6 +63,7 @@ extra-deps:
   - /home/gw/code/utility/hierarchical-spectral-clustering/
   - /home/gw/code/utility/differential/
   - /home/gw/git_repos/diagrams-graphviz/
+  - /home/gw/git_repos/sparse-linear-algebra/
   - git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git
     commit: b92d8cc9b5275df38198ede27b58f7e35aaf69d1
 

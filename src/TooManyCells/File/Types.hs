@@ -41,6 +41,9 @@ newtype MatrixFile = MatrixFile
     { unMatrixFile :: FilePath
     } deriving (Read,Show)
 newtype ProjectionFile  = ProjectionFile { unProjectionFile :: FilePath }
+newtype CellWhitelistFile = CellWhitelistFile
+    { unCellWhitelistFile :: FilePath
+    }
 newtype LabelFile       = LabelFile { unLabelFile :: FilePath }
 newtype PriorPath   = PriorPath
     { unPriorPath :: FilePath

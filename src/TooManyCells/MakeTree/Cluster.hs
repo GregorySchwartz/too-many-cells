@@ -6,6 +6,7 @@ Collects the functions pertaining to the clustering of columns.
 
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module TooManyCells.MakeTree.Cluster
     ( hdbscan
@@ -13,22 +14,31 @@ module TooManyCells.MakeTree.Cluster
     , hClust
     , hSpecClust
     , assignClusters
+    , clusterDiversity
+    , printClusterDiversity
     ) where
 
 -- Remote
-import Data.List (zip4)
+import Data.Function (on)
+import Data.List (sortBy, groupBy, zip4)
 import Data.Int (Int32)
-import Data.Maybe (catMaybes)
+import Data.Maybe (fromMaybe, catMaybes)
+import Data.Monoid ((<>))
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster, B (..))
 import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram, getClusterItemsDend)
+import Math.Diversity.Diversity (diversity)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
+import Safe (headMay)
 import qualified Control.Lens as L
+import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Clustering.Hierarchical as HC
+import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
@@ -146,7 +156,34 @@ hSpecClust (MinClusterSize minSize) sc =
                     (projections sc)
 
 -- | Find the diversity of each leaf cluster.
--- clusterDiversity :: Order -> ClusterResults -> [(Cluster, Diversity)]
--- clusterDiversity (Order order) = clusterList
---   where
---     groupByLabels = 
+clusterDiversity :: Order -> LabelMap -> ClusterResults -> [(Cluster, Diversity)]
+clusterDiversity (Order order) (LabelMap lm) =
+    getDiversityOfCluster . clusterList
+  where
+    getDiversityOfCluster :: [(CellInfo, [Cluster])] -> [(Cluster, Diversity)]
+    getDiversityOfCluster =
+        fmap (L.over L._2 (Diversity . diversity order . fmap cellInfoToLabel))
+            . groupCellsByCluster
+    cellInfoToLabel :: CellInfo -> Label
+    cellInfoToLabel =
+        flip (Map.findWithDefault (error "Cell missing a label.")) lm
+            . Id
+            . unCell
+            . barcode
+    groupCellsByCluster :: [(CellInfo, [Cluster])] -> [(Cluster, [CellInfo])]
+    groupCellsByCluster = fmap assignCluster
+                        . groupBy ((==) `on` (headMay . snd))
+                        . sortBy (compare `on` (headMay . snd))
+    assignCluster :: [(CellInfo, [Cluster])] -> (Cluster, [CellInfo])
+    assignCluster [] = error "Empty cluster."
+    assignCluster all@(x:_) =
+        ( fromMaybe (error "No cluster for cell.") . headMay . snd $ x
+        , fmap fst all
+        )
+
+-- | Print the diversity of each leaf cluster.
+printClusterDiversity :: Order -> LabelMap -> ClusterResults -> B.ByteString
+printClusterDiversity order lm =
+    (<>) "cluster,diversity\n" . CSV.encode
+        . fmap (L.over L._2 unDiversity . L.over L._1 unCluster)
+        . clusterDiversity order lm

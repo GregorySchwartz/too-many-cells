@@ -4,6 +4,7 @@ Gregory W. Schwartz
 Clusters single cell data.
 -}
 
+{-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveGeneric     #-}
@@ -62,68 +63,36 @@ import TooManyCells.Matrix.Preprocess
 import TooManyCells.Matrix.Types
 
 -- | Command line arguments
-data Options = MakeTree { matrixFile  :: Maybe String
-                               <?> "([matrix.mtx] | FILE) The input file containing the matrix output of cellranger or, if genes-file and cells-file are not specified, a csv containing gene row names and cell column names."
-                       , genesFile :: Maybe String
-                               <?> "([genes.tsv] | FILE) The input file containing gene information from cellranger. Matches row order in the matrix file."
-                       , cellsFile :: Maybe String
-                               <?> "([barcodes.tsv] | FILE) The input file containing barcode information from cellranger. Matches column order in the matrix file."
-                       , projectionFile :: Maybe String
-                               <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
-                       , labelsFile :: Maybe String
-                               <?> "([Nothing] | FILE) The input file containing the label for each cell, with \"cell,label\" header."
-                       , delimiter :: Maybe Char
-                               <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-                       , preNormalization :: Bool
-                               <?> "Do not pre-normalize matrix before cluster normalization."
-                       , minSize   :: Maybe Int
-                               <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
-                       , drawLeaf :: Maybe String
-                               <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, and DrawItem (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
-                       , drawPie :: Maybe String
-                               <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
-                       , drawDendrogram :: Bool
-                               <?> "Draw a dendrogram instead of a graph."
-                       , drawNodeNumber :: Bool
-                               <?> "Draw the node numbers on top of each vertex in the graph."
-                       , prior :: Maybe String
-                               <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
-                       , output :: Maybe String
-                               <?> "([out] | STRING) The folder containing output."
-                       }
-            | Differential { matrixFile  :: Maybe String
-                                   <?> "([matrix.mtx] | FILE) The input file containing the matrix output of cellranger or, if genes-file and cells-file are not specified, a csv containing gene row names and cell column names."
-                           , genesFile :: Maybe String
-                                   <?> "([genes.tsv] | FILE) The input file containing gene information from cellranger. Matches row order in the matrix file."
-                           , cellsFile :: Maybe String
-                                   <?> "([barcodes.tsv] | FILE) The input file containing barcode information from cellranger. Matches column order in the matrix file."
-                           , projectionFile :: Maybe String
-                                   <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
-                           , delimiter :: Maybe Char
-                                   <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-                           , preNormalization :: Bool
-                                   <?> "Do not pre-normalize matrix before cluster normalization."
-                           , prior :: Maybe String
-                                   <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
-                           , vertices :: String
-                                     <?> "([VERTEX], [VERTEX]) Find the differential expression between cells belonging downstream of a list of vertices versus another list of vertices."
-                           , topN     :: Maybe Int
-                                     <?> "([100] | INT ) The top INT differentially expressed genes."
-                           }
-            | Diversity { priors   :: [String]
-                                <?> "(PATH) Either input folders containing the output from a run of sc-cluster or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case."
-                        , start    :: Maybe Integer
-                                <?> "([0] | INT) For the rarefaction curve, start the curve at this subsampling."
-                        , interval :: Maybe Integer
-                                <?> "([1] | INT) For the rarefaction curve, the amount to increase each subsampling. For instance, starting at 0 with an interval of 4, we would sampling 0, 4, 8, 12, ..."
-                        , end      :: Maybe Integer
-                                <?> "([N] | INT) For the rarefaction curve, which subsample to stop at. By default, the curve stops at the observed number of species for each population."
-                        , order    :: Maybe Double
-                                <?> "([1] | DOUBLE) The order of diversity."
-                        , output   :: Maybe String
-                                <?> "([out] | STRING) The folder containing output."
-                        }
-              deriving (Generic)
+data Options
+    = MakeTree { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv)or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
+               , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
+               , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
+               , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell, with \"cell,label\" header."
+               , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+               , preNormalization :: Bool <?> "Do not pre-normalize matrix before cluster normalization."
+               , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
+               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, and DrawItem (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
+               , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
+               , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
+               , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each vertex in the graph."
+               , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
+               , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
+               , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
+    | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv)or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
+                   , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
+                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
+                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+                   , preNormalization :: Bool <?> "Do not pre-normalize matrix before cluster normalization."
+                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
+                   , vertices :: String <?> "([VERTEX], [VERTEX]) Find the differential expression between cells belonging downstream of a list of vertices versus another list of vertices."
+                   , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."}
+    | Diversity { priors :: [String] <?> "(PATH) Either input folders containing the output from a run of too-many-cells or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case."
+                , start :: Maybe Integer <?> "([0] | INT) For the rarefaction curve, start the curve at this subsampling."
+                , interval :: Maybe Integer <?> "([1] | INT) For the rarefaction curve, the amount to increase each subsampling. For instance, starting at 0 with an interval of 4, we would sampling 0, 4, 8, 12, ..."
+                , end :: Maybe Integer <?> "([N] | INT) For the rarefaction curve, which subsample to stop at. By default, the curve stops at the observed number of species for each population."
+                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
+                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
+    deriving ((Generic))
 
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
@@ -142,42 +111,65 @@ instance ParseRecord Options where
     parseRecord = parseRecordWithModifiers modifiers
 
 -- | Load the single cell matrix.
-loadSSM :: Options -> IO (SingleCells MatObsRow)
-loadSSM opts = do
-    let matrixFile'     =
-            MatrixFile . fromMaybe "matrix.mtx" . unHelpful . matrixFile $ opts
-        genesFile'      =
-            GeneFile . fromMaybe "genes.tsv" . unHelpful . genesFile $ opts
-        cellsFile'      =
-            CellFile . fromMaybe "barcodes.tsv" . unHelpful . cellsFile $ opts
+loadSSM :: Options -> FilePath -> IO (SingleCells MatObsRow)
+loadSSM opts matrixPath' = do
+    fileExist      <- FP.doesFileExist matrixPath'
+    directoryExist <- FP.doesDirectoryExist matrixPath'
+
+    let matrixFile' =
+            case (fileExist, directoryExist) of
+                (False, False) -> error "Matrix path does not exist."
+                (True, False)  -> Left $ MatrixFile matrixPath'
+                (False, True)  ->
+                    Right . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
+        genesFile'  = GeneFile $ matrixPath' FP.</> "genes.tsv"
+        cellsFile'  = CellFile $ matrixPath' FP.</> "barcodes.tsv"
         projectionFile' =
             fmap ProjectionFile . unHelpful . projectionFile $ opts
         delimiter'      =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        unFilteredSc   =
+            case matrixFile' of
+                (Left file) -> loadSparseMatrixDataStream
+                                delimiter'
+                                projectionFile'
+                                file
+                (Right file) -> loadCellrangerData
+                                    projectionFile'
+                                    genesFile'
+                                    cellsFile'
+                                    file
+    unFilteredSc
+
+-- | Load all single cell matrices.
+loadAllSSM :: Options -> IO (SingleCells MatObsRow)
+loadAllSSM opts = do
+    let matrixPaths'    =
+            (\xs -> bool (error "Need a matrix path.") xs . not . null $ xs)
+                . unHelpful
+                . matrixPath
+                $ opts
+        cellWhitelistFile' =
+            fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
         preNormalization' =
             PreNormalization . unHelpful . preNormalization $ opts
-        matrixCsv       =
-            any
-                isNothing
-                [unHelpful . genesFile $ opts, unHelpful . cellsFile $ opts]
-        unFilteredSc   =
-            if matrixCsv
-                then loadSparseMatrixDataStream
-                        delimiter'
-                        projectionFile'
-                        matrixFile'
-                else loadCellrangerData
-                        projectionFile'
-                        genesFile'
-                        cellsFile'
-                        matrixFile'
-        sc             = fmap filterSparseMat unFilteredSc
-        processMat     = bool matrix (scaleSparseMat . matrix)
-                       . unPreNormalization
-                       $ preNormalization'
-        processedSc    = sc >>= (\x -> return $ x { matrix = processMat x })
 
-    processedSc
+    cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
+
+    mats <- mapM (loadSSM opts) matrixPaths'
+
+    let whiteListFilter Nothing = id
+        whiteListFilter (Just wl) = filterWhitelistSparseMat wl
+        unFilteredSc = mconcat mats
+        sc           = filterNumSparseMat
+                     . whiteListFilter cellWhitelist
+                     $ unFilteredSc
+        processMat   = bool matrix (scaleSparseMat . matrix)
+                      . unPreNormalization
+                      $ preNormalization'
+        processedSc  = sc { matrix = processMat sc }
+
+    return processedSc
 
 makeTreeMain :: Options -> IO ()
 makeTreeMain opts = do
@@ -195,33 +187,18 @@ makeTreeMain opts = do
         drawPie'        = maybe PieRing read . unHelpful . drawPie $ opts
         drawDendrogram' = unHelpful . drawDendrogram $ opts
         drawNodeNumber' = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
+        order'          = Order . fromMaybe 1 . unHelpful . order $ opts
         output'         =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
 
         drawConfig      = DrawConfig drawLeaf' drawPie' drawNodeNumber'
 
-        processedSc = loadSSM opts
+        processedSc = loadAllSSM opts
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
 
-    labelMap     <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
-
-    let labelColorMap = fmap getLabelColorMap labelMap
-        itemColorMap =
-            case drawLeaf' of
-                DrawText           ->
-                    return $ do
-                        lcm <- labelColorMap
-                        lm  <- labelMap
-                        return $ labelToItemColorMap lcm lm
-                DrawItem DrawLabel ->
-                    return $ do
-                        lcm <- labelColorMap
-                        lm  <- labelMap
-                        return $ labelToItemColorMap lcm lm
-                DrawItem (DrawExpression x) ->
-                    fmap (Just . getItemColorMapExpression (Gene x)) processedSc
+    labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -252,6 +229,13 @@ makeTreeMain opts = do
                     . G.graphToDot G.nonClusteredParams
                     . unClusterGraph
                     $ gr
+                case labelMap of
+                    Nothing   -> return ()
+                    (Just lm) ->
+                        B.writeFile
+                            (unOutputDirectory output' FP.</> "cluster_diversity.csv")
+                            . printClusterDiversity order' lm
+                            $ cr
 
                 return ((return cr, return b, return gr) :: (IO ClusterResults, IO B, IO (ClusterGraph CellInfo)))
             (Just x) -> do
@@ -280,21 +264,28 @@ makeTreeMain opts = do
                     . (FP.</> "graph.dot")
                     . unOutputDirectory
                     $ output'
+                FP.copyFile crInput
+                    . (FP.</> "cluster_diversity.csv")
+                    . unOutputDirectory
+                    $ output'
 
                 gr <- fmap (dendrogramToGraph . clusterDend) cr
 
                 return (cr, b, return gr)
 
-    -- Find clumpiness.
+    -- Calculations with the label map (clumpiness and cluster diversity).
     case labelMap of
         Nothing ->
             hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
-        (Just lcm) ->
+        (Just lcm) -> do
             clusterResults
               >>= B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
                 . dendToClumpCsv lcm
                 . clusterDend
 
+            clusterResults
+                >>= B.writeFile (unOutputDirectory output' FP.</> "cluster_diversity.csv")
+                  . printClusterDiversity order' lcm
 
     -- Header
     B.putStrLn $ "cell,cluster,path"
@@ -314,6 +305,24 @@ makeTreeMain opts = do
     -- | Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
+        -- Get the color of each label.
+        labelColorMap <- sequence $ fmap getLabelColorMap labelMap
+
+        let itemColorMap =
+                case drawLeaf' of
+                    DrawText           ->
+                        return $ do
+                            lcm <- labelColorMap
+                            lm  <- labelMap
+                            return $ labelToItemColorMap lcm lm
+                    DrawItem DrawLabel ->
+                        return $ do
+                            lcm <- labelColorMap
+                            lm  <- labelMap
+                            return $ labelToItemColorMap lcm lm
+                    DrawItem (DrawExpression x) ->
+                        fmap (Just . getItemColorMapExpression (Gene x)) processedSc
+
         -- Plot dendrogram.
         H.io $ do
             cr <- clusterResults
@@ -357,7 +366,7 @@ differentialMain opts = do
                   $ opts
         topN'     = TopN . fromMaybe 100 . unHelpful . topN $ opts
 
-    processedSc <- loadSSM opts
+    processedSc <- loadAllSSM opts
 
     let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
         cr :: IO ClusterResults
@@ -435,6 +444,21 @@ diversityMain opts = do
         . plotRarefactionPy
         $ popDiversities
 
+    H.withEmbeddedR defaultConfig $ H.runRegion $ do
+        let divFile = unOutputDirectory output' FP.</> "diversity_r.pdf"
+        divPlot <- plotDiversityR popDiversities
+        [r| ggsave(divPlot_hs, file = divFile_hs) |]
+
+        let chao1File = unOutputDirectory output' FP.</> "chao_r.pdf"
+        chao1Plot <- plotChao1R popDiversities
+        [r| ggsave(chao1Plot_hs, file = chao1File_hs) |]
+
+        let rarefactionFile = unOutputDirectory output' FP.</> "rarefaction_r.pdf"
+        rarefactionPlot <- plotRarefactionR popDiversities
+        [r| ggsave(rarefactionPlot_hs, file = rarefactionFile_hs) |]
+
+        return ()
+
     return ()
 
 main :: IO ()
@@ -444,5 +468,5 @@ main = do
 
     case opts of
         (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
-        (Differential _ _ _ _ _ _ _ _ _)       -> differentialMain opts
+        (Differential _ _ _ _ _ _ _ _)         -> differentialMain opts
         (Main.Diversity _ _ _ _ _ _)           -> diversityMain opts

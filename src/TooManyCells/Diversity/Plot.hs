@@ -5,6 +5,7 @@ Collects the functions pertaining to the plotting of data.
 -}
 
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE QuasiQuotes #-}
 
 module TooManyCells.Diversity.Plot
     ( plotDiversity
@@ -13,6 +14,9 @@ module TooManyCells.Diversity.Plot
     , plotDiversityPy
     , plotChao1Py
     , plotRarefactionPy
+    , plotDiversityR
+    , plotChao1R
+    , plotRarefactionR
     ) where
 
 -- Remote
@@ -21,6 +25,8 @@ import Diagrams.Backend.Cairo
 import Data.Colour.Palette.BrewerSet (ColorCat (..), brewerSet)
 import Control.Lens
 import Control.Monad (forM)
+import Language.R as R
+import Language.R.QQ (r)
 import Plots
 import Plots.Axis.Line
 import qualified Graphics.Matplotlib as P
@@ -104,3 +110,59 @@ plotRarefactionPy pops =
             . fmap (over _2 unY . over _1 unX)
             . unRarefaction
             . popRarefaction
+
+-- | Plot the diversity of a group of populations.
+plotDiversityR :: [PopulationDiversity] -> R s (R.SomeSEXP s)
+plotDiversityR pops = do
+    let labels = fmap getPopLabel pops
+        values = fmap (unDiversity . popDiversity) pops
+
+    [r| library(ggplot2)
+        library(cowplot)
+
+        df = data.frame(x = labels_hs, y = values_hs)
+
+        ggplot(df, aes(x = x, y = y, fill = x)) +
+            geom_col() +
+            theme(axis.text.x = element_text(angle = 315, hjust = 0))
+    |]
+
+-- | Plot the Chao1 of a group of populations.
+plotChao1R :: [PopulationDiversity] -> R s (R.SomeSEXP s)
+plotChao1R pops = do
+    let labels = fmap getPopLabel pops
+        values = fmap (unChao1 . popChao1) pops
+
+    [r| library(ggplot2)
+        library(cowplot)
+
+        df = data.frame(x = labels_hs, y = values_hs)
+
+        ggplot(df, aes(x = x, y = y, fill = x)) +
+            geom_col() +
+            theme(axis.text.x = element_text(angle = 315, hjust = 0))
+    |]
+
+-- | Plot the rarefaction curves of a group of populations.
+plotRarefactionR :: [PopulationDiversity] -> R s (R.SomeSEXP s)
+plotRarefactionR pops = do
+    let labels =
+            concatMap
+                (\pop ->
+                      replicate
+                          (length . unRarefaction . popRarefaction $ pop)
+                          (getPopLabel pop)
+                )
+                pops
+        valuesX =
+            fmap (unX . fst) . concatMap (unRarefaction . popRarefaction) $ pops
+        valuesY =
+            fmap (unY . snd) . concatMap (unRarefaction . popRarefaction) $ pops
+        
+    [r| library(ggplot2)
+        library(cowplot)
+
+        df = data.frame(x = valuesX_hs, y = valuesY_hs, labels = labels_hs)
+
+        ggplot(df, aes(x = x, y = y, color = labels)) + geom_line()
+    |]
