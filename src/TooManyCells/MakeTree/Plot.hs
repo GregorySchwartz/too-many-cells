@@ -562,14 +562,16 @@ drawGraphNode opts@(DrawConfig { _drawLeaf = (DrawItem _) }) cm gr (n, Just item
                           $ textDia dnn <> drawGraphItem cm items
     pieDia PieNone     = mempty
     pieDia x           = scaleUToY scaleVal $ drawPieItem x cm items
-    scaleVal   = getScaledLeafSize maxClusterSize' items
+    scaleVal = if unDrawNoScaleNodesFlag . _drawNoScaleNodesFlag $ opts
+                then unDrawMaxNodeSize . _drawMaxNodeSize $ opts
+                else getScaledLeafSize maxClusterSize' items
     maxClusterSize' = maxClusterSize . unClusterGraph $ gr
     textDia True  = text (show n) # fc black
     textDia False = mempty
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
 drawGraphNode opts cm gr (n, Nothing) pos               =
     (textDia dnn <> (circle 1 # fc color # rootDiffer n))
-        # scaleUToY (2 * getNodeSize items) -- We want the branches to be a little thicker.
+        # scaleUToY (getNodeSize (_drawNoScaleNodesFlag opts) items)
         # moveTo pos
   where
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
@@ -579,9 +581,13 @@ drawGraphNode opts cm gr (n, Nothing) pos               =
     rootDiffer n = lw none
     color = getGraphColor cm items
     items = getGraphLeafItems gr n
-    getNodeSize :: Seq.Seq a -> Double
-    getNodeSize =
-        isTo totalItems 36 . fromIntegral . Seq.length
+    getNodeSize :: DrawNoScaleNodesFlag -> Seq.Seq a -> Double
+    getNodeSize (DrawNoScaleNodesFlag False) =
+        isTo totalItems (unDrawMaxNodeSize . _drawMaxNodeSize $ opts)
+            . fromIntegral
+            . Seq.length
+    getNodeSize (DrawNoScaleNodesFlag True) =
+        const (unDrawMaxNodeSize . _drawMaxNodeSize $ opts)
     totalItems = fromIntegral . Seq.length . getGraphLeafItems gr $ 0
 
 -- | Plot a graph rather than a traditional tree. Uses only info in leaves

@@ -47,6 +47,9 @@ newtype Cluster = Cluster
 newtype MinClusterSize = MinClusterSize
     { unMinClusterSize :: Int
     } deriving (Read,Show)
+newtype DrawMaxNodeSize = DrawMaxNodeSize
+    { unDrawMaxNodeSize :: Double
+    } deriving (Read,Show)
 newtype PreNormalization = PreNormalization
     { unPreNormalization :: Bool
     } deriving (Read,Show)
@@ -54,6 +57,9 @@ newtype DrawNodeNumber = DrawNodeNumber
     { unDrawNodeNumber :: Bool
     } deriving (Read,Show)
 newtype IsLeaf = IsLeaf {unIsLeaf :: Bool} deriving (Eq, Ord, Read, Show)
+newtype DrawNoScaleNodesFlag = DrawNoScaleNodesFlag
+    { unDrawNoScaleNodesFlag :: Bool
+    } deriving (Read,Show)
 newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)
@@ -84,6 +90,8 @@ data DrawConfig = DrawConfig
     { _drawLeaf :: DrawLeaf
     , _drawPie :: DrawPie
     , _drawNodeNumber :: DrawNodeNumber
+    , _drawMaxNodeSize :: DrawMaxNodeSize
+    , _drawNoScaleNodesFlag :: DrawNoScaleNodesFlag
     } deriving (Read,Show)
 
 data ClusterResults = ClusterResults

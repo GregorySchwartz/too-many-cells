@@ -155,12 +155,19 @@ getLabelColorMap (LabelMap lm) = do
     let labels    = Set.toAscList . Set.fromList . Map.elems $ lm
         labelsLen = genericLength labels :: Int32
 
-    colorsHex <- [r| library(RColorBrewer)
-                     colorRampPalette(brewer.pal(9, "Set1"))(labelsLen_hs)
-                 |]
+    colorsHex <-
+        if labelsLen > 9
+            then
+                [r| library(RColorBrewer)
+                    colorRampPalette(brewer.pal(9, "Set1"))(labelsLen_hs)
+                |]
+            else
+                [r| library(RColorBrewer)
+                    brewer.pal(labelsLen_hs, "Set1")
+                |]
 
     let colors = fmap Colour.sRGB24read . R.dynSEXP $ colorsHex
-              
+
     return
         . LabelColorMap
         . Map.fromList

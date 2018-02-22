@@ -54,7 +54,7 @@ scToTwoD cellGroups sc =
                 . fmap (S.extractRow (unMatObsRow . matrix $ sc) . L.view L._1)
                 $ cellGroups
 
--- | Get the indices and statuses for two lists of vertices.
+-- | Get the indices and statuses for two lists of nodes.
 getStatuses
     :: [G.Node] -> [G.Node] -> ClusterGraph CellInfo -> [(Int, Cell, Diff.Status)]
 getStatuses v1 v2 (ClusterGraph gr) =

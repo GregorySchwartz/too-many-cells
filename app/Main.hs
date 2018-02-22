@@ -74,7 +74,9 @@ data Options
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, and DrawItem (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
-               , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each vertex in the graph."
+               , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
+               , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
+               , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
@@ -84,7 +86,7 @@ data Options
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                    , preNormalization :: Bool <?> "Do not pre-normalize matrix before cluster normalization."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
-                   , vertices :: String <?> "([VERTEX], [VERTEX]) Find the differential expression between cells belonging downstream of a list of vertices versus another list of vertices."
+                   , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."}
     | Diversity { priors :: [String] <?> "(PATH) Either input folders containing the output from a run of too-many-cells or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case."
                 , start :: Maybe Integer <?> "([0] | INT) For the rarefaction curve, start the curve at this subsampling."
@@ -173,27 +175,36 @@ loadAllSSM opts = do
 
 makeTreeMain :: Options -> IO ()
 makeTreeMain opts = do
-    let labelsFile'     =
+    let labelsFile'       =
             fmap LabelFile . unHelpful . labelsFile $ opts
-        prior'          =
+        prior'            =
             fmap PriorPath . unHelpful . prior $ opts
-        delimiter'      =
+        delimiter'        =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         preNormalization' =
             PreNormalization . unHelpful . preNormalization $ opts
-        minSize'        =
+        minSize'          =
             MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
-        drawLeaf'       = maybe DrawText read . unHelpful . drawLeaf $ opts
-        drawPie'        = maybe PieRing read . unHelpful . drawPie $ opts
-        drawDendrogram' = unHelpful . drawDendrogram $ opts
-        drawNodeNumber' = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
-        order'          = Order . fromMaybe 1 . unHelpful . order $ opts
-        output'         =
+        drawLeaf'         = maybe DrawText read . unHelpful . drawLeaf $ opts
+        drawPie'          = maybe PieRing read . unHelpful . drawPie $ opts
+        drawDendrogram'   = unHelpful . drawDendrogram $ opts
+        drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
+        drawMaxNodeSize'  =
+            DrawMaxNodeSize . fromMaybe 72 . unHelpful . drawMaxNodeSize $ opts
+        drawNoScaleNodes' =
+            DrawNoScaleNodesFlag . unHelpful . drawNoScaleNodes $ opts
+        order'            = Order . fromMaybe 1 . unHelpful . order $ opts
+        output'           =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
 
-        drawConfig      = DrawConfig drawLeaf' drawPie' drawNodeNumber'
+        drawConfig        = DrawConfig
+                                drawLeaf'
+                                drawPie'
+                                drawNodeNumber'
+                                drawMaxNodeSize'
+                                drawNoScaleNodes'
 
-        processedSc = loadAllSSM opts
+        processedSc       = loadAllSSM opts
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
@@ -358,7 +369,7 @@ makeTreeMain opts = do
 -- | Differential path.
 differentialMain :: Options -> IO ()
 differentialMain opts = do
-    let vertices' = DiffVertices . read . unHelpful . vertices $ opts
+    let nodes'    = DiffNodes . read . unHelpful . nodes $ opts
         prior'    = PriorPath
                   . fromMaybe (error "Requires a previous run to get the graph.")
                   . unHelpful
@@ -380,8 +391,8 @@ differentialMain opts = do
         res <- getDEGraph
                 topN'
                 processedSc
-                (fst . unDiffVertices $ vertices')
-                (snd . unDiffVertices $ vertices')
+                (fst . unDiffNodes $ nodes')
+                (snd . unDiffNodes $ nodes')
                 gr
 
         H.io . putStrLn . getDEString $ res
@@ -467,6 +478,6 @@ main = do
                       \ Clusters and analyzes single cell data."
 
     case opts of
-        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
-        (Differential _ _ _ _ _ _ _ _)         -> differentialMain opts
-        (Main.Diversity _ _ _ _ _ _)           -> diversityMain opts
+        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
+        (Differential _ _ _ _ _ _ _ _)             -> differentialMain opts
+        (Main.Diversity _ _ _ _ _ _)               -> diversityMain opts

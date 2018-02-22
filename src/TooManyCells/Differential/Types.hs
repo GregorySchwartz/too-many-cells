@@ -15,6 +15,4 @@ import qualified Data.Graph.Inductive as G
 
 -- Basic
 newtype TopN = TopN { unTopN :: Int }
-newtype DiffVertices = DiffVertices
-    { unDiffVertices :: ([G.Node], [G.Node])
-    }
+newtype DiffNodes = DiffNodes {unDiffNodes :: ([G.Node], [G.Node])}
