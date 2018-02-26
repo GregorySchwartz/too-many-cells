@@ -44,6 +44,7 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend)
 import Plots
 import Plots.Axis.ColourBar
+import Plots.Legend
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.Clustering.Hierarchical as HC
@@ -85,7 +86,7 @@ plotClustersR outputPlot clusterList = do
         xs = fmap (unX . fst . projection . fst) clusterListOrdered
         ys = fmap (unY . snd . projection . fst) clusterListOrdered
         cs = fmap (show . unCluster . snd) clusterListOrdered
-    [r| library(ggplot2)
+    [r| suppressMessages(library(ggplot2))
         library(cowplot)
         df = data.frame(x = xs_hs, y = ys_hs, c = cs_hs)
         df$c = factor(df$c, unique(df$c))
@@ -359,25 +360,43 @@ getItem :: Kolor -> Diagram B
 getItem color = circle 1 # lc black # fc color # lw 0.1
 
 -- | Get the legend for labels.
+-- plotLabelLegend :: LabelColorMap -> Diagram B
+-- plotLabelLegend = vsep 0.10
+--                 . fmap plotLabel
+--                 . Map.toAscList
+--                 . unLabelColorMap
+--   where
+--     plotLabel (!l, !c) =
+--         stroke (textSVG (T.unpack . unLabel $ l) 1) # fc c # lw none # alignL
+
 plotLabelLegend :: LabelColorMap -> Diagram B
-plotLabelLegend = vsep 0.10
+plotLabelLegend = flip (drawLegend emptyBox) legendOpts
                 . fmap plotLabel
                 . Map.toAscList
                 . unLabelColorMap
   where
+    legendOpts :: Legend B Double
+    legendOpts = over legendTextStyle (const (mempty # font "Arial" # fontSize (local size)))
+               . over legendStyle (lw none)
+               $ def
+    plotLabel :: (Label, Colour Double) -> (Diagram B, String)
     plotLabel (!l, !c) =
-        stroke (textSVG (T.unpack . unLabel $ l) 1) # fc c # lw none # alignL
+        ( circle size # lc black # fc c # lw (local $ 0.1 * size)
+        , T.unpack . unLabel $ l
+        )
+    size :: Double
+    size = (/ 2.5) $ (def :: Legend B Double) ^. legendSpacing
 
 -- | Get the legend for expression. Bar from
 -- https://archives.haskell.org/projects.haskell.org/diagrams/blog/2013-12-03-Palette1.html
 plotExpressionLegend :: Gene -> SingleCells MatObsRow -> Diagram B
 plotExpressionLegend g sc =
-    renderColourBar
-        (L.set visible True defColourBar)
-        cm
-        (fromMaybe 0 minVal, fromMaybe 0 maxVal)
-        100
+    renderColourBar cbOpts cm (fromMaybe 0 minVal, fromMaybe 0 maxVal) 100
   where
+    cbOpts :: ColourBar B Double
+    cbOpts = over tickLabelStyle (font "Arial")
+           . set visible True
+           $ defColourBar
     cm =
         colourMap . zip [1..] . fmap (\x -> sRGB 1 (1 - x) (1 - x)) $ [1,0.9..0]
     (minVal, maxVal) = Fold.fold ((,) <$> Fold.minimum <*> Fold.maximum)
@@ -408,7 +427,7 @@ labelToItemColorMap (LabelColorMap lm) =
 -- | Get the colors from a list of expressions.
 getExpressionColor :: [Double] -> [Kolor]
 getExpressionColor =
-    fmap (\x -> sRGB 1 (1 - x) (1 - x))
+    fmap (\x -> sRGB (1 - x) (1 - x) (1 - x))
         . Fold.fold
             ( (\xs m -> fmap (/ (fromMaybe (error "Expression does not exist.") m)) xs)
                     <$> Fold.list
@@ -621,8 +640,8 @@ plotGraph legend opts cm (ClusterGraph gr) = do
                     pad 1
                         . hsep
                             1
-                        $   [ alignT . center $ treeDia
-                            , pad 2 . alignT . lw 0.3 . center . scaleUToY (height treeDia / 6) $ l
+                        $   [ alignY 1.5 . lw 0.3 . center . scaleUToX (width treeDia / 8) $ l
+                            , alignT . center $ treeDia
                             ]
 
     return dia
