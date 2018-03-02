@@ -41,6 +41,9 @@ newtype Label = Label
 newtype Id = Id
     { unId :: Text
     } deriving (Eq,Ord,Read,Show)
+newtype Feature = Feature
+    { unFeature :: Text
+    } deriving (Eq,Ord,Read,Show)
 newtype Cluster = Cluster
     { unCluster :: Int
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
@@ -82,9 +85,15 @@ newtype U = U Double
 newtype V = V Double
 
 -- Advanced
-data DrawItemType = DrawLabel | DrawExpression Text deriving (Read, Show)
+data DrawItemType
+    = DrawLabel
+    | DrawContinuous Text
+    | DrawThresholdContinuous [(Text, Double)]
+    deriving (Read,Show)
 data DrawLeaf = DrawItem DrawItemType | DrawText deriving (Read, Show)
 data DrawPie  = PieRing | PieChart | PieNone deriving (Read, Show)
+
+data Palette = Set1 | Hcl
 
 data DrawConfig = DrawConfig
     { _drawLeaf :: DrawLeaf
@@ -104,6 +113,16 @@ class TreeItem a where
 
 instance TreeItem CellInfo where
     getId = Id . unCell . barcode
+
+class MatrixLike a where
+    getMatrix   :: a -> S.SpMatrix Double
+    getRowNames :: a -> Vector Text
+    getColNames :: a -> Vector Text
+
+instance MatrixLike SingleCells where
+    getMatrix   = unMatObsRow . matrix
+    getRowNames = fmap unCell . rowNames
+    getColNames = fmap unGene . colNames
 
 deriving instance (Read a) => Read (HC.Dendrogram a)
 deriving instance (Generic a) => Generic (HC.Dendrogram a)

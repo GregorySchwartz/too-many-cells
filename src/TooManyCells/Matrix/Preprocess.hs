@@ -106,7 +106,7 @@ scaleSparseMol xs = fmap (/ med) xs
         $ xs
 
 -- | Filter a matrix to remove low count cells and genes.
-filterDenseMat :: SingleCells MatObsRow -> SingleCells MatObsRow
+filterDenseMat :: SingleCells -> SingleCells
 filterDenseMat sc =
     SingleCells { matrix   = m
                 , rowNames = r
@@ -137,7 +137,7 @@ filterDenseMat sc =
       $ sc
 
 -- | Filter a matrix to remove low count cells and genes.
-filterNumSparseMat :: SingleCells MatObsRow -> SingleCells MatObsRow
+filterNumSparseMat :: SingleCells -> SingleCells
 filterNumSparseMat sc =
     SingleCells { matrix   = m
                 , rowNames = r
@@ -169,11 +169,11 @@ filterNumSparseMat sc =
     p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
       . projections
       $ sc
-      
+
 -- | Filter a matrix to keep whitelist cells.
 filterWhitelistSparseMat :: CellWhitelist
-                         -> SingleCells MatObsRow
-                         -> SingleCells MatObsRow
+                         -> SingleCells
+                         -> SingleCells
 filterWhitelistSparseMat (CellWhitelist wl) sc =
     sc { matrix   = m
        , rowNames = r
@@ -216,38 +216,38 @@ filterRMat (RMatObsRow mat) =
     fmap RMatObsRow [r| mat = mat_hs[,colSums(mat_hs) >= 250] |]
 
 -- | Perform feature selection on a matrix.
-featureSelectionRandomForest :: RMatObsRow s -> R s (RMatObsRowImportant s)
+featureSelectionRandomForest :: RMatObsRow s -> R s (RMatObsRow s)
 featureSelectionRandomForest (RMatObsRow mat) = do
     [r| suppressPackageStartupMessages(library(randomForest)) |]
 
     importance   <- [r| randomForest(mat_hs, na.action = na.omit)$importance |]
     importantMat <- [r| mat_hs[,importance_hs > sort(importance_hs, decreasing = TRUE)[10]] |]
 
-    return . RMatObsRowImportant $ importantMat
+    return . RMatObsRow $ importantMat
 
 -- | Remove highly correlated (> 0.6) variables in a matrix.
-removeCorrelated :: RMatObsRow s -> R s (RMatObsRowImportant s)
+removeCorrelated :: RMatObsRow s -> R s (RMatObsRow s)
 removeCorrelated (RMatObsRow mat) = do
     [r| suppressPackageStartupMessages(library(caret)) |]
 
     cor   <- [r| cor(mat_hs) |]
     importantMat <- [r| mat_hs[,-findCorrelation(cor_hs, cutoff = 0.6, exact = FALSE)] |]
 
-    return . RMatObsRowImportant $ importantMat
+    return . RMatObsRow $ importantMat
 
 -- | Conduct PCA on a matrix, using components > 5% of variance.
-pcaRMat :: RMatObsRow s -> R s (RMatObsRowImportant s)
+pcaRMat :: RMatObsRow s -> R s (RMatObsRow s)
 pcaRMat (RMatObsRow mat) = do
     fmap
-        RMatObsRowImportant
+        RMatObsRow
         [r| mat = prcomp(t(mat_hs), tol = 0.95)$rotation
         |]
 
 -- | Conduct PCA on a matrix, retaining 80% of variance.
-pcaDenseMat :: MatObsRow -> IO MatObsRowImportant
+pcaDenseMat :: MatObsRow -> IO MatObsRow
 pcaDenseMat (MatObsRow mat) = do
     return
-        . MatObsRowImportant
+        . MatObsRow
         . hToSparseMat
         . L.view L._3
         . getDimReducer_rv (sparseToHMat mat)

@@ -55,7 +55,7 @@ loadCellrangerData
     -> GeneFile
     -> CellFile
     -> MatrixFile
-    -> IO (SingleCells MatObsRow)
+    -> IO SingleCells
 loadCellrangerData pf gf cf mf = do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
@@ -91,7 +91,7 @@ loadCellrangerData pf gf cf mf = do
 loadHMatrixData :: Delimiter
                 -> Maybe ProjectionFile
                 -> MatrixFile
-                -> IO (SingleCells MatObsRow)
+                -> IO SingleCells
 loadHMatrixData (Delimiter delim) pf mf = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
@@ -128,7 +128,7 @@ loadHMatrixData (Delimiter delim) pf mf = do
 loadSparseMatrixData :: Delimiter
                      -> Maybe ProjectionFile
                      -> MatrixFile
-                     -> IO (SingleCells MatObsRow)
+                     -> IO SingleCells
 loadSparseMatrixData (Delimiter delim) pf mf = do
     let csvOpts = CSV.defaultDecodeOptions
                     { CSV.decDelimiter = fromIntegral (ord delim) }
@@ -162,7 +162,7 @@ loadSparseMatrixData (Delimiter delim) pf mf = do
 loadSparseMatrixDataStream :: Delimiter
                            -> Maybe ProjectionFile
                            -> MatrixFile
-                           -> IO (SingleCells MatObsRow)
+                           -> IO SingleCells
 loadSparseMatrixDataStream (Delimiter delim) pf mf = do
     let csvOpts = S.defaultDecodeOptions
                     { S.decDelimiter = fromIntegral (ord delim) }

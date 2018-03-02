@@ -18,10 +18,11 @@ module TooManyCells.MakeTree.Plot
     , plotDendrogram
     , plotGraph
     , getLabelColorMap
+    , getLabelMapThresholdContinuous
     , labelToItemColorMap
-    , getItemColorMapExpression
+    , getItemColorMapContinuous
     , plotLabelLegend
-    , plotExpressionLegend
+    , plotContinuousLegend
     ) where
 
 -- Remote
@@ -30,9 +31,10 @@ import Control.Monad.State (State (..))
 import Data.Colour (AffineSpace (..))
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..), Kolor)
+import qualified Data.Colour.Palette.BrewerSet as Brewer
 import Data.Colour.SRGB (RGB (..), toSRGB)
 import Data.Function (on)
-import Data.List (nub, sort, sortBy)
+import Data.List (nub, sort, sortBy, foldl1', transpose)
 import Data.Maybe (fromMaybe)
 import Data.Tuple (swap)
 import Diagrams.Backend.Cairo
@@ -102,8 +104,8 @@ plotClustersR outputPlot clusterList = do
     return ()
 
 -- | Plot clusters using outputs from R.
-plotClustersOnlyR :: String -> RMatObsRowImportant s -> R.SomeSEXP s -> R s ()
-plotClustersOnlyR outputPlot (RMatObsRowImportant mat) clustering = do
+plotClustersOnlyR :: String -> RMatObsRow s -> R.SomeSEXP s -> R s ()
+plotClustersOnlyR outputPlot (RMatObsRow mat) clustering = do
     -- Plot hierarchy.
     [r| pdf(paste0(outputPlot_hs, "_hierarchy.pdf", sep = ""))
         plot(clustering_hs$hc)
@@ -270,7 +272,7 @@ dendrogramPathLabel
     -> Diagram B
     -> Diagram B
 dendrogramPathLabel _ Nothing _ d                       = d
-dendrogramPathLabel (DrawItem (DrawExpression _)) _ _ d = d
+dendrogramPathLabel (DrawItem (DrawContinuous _)) _ _ d = d
 dendrogramPathLabel _ (Just cm) dend d                  = lc color d
   where
     color = getMostFrequentColorDend cm dend
@@ -389,32 +391,33 @@ plotLabelLegend = flip (drawLegend emptyBox) legendOpts
 
 -- | Get the legend for expression. Bar from
 -- https://archives.haskell.org/projects.haskell.org/diagrams/blog/2013-12-03-Palette1.html
-plotExpressionLegend :: Gene -> SingleCells MatObsRow -> Diagram B
-plotExpressionLegend g sc =
-    renderColourBar cbOpts cm (fromMaybe 0 minVal, fromMaybe 0 maxVal) 100
+plotContinuousLegend :: (MatrixLike a) => Feature -> a -> Diagram B
+plotContinuousLegend g mat =
+    rotateBy (3 / 4)
+        $ renderColourBar cbOpts cm (fromMaybe 0 minVal, fromMaybe 0 maxVal) 100
   where
     cbOpts :: ColourBar B Double
     cbOpts = over tickLabelStyle (font "Arial")
            . set visible True
            $ defColourBar
     cm =
-        colourMap . zip [1..] . fmap (\x -> sRGB 1 (1 - x) (1 - x)) $ [1,0.9..0]
+        colourMap . zip [1..] . fmap (\x -> sRGB 1 (1 - x) (1 - x)) $ [0,0.1..1]
     (minVal, maxVal) = Fold.fold ((,) <$> Fold.minimum <*> Fold.maximum)
                      . flip S.extractCol col
-                     . unMatObsRow
-                     . matrix
-                     $ sc
-    col = fromMaybe (error "Expression does not exist.")
+                     . getMatrix
+                     $ mat
+    col = fromMaybe (error $ "Feature " <> T.unpack (unFeature g) <> " does not exist.")
         . V.elemIndex g
-        . colNames
-        $ sc
+        . fmap Feature
+        . getColNames
+        $ mat
 
 -- | Get the colors of each label.
 getLabelColorMap9 :: LabelMap -> LabelColorMap
 getLabelColorMap9 (LabelMap lm) =
     LabelColorMap
         . Map.fromList
-        . flip zip (cycle (brewerSet Set1 9))
+        . flip zip (cycle (brewerSet Brewer.Set1 9))
         $ labels
   where
     labels = Set.toAscList . Set.fromList . Map.elems $ lm
@@ -425,32 +428,63 @@ labelToItemColorMap (LabelColorMap lm) =
     ItemColorMap . Map.map (\x -> Map.findWithDefault black x lm) . unLabelMap
 
 -- | Get the colors from a list of expressions.
-getExpressionColor :: [Double] -> [Kolor]
-getExpressionColor =
-    fmap (\x -> sRGB (1 - x) (1 - x) (1 - x))
+getContinuousColor :: [Double] -> [Kolor]
+getContinuousColor =
+    fmap (\x -> sRGB 1 (1 - x) (1 - x))
         . Fold.fold
-            ( (\xs m -> fmap (/ (fromMaybe (error "Expression does not exist.") m)) xs)
+            ( (\xs m -> fmap (/ (fromMaybe (error "Feature does not exist.") m)) xs)
                     <$> Fold.list
                     <*> Fold.maximum
             )
 
 -- | Get the colors of each item, where the color is determined by expression.
-getItemColorMapExpression :: Gene -> SingleCells MatObsRow -> ItemColorMap
-getItemColorMapExpression g sc =
+getItemColorMapContinuous :: (MatrixLike a) => Feature -> a -> ItemColorMap
+getItemColorMapContinuous g mat =
     ItemColorMap
         . Map.fromList
-        . zip (fmap (Id . unCell) . V.toList . rowNames $ sc)
-        . getExpressionColor
+        . zip (fmap Id . V.toList . getRowNames $ mat)
+        . getContinuousColor
         . S.toDenseListSV
         . flip S.extractCol col
-        . unMatObsRow
-        . matrix
-        $ sc
+        . getMatrix
+        $ mat
   where
-    col = fromMaybe (error "Expression does not exist.")
+    col = fromMaybe (error $ "Feature " <> T.unpack (unFeature g) <> " does not exist.")
         . V.elemIndex g
-        . colNames
-        $ sc
+        . fmap Feature
+        . getColNames
+        $ mat
+
+-- | Get the labels of each item, where the label is determined by a binary high
+-- / low expression determined by a threshold. Multiple expressions can be used
+-- for combinatorical labeling..
+getLabelMapThresholdContinuous
+    :: (MatrixLike a)
+    => [(Feature, Double)] -> a -> LabelMap
+getLabelMapThresholdContinuous gs mat =
+    LabelMap
+        . Map.fromList
+        . zip (fmap Id . V.toList . getRowNames $ mat)
+        . getCombinatoricLabels
+        $ gs'
+  where
+    getCombinatoricLabels :: [(Feature, Double)] -> [Label]
+    getCombinatoricLabels =
+        fmap (Label . foldl1' (\acc x -> acc <> " " <> x))
+            . transpose
+            . fmap (uncurry getCombinatoricLabelFeature)
+    getCombinatoricLabelFeature g v =
+        fmap (\x -> unFeature g <> " " <> if x > v then "high" else "low")
+            . S.toDenseListSV
+            . flip S.extractCol (getCol g)
+            . getMatrix
+            $ mat
+    gs' = sortBy (compare `on` fst) gs
+    getCol g = fromMaybe (error $ "Feature " <> T.unpack (unFeature g) <> " does not exist.")
+             . V.elemIndex g
+             . fmap Feature
+             . getColNames
+             $ mat
 
 -- | Get the maximum cluster size from a graph.
 maxClusterSize :: G.Gr (G.Node, Maybe (Seq.Seq a)) e -> Int

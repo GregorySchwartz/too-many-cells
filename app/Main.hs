@@ -71,7 +71,7 @@ data Options
                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                , preNormalization :: Bool <?> "Do not pre-normalize matrix before cluster normalization."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
-               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, and DrawItem (DrawExpression GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix, not yet implemented)."
+               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), and DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.)."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
@@ -113,7 +113,7 @@ instance ParseRecord Options where
     parseRecord = parseRecordWithModifiers modifiers
 
 -- | Load the single cell matrix.
-loadSSM :: Options -> FilePath -> IO (SingleCells MatObsRow)
+loadSSM :: Options -> FilePath -> IO SingleCells
 loadSSM opts matrixPath' = do
     fileExist      <- FP.doesFileExist matrixPath'
     directoryExist <- FP.doesDirectoryExist matrixPath'
@@ -144,7 +144,7 @@ loadSSM opts matrixPath' = do
     unFilteredSc
 
 -- | Load all single cell matrices.
-loadAllSSM :: Options -> IO (SingleCells MatObsRow)
+loadAllSSM :: Options -> IO SingleCells
 loadAllSSM opts = do
     let matrixPaths'    =
             (\xs -> bool (error "Need a matrix path.") xs . not . null $ xs)
@@ -209,7 +209,16 @@ makeTreeMain opts = do
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
 
-    labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
+    -- Get the label map from either a file or from expression thresholds.
+    labelMap <- case drawLeaf' of
+                    (DrawItem (DrawThresholdContinuous gs)) ->
+                        fmap
+                            ( Just
+                            . getLabelMapThresholdContinuous
+                                (fmap (L.over L._1 Feature) gs)
+                            )
+                            processedSc
+                    _ -> sequence . fmap (loadLabelData delimiter') $ labelsFile'
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -317,22 +326,19 @@ makeTreeMain opts = do
     -- supplied.
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         -- Get the color of each label.
-        labelColorMap <- sequence $ fmap getLabelColorMap labelMap
+        labelColorMap <- sequence $ fmap (getLabelColorMap Set1) labelMap
 
-        let itemColorMap =
+        let defaultGetItemColorMap = do
+                lcm <- labelColorMap
+                lm  <- labelMap
+                return $ labelToItemColorMap lcm lm
+            itemColorMap =
                 case drawLeaf' of
-                    DrawText           ->
-                        return $ do
-                            lcm <- labelColorMap
-                            lm  <- labelMap
-                            return $ labelToItemColorMap lcm lm
-                    DrawItem DrawLabel ->
-                        return $ do
-                            lcm <- labelColorMap
-                            lm  <- labelMap
-                            return $ labelToItemColorMap lcm lm
-                    DrawItem (DrawExpression x) ->
-                        fmap (Just . getItemColorMapExpression (Gene x)) processedSc
+                    DrawItem (DrawContinuous x) ->
+                        fmap
+                            (Just . getItemColorMapContinuous (Feature x))
+                            processedSc
+                    _                           -> return defaultGetItemColorMap
 
         -- Plot dendrogram.
         H.io $ do
@@ -340,9 +346,9 @@ makeTreeMain opts = do
             gr <- graph
             cm <- itemColorMap
             legend <- case drawLeaf' of
-                        (DrawItem (DrawExpression g)) ->
+                        (DrawItem (DrawContinuous g)) ->
                             fmap
-                                (Just . plotExpressionLegend (Gene g))
+                                (Just . plotContinuousLegend (Feature g))
                                 processedSc
                         _ -> return $ fmap plotLabelLegend labelColorMap
 

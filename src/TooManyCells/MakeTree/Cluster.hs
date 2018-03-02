@@ -53,8 +53,8 @@ import TooManyCells.Matrix.Types
 import TooManyCells.Diversity.Types
 
 -- | Cluster cLanguage.R.QQ (r)olumns of a sparse matrix using HDBSCAN.
-hdbscan :: RMatObsRowImportant s -> R s (R.SomeSEXP s)
-hdbscan (RMatObsRowImportant mat) = do
+hdbscan :: RMatObsRow s -> R s (R.SomeSEXP s)
+hdbscan (RMatObsRow mat) = do
     [r| library(dbscan) |]
 
     clustering  <- [r| hdbscan(mat_hs, minPts = 5) |]
@@ -62,7 +62,7 @@ hdbscan (RMatObsRowImportant mat) = do
     return clustering
 
 -- | Hierarchical clustering.
-hClust :: SingleCells MatObsRowImportant -> ClusterResults
+hClust :: SingleCells -> ClusterResults
 hClust sc =
     ClusterResults { clusterList = clustering
                    , clusterDend = cDend
@@ -91,7 +91,7 @@ hClust sc =
                    (V.toList $ projections sc)
             )
           . S.toRowsL
-          . unMatObsRowImportant
+          . unMatObsRow
           . matrix
           $ sc
 
@@ -110,7 +110,7 @@ findCut = continuousBy s 9 10 . VU.fromList . F.toList . flattenDist
         (Seq.<|) d . (Seq.><) (flattenDist l) . flattenDist $ r
 
 -- | Convert the cluster object from hdbscan to a cluster list.
-clustersToClusterList :: SingleCells MatObsRowImportant
+clustersToClusterList :: SingleCells
                       -> R.SomeSEXP s
                       -> R s [(Cell, Cluster)]
 clustersToClusterList sc clustering = do
@@ -123,7 +123,7 @@ clustersToClusterList sc clustering = do
 
 -- | Hierarchical spectral clustering.
 hSpecClust :: MinClusterSize
-           -> SingleCells MatObsRow
+           -> SingleCells
            -> (ClusterResults, B, ClusterGraph CellInfo)
 hSpecClust (MinClusterSize minSize) sc =
     ( ClusterResults { clusterList = clustering

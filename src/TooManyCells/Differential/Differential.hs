@@ -41,7 +41,7 @@ import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Types
 
 -- | Convert a single cell matrix to a two dimensional matrix.
-scToTwoD :: [(Int, Cell, Diff.Status)] -> SingleCells MatObsRow -> Diff.TwoDMat
+scToTwoD :: [(Int, Cell, Diff.Status)] -> SingleCells -> Diff.TwoDMat
 scToTwoD cellGroups sc =
     Diff.TwoDMat rNames cNames statuses nRows nCols . S.toListSM $ filteredMat
   where
@@ -70,7 +70,7 @@ getStatuses v1 v2 (ClusterGraph gr) =
 
 -- | Get the differential expression of two sets of cells.
 getDEGraph :: TopN
-           -> SingleCells MatObsRow
+           -> SingleCells
            -> [G.Node]
            -> [G.Node]
            -> ClusterGraph CellInfo

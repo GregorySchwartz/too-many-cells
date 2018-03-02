@@ -23,6 +23,7 @@ module TooManyCells.Diversity.Plot
 import Diagrams.Prelude
 import Diagrams.Backend.Cairo
 import Data.Colour.Palette.BrewerSet (ColorCat (..), brewerSet)
+import qualified Data.Colour.Palette.BrewerSet as Brewer
 import Control.Lens
 import Control.Monad (forM)
 import Language.R as R
@@ -75,7 +76,7 @@ plotRarefaction xs = renderAxis $ r2Axis &~ do
     hideGridLines
     xAxis.axisLineType .= LeftAxisLine
     yAxis.axisLineType .= LeftAxisLine
-    axisColourMap .= (colourMap . zip [1..] . brewerSet Set1 $ 9)
+    axisColourMap .= (colourMap . zip [1..] . brewerSet Brewer.Set1 $ 9)
     xLabel .= "Subsample (# cells)"
     yLabel .= "Estimated clusters (# clusters)"
 

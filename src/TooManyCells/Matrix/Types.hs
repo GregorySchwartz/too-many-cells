@@ -54,9 +54,6 @@ newtype Y = Y
 newtype RMat s          = RMat { unRMat :: R.SomeSEXP s }
 newtype RMatObsRow s    = RMatObsRow { unRMatObsRow :: R.SomeSEXP s }
 newtype RMatFeatRow s   = RMatFeatRow { unRMatFeatRow :: R.SomeSEXP s }
-newtype RMatObsRowImportant s = RMatObsRowImportant
-    { unRMatObsRowImportant :: R.SomeSEXP s
-    }
 newtype RMatScaled s    = RMatScaled { unRMatScaled :: R.SomeSEXP s }
 newtype Row = Row
     { unRow :: Int
@@ -66,17 +63,14 @@ newtype Vals            = Vals { unVals :: [Double] }
 newtype MatObsRow = MatObsRow
     { unMatObsRow :: S.SpMatrix Double
     } deriving (Show)
-newtype MatObsRowImportant = MatObsRowImportant
-    { unMatObsRowImportant :: S.SpMatrix Double
-    } deriving (Show)
 
 -- Advanced
-data SingleCells a = SingleCells { matrix :: a
-                                 , rowNames :: Vector Cell
-                                 , colNames :: Vector Gene
-                                 , projections :: Vector (X, Y)
-                                 }
-                     deriving (Read, Show)
+data SingleCells = SingleCells { matrix :: MatObsRow
+                               , rowNames :: Vector Cell
+                               , colNames :: Vector Gene
+                               , projections :: Vector (X, Y)
+                               }
+                     deriving (Show)
 
 data CellInfo = CellInfo
     { barcode :: Cell
@@ -90,13 +84,8 @@ instance Monoid MatObsRow where
     mempty  = MatObsRow $ S.zeroSM 0 0
     mappend (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
 
-instance Monoid MatObsRowImportant where
-    mempty  = MatObsRowImportant $ S.zeroSM 0 0
-    mappend (MatObsRowImportant x) (MatObsRowImportant y) =
-        MatObsRowImportant $ S.vertStackSM x y
-
-instance (Monoid a) => Monoid (SingleCells a) where
-    mempty  = SingleCells { matrix = mempty :: (Monoid a) => a
+instance Monoid SingleCells where
+    mempty  = SingleCells { matrix = mempty
                           , rowNames = V.empty
                           , colNames = V.empty
                           , projections = V.empty

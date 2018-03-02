@@ -53,7 +53,7 @@ matToRMat (MatObsRow m) = do
     return . RMatObsRow $ mat
 
 -- | Convert a sc structure to an RMatrix.
-scToRMat :: SingleCells MatObsRow -> R s (RMatObsRow s)
+scToRMat :: SingleCells -> R s (RMatObsRow s)
 scToRMat sc = do
     [r| library(Matrix) |]
 

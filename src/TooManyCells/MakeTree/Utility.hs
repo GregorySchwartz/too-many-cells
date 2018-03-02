@@ -150,21 +150,29 @@ lchPalette n = fmap
                 [30, 30 + (360 / fromIntegral (n - 1)) .. fromIntegral 390]
 
 -- | Get the colors of each label using R to interpolate additional colors.
-getLabelColorMap :: LabelMap -> R.R s LabelColorMap
-getLabelColorMap (LabelMap lm) = do
+getLabelColorMap :: Palette -> LabelMap -> R.R s LabelColorMap
+getLabelColorMap palette (LabelMap lm) = do
     let labels    = Set.toAscList . Set.fromList . Map.elems $ lm
-        labelsLen = genericLength labels :: Int32
+        labelsLen = if odd $ genericLength labels
+                        then genericLength labels :: Int32
+                        else genericLength labels + 1 :: Int32
 
     colorsHex <-
-        if labelsLen > 9
-            then
-                [r| library(RColorBrewer)
-                    colorRampPalette(brewer.pal(9, "Set1"))(labelsLen_hs)
-                |]
-            else
-                [r| library(RColorBrewer)
-                    brewer.pal(labelsLen_hs, "Set1")
-                |]
+        case palette of
+            -- From https://stackoverflow.com/questions/8197559/emulate-ggplot2-default-color-palette
+            Hcl  -> [r| hues = seq(15, 375, length = labelsLen_hs + 1)
+                        hcl(h = hues, l = 65, c = 100)[1:labelsLen_hs]
+                    |]
+            Set1 ->
+                if labelsLen > 9
+                    then
+                        [r| library(RColorBrewer)
+                            colorRampPalette(brewer.pal(9, "Set1"))(labelsLen_hs)
+                        |]
+                    else
+                        [r| library(RColorBrewer)
+                            brewer.pal(labelsLen_hs, "Set1")
+                        |]
 
     let colors = fmap Colour.sRGB24read . R.dynSEXP $ colorsHex
 
