@@ -12,6 +12,9 @@ module TooManyCells.MakeTree.Utility
     ( getMostFrequent
     , getFractions
     , isTo
+    , stepCutDendrogram
+    , sizeCutDendrogram
+    , sizeCutDendrogramV
     , dendrogramToGraph
     , getGraphLeaves
     , getGraphLeavesWithParents
@@ -26,6 +29,7 @@ import Data.Int (Int32)
 import Data.List (genericLength, maximumBy)
 import Data.Maybe (fromMaybe)
 import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..))
+import Data.Monoid ((<>))
 import Data.Scientific (toRealFloat, Scientific)
 import Language.R as R
 import Language.R.QQ (r)
@@ -66,6 +70,64 @@ getFractions xs = Map.toAscList . Map.map (/ total) $ countMap
 -- of xIsToYAs x y a.
 isTo :: Double -> Double -> Double -> Double
 isTo x y a = a / (x / y)
+
+-- | Cut a dendrogram based off of the number of steps from the root, combining
+-- the results.
+stepCutDendrogram :: (Monoid a) => Int -> HC.Dendrogram a -> HC.Dendrogram a
+stepCutDendrogram _ (HC.Leaf x)        = HC.Leaf x
+stepCutDendrogram 0 (HC.Branch d l r)  =
+    HC.Leaf . mconcat $ HC.elements l <> HC.elements r
+stepCutDendrogram !n (HC.Branch d l r) =
+    HC.Branch d (stepCutDendrogram (n - 1) l) (stepCutDendrogram (n - 1) r)
+
+-- | Cut a dendrogram based off of the minimum size of a leaf.
+sizeCutDendrogram
+    :: (Monoid (t a), Traversable t)
+    => Int -> HC.Dendrogram (t a) -> HC.Dendrogram (t a)
+sizeCutDendrogram _ (HC.Leaf x) = HC.Leaf x
+sizeCutDendrogram n (HC.Branch d l@(HC.Leaf ls) r@(HC.Leaf rs)) =
+    if length ls < n || length rs < n
+        then HC.Leaf $ ls <> rs
+        else HC.Branch d (sizeCutDendrogram n l) (sizeCutDendrogram n r)
+sizeCutDendrogram n (HC.Branch d l@(HC.Leaf ls) r) =
+    if length ls < n
+        then HC.Leaf . mconcat $ ls : HC.elements r
+        else HC.Branch d l (sizeCutDendrogram n r)
+sizeCutDendrogram n (HC.Branch d l r@(HC.Leaf rs)) =
+    if length rs < n
+        then HC.Leaf . mconcat $ rs : HC.elements l
+        else HC.Branch d (sizeCutDendrogram n l) (HC.Leaf rs) 
+sizeCutDendrogram n (HC.Branch d l r) =
+    if lengthElements l + lengthElements r < n
+        then HC.Leaf . mconcat $ HC.elements l <> HC.elements r
+        else HC.Branch d (sizeCutDendrogram n l) (sizeCutDendrogram n r)
+  where
+    lengthElements = sum . fmap length . HC.elements
+        
+-- | Cut a dendrogram based off of the minimum size of a leaf. For vectors only,
+-- faster for length calculation.
+sizeCutDendrogramV :: Int
+                   -> HC.Dendrogram (V.Vector a)
+                   -> HC.Dendrogram (V.Vector a)
+sizeCutDendrogramV _ (HC.Leaf x) = HC.Leaf x
+sizeCutDendrogramV n (HC.Branch d l@(HC.Leaf ls) r@(HC.Leaf rs)) =
+    if V.length ls < n || V.length rs < n
+        then HC.Leaf $ ls <> rs
+        else HC.Branch d (sizeCutDendrogram n l) (sizeCutDendrogram n r)
+sizeCutDendrogramV n (HC.Branch d l@(HC.Leaf ls) r) =
+    if V.length ls < n
+        then HC.Leaf . mconcat $ ls : HC.elements r
+        else HC.Branch d l (sizeCutDendrogram n r)
+sizeCutDendrogramV n (HC.Branch d l r@(HC.Leaf rs)) =
+    if V.length rs < n
+        then HC.Leaf . mconcat $ rs : HC.elements l
+        else HC.Branch d (sizeCutDendrogram n l) (HC.Leaf rs) 
+sizeCutDendrogramV n (HC.Branch d l r) =
+    if lengthElements l + lengthElements r < n
+        then HC.Leaf . mconcat $ HC.elements l <> HC.elements r
+        else HC.Branch d (sizeCutDendrogram n l) (sizeCutDendrogram n r)
+  where
+    lengthElements = sum . fmap V.length . HC.elements
 
 -- | Convert a dendrogram with height as accumulating Q values to a graph for
 -- plotting with leaves containing all information. This also means that the

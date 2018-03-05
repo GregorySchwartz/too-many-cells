@@ -14,6 +14,7 @@ module TooManyCells.MakeTree.Cluster
     , hClust
     , hSpecClust
     , assignClusters
+    , dendrogramToClusterList
     , clusterDiversity
     , printClusterDiversity
     ) where
@@ -64,8 +65,8 @@ hdbscan (RMatObsRow mat) = do
 -- | Hierarchical clustering.
 hClust :: SingleCells -> ClusterResults
 hClust sc =
-    ClusterResults { clusterList = clustering
-                   , clusterDend = cDend
+    ClusterResults { _clusterList = clustering
+                   , _clusterDend = cDend
                    }
   where
     cDend = fmap ( V.singleton
@@ -122,12 +123,12 @@ clustersToClusterList sc clustering = do
         $ (R.fromSomeSEXP clusters :: [Int32])
 
 -- | Hierarchical spectral clustering.
-hSpecClust :: MinClusterSize
+hSpecClust :: NormType
            -> SingleCells
            -> (ClusterResults, B, ClusterGraph CellInfo)
-hSpecClust (MinClusterSize minSize) sc =
-    ( ClusterResults { clusterList = clustering
-                     , clusterDend = dend
+hSpecClust norm sc =
+    ( ClusterResults { _clusterList = clustering
+                     , _clusterDend = dend
                      }
     , b
     , gr
@@ -144,7 +145,7 @@ hSpecClust (MinClusterSize minSize) sc =
             $ gr
     gr         = dendrogramToGraph dend
     dend       = clusteringTreeToDendrogram tree
-    (tree, b)  = hierarchicalSpectralCluster (Just minSize) items
+    (tree, b)  = hSpecCommand norm
                . Left
                . unMatObsRow
                . matrix
@@ -154,11 +155,24 @@ hSpecClust (MinClusterSize minSize) sc =
                     (rowNames sc)
                     (fmap Row . flip V.generate id . V.length . rowNames $ sc)
                     (projections sc)
+    hSpecCommand B1Norm = hierarchicalSpectralCluster True Nothing items
+    hSpecCommand _      = hierarchicalSpectralCluster False Nothing items
+
+dendrogramToClusterList :: HC.Dendrogram (V.Vector CellInfo)
+                        -> [(CellInfo, [Cluster])]
+dendrogramToClusterList =
+    concatMap (\ (!ns, (_, !xs))
+                -> zip (maybe [] F.toList xs) . repeat . fmap Cluster $ ns
+                )
+        . F.toList
+        . flip getGraphLeavesWithParents 0
+        . unClusterGraph
+        . dendrogramToGraph
 
 -- | Find the diversity of each leaf cluster.
 clusterDiversity :: Order -> LabelMap -> ClusterResults -> [(Cluster, Diversity)]
 clusterDiversity (Order order) (LabelMap lm) =
-    getDiversityOfCluster . clusterList
+    getDiversityOfCluster . _clusterList
   where
     getDiversityOfCluster :: [(CellInfo, [Cluster])] -> [(Cluster, Diversity)]
     getDiversityOfCluster =

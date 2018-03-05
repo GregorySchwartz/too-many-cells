@@ -77,7 +77,7 @@ priorToPopulation = Population
                          . L.over L._2 (Seq.singleton . barcode)
                          . swap
                          )
-                  . clusterList
+                  . _clusterList
 
 loadPopulation :: PriorPath
                -> IO (Population, Maybe ClusterResults, Maybe B)

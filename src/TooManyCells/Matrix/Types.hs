@@ -45,6 +45,9 @@ newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show)
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: Set.Set Cell
     } deriving (Eq,Ord,Read,Show)
+newtype PCAVar = PCAVar
+    { unPCAVar :: Double
+    } deriving (Eq,Ord,Read,Show)
 newtype X = X
     { unX :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
@@ -77,6 +80,8 @@ data CellInfo = CellInfo
     , cellRow :: Row
     , projection :: (X, Y)
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
+
+data NormType = B1Norm | WishboneNorm | NoneNorm deriving (Read, Show)
 
 instance (Generic a) => Generic (Vector a)
 

@@ -1,4 +1,4 @@
-{- sc-cluster
+{- too-many-cells
 Gregory W. Schwartz
 
 Clusters single cell data.
@@ -69,14 +69,16 @@ data Options
                , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell, with \"cell,label\" header."
                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-               , preNormalization :: Bool <?> "Do not pre-normalize matrix before cluster normalization."
+               , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
+               , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), and DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.)."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
+               , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
@@ -84,7 +86,7 @@ data Options
                    , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-                   , preNormalization :: Bool <?> "Do not pre-normalize matrix before cluster normalization."
+                   , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                    , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."}
@@ -94,23 +96,31 @@ data Options
                 , end :: Maybe Integer <?> "([N] | INT) For the rarefaction curve, which subsample to stop at. By default, the curve stops at the observed number of species for each population."
                 , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                 , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
-    deriving ((Generic))
+    deriving (Generic)
 
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
-    short "minSize"           = Just 'M'
-    short "projectionFile"    = Just 'j'
-    short "priors"            = Just 'P'
-    short "preNormalization"  = Just 'n'
-    short "drawLeaf"          = Just 'L'
-    short "drawDendrogram"    = Just 'D'
-    short "drawNodeNumber"    = Just 'N'
-    short "order"             = Just 'O'
-    short x                   = firstLetter x
+    short "minSize"              = Just 'M'
+    short "projectionFile"       = Just 'j'
+    short "priors"               = Just 'P'
+    short "clusterNormalization" = Just 'C'
+    short "normalization"        = Just 'z'
+    short "drawLeaf"             = Just 'L'
+    short "drawDendrogram"       = Just 'D'
+    short "drawNodeNumber"       = Just 'N'
+    short "order"                = Just 'O'
+    short "pca"                  = Just 'a'
+    short x                      = firstLetter x
 
 instance ParseRecord Options where
     parseRecord = parseRecordWithModifiers modifiers
+
+-- | Notify user of limitations and error out for incompatabilities. Empty for
+-- now.
+limitationWarningsErrors :: Options -> IO ()
+limitationWarningsErrors opts = do
+    return ()
 
 -- | Load the single cell matrix.
 loadSSM :: Options -> FilePath -> IO SingleCells
@@ -146,15 +156,16 @@ loadSSM opts matrixPath' = do
 -- | Load all single cell matrices.
 loadAllSSM :: Options -> IO SingleCells
 loadAllSSM opts = do
-    let matrixPaths'    =
+    let matrixPaths'       =
             (\xs -> bool (error "Need a matrix path.") xs . not . null $ xs)
                 . unHelpful
                 . matrixPath
                 $ opts
         cellWhitelistFile' =
             fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
-        preNormalization' =
-            PreNormalization . unHelpful . preNormalization $ opts
+        normalization'     =
+            maybe B1Norm read . unHelpful . normalization $ opts
+        pca'               = fmap PCAVar . unHelpful . pca $ opts
 
     cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
 
@@ -166,10 +177,13 @@ loadAllSSM opts = do
         sc           = filterNumSparseMat
                      . whiteListFilter cellWhitelist
                      $ unFilteredSc
-        processMat   = bool matrix (scaleSparseMat . matrix)
-                      . unPreNormalization
-                      $ preNormalization'
-        processedSc  = sc { matrix = processMat sc }
+        normMat NoneNorm     = id
+        normMat B1Norm       = id -- Normalize during clustering.
+        normMat WishboneNorm = scaleSparseMat
+        processMat  = (\m -> maybe m (flip pcaDenseMat m) pca')
+                    . normMat normalization'
+                    . matrix
+        processedSc = sc { matrix = processMat sc }
 
     return processedSc
 
@@ -181,10 +195,10 @@ makeTreeMain opts = do
             fmap PriorPath . unHelpful . prior $ opts
         delimiter'        =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        preNormalization' =
-            PreNormalization . unHelpful . preNormalization $ opts
-        minSize'          =
-            MinClusterSize . fromMaybe 1 . unHelpful . minSize $ opts
+        normalization' =
+            maybe B1Norm read . unHelpful . normalization $ opts
+        minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
+        maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
         drawLeaf'         = maybe DrawText read . unHelpful . drawLeaf $ opts
         drawPie'          = maybe PieRing read . unHelpful . drawPie $ opts
         drawDendrogram'   = unHelpful . drawDendrogram $ opts
@@ -205,6 +219,9 @@ makeTreeMain opts = do
                                 drawNoScaleNodes'
 
         processedSc       = loadAllSSM opts
+
+    -- Notify user of limitations.
+    limitationWarningsErrors opts
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
@@ -230,68 +247,113 @@ makeTreeMain opts = do
         --let clusterResults = fmap hClust processedSc
 
     -- Load previous results or write if first run.
-    (clusterResults, bMat, graph) <-
-        case prior' of
-            Nothing -> do
-                (cr, b, gr) <- fmap (hSpecClust minSize') processedSc
+    (clusterResults, bMat, graph) <- case prior' of
+        Nothing -> do
+            (fullCr, b, gr) <- fmap (hSpecClust normalization') processedSc
 
-                B.writeFile
-                    (unOutputDirectory output' FP.</> "cluster_results.json")
-                    . A.encode
-                    $ cr
-                writeMatrix (unOutputDirectory output' FP.</> "b.mtx")
-                    . spMatToMat
-                    . unB
-                    $ b
-                T.writeFile
-                    (unOutputDirectory output' FP.</> "graph.dot")
-                    . G.printDotGraph
-                    . G.graphToDot G.nonClusteredParams
-                    . unClusterGraph
-                    $ gr
-                case labelMap of
-                    Nothing   -> return ()
-                    (Just lm) ->
-                        B.writeFile
-                            (unOutputDirectory output' FP.</> "cluster_diversity.csv")
-                            . printClusterDiversity order' lm
-                            $ cr
+            let dend  = _clusterDend fullCr
+                dend' = (\ y
+                        -> maybe
+                            y
+                            (flip sizeCutDendrogramV y . unMinClusterSize)
+                            minSize'
+                        )
+                        . maybe dend (flip stepCutDendrogram dend . unMaxStep)
+                        $ maxStep'
+                clusterList' = dendrogramToClusterList dend'
+                gr' = dendrogramToGraph dend'
+                cr' = ClusterResults clusterList' dend'
 
-                return ((return cr, return b, return gr) :: (IO ClusterResults, IO B, IO (ClusterGraph CellInfo)))
-            (Just x) -> do
-                let crInput =
-                        (FP.</> "cluster_results.json") . unPriorPath $ x
-                    bInput  = (FP.</> "b.mtx") . unPriorPath $ x
-                    grInput  = (FP.</> "graph.dot") . unPriorPath $ x
-                    cr :: IO ClusterResults
-                    cr = fmap (either error id . A.eitherDecode)
-                       . B.readFile
-                       $ crInput
-                    b :: IO B
-                    b  = fmap (B . matToSpMat)
-                       . readMatrix
-                       $ bInput
+            writeMatrix (unOutputDirectory output' FP.</> "b.mtx")
+                . spMatToMat
+                . unB
+                $ b
+            B.writeFile
+                (unOutputDirectory output' FP.</> "cluster_results.json")
+                . A.encode
+                $ cr'
+            T.writeFile
+                (unOutputDirectory output' FP.</> "graph.dot")
+                . G.printDotGraph
+                . G.graphToDot G.nonClusteredParams
+                . unClusterGraph
+                $ gr'
+            case labelMap of
+                Nothing   -> return ()
+                (Just lm) ->
+                    B.writeFile
+                        (unOutputDirectory output' FP.</> "cluster_diversity.csv")
+                        . printClusterDiversity order' lm
+                        $ cr'
 
-                FP.copyFile crInput
-                    . (FP.</> "cluster_results.json")
-                    . unOutputDirectory
-                    $ output'
-                FP.copyFile bInput
-                    . (FP.</> "b.mtx")
-                    . unOutputDirectory
-                    $ output'
-                FP.copyFile grInput
-                    . (FP.</> "graph.dot")
-                    . unOutputDirectory
-                    $ output'
-                FP.copyFile crInput
-                    . (FP.</> "cluster_diversity.csv")
-                    . unOutputDirectory
-                    $ output'
+            return ((return cr', return b, return gr') :: (IO ClusterResults, IO B, IO (ClusterGraph CellInfo)))
+        (Just x) -> do
+            let crInput =
+                    (FP.</> "cluster_results.json") . unPriorPath $ x
+                bInput  = (FP.</> "b.mtx") . unPriorPath $ x
+                grInput  = (FP.</> "graph.dot") . unPriorPath $ x
+                
+            fullCr <- fmap (either error id . A.eitherDecode)
+                    . B.readFile
+                    $ crInput
 
-                gr <- fmap (dendrogramToGraph . clusterDend) cr
+            let dend  = _clusterDend fullCr
+                dend' = (\ y
+                        -> maybe
+                            y
+                            (flip sizeCutDendrogramV y . unMinClusterSize)
+                            minSize'
+                        )
+                        . maybe dend (flip stepCutDendrogram dend . unMaxStep)
+                        $ maxStep'
+                clusterList' = dendrogramToClusterList dend'
+                gr' = dendrogramToGraph dend'
+                cr' = ClusterResults clusterList' dend'
+                b :: IO B
+                b  = fmap (B . matToSpMat)
+                    . readMatrix
+                    $ bInput
 
-                return (cr, b, return gr)
+            -- Write results to files.
+            FP.copyFile bInput
+                . (FP.</> "b.mtx")
+                . unOutputDirectory
+                $ output'
+
+            case (minSize', maxStep') of
+                (Nothing, Nothing) -> do
+                    FP.copyFile crInput
+                        . (FP.</> "cluster_results.json")
+                        . unOutputDirectory
+                        $ output'
+                    FP.copyFile grInput
+                        . (FP.</> "graph.dot")
+                        . unOutputDirectory
+                        $ output'
+                    FP.copyFile crInput
+                        . (FP.</> "cluster_diversity.csv")
+                        . unOutputDirectory
+                        $ output'
+                _ -> do
+                    B.writeFile
+                        (unOutputDirectory output' FP.</> "cluster_results.json")
+                        . A.encode
+                        $ cr'
+                    T.writeFile
+                        (unOutputDirectory output' FP.</> "graph.dot")
+                        . G.printDotGraph
+                        . G.graphToDot G.nonClusteredParams
+                        . unClusterGraph
+                        $ gr'
+                    case labelMap of
+                        Nothing   -> return ()
+                        (Just lm) ->
+                            B.writeFile
+                                (unOutputDirectory output' FP.</> "cluster_diversity.csv")
+                                . printClusterDiversity order' lm
+                                $ cr'
+
+            return (return cr', b, return gr')
 
     -- Calculations with the label map (clumpiness and cluster diversity).
     case labelMap of
@@ -301,7 +363,7 @@ makeTreeMain opts = do
             clusterResults
               >>= B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
                 . dendToClumpCsv lcm
-                . clusterDend
+                . _clusterDend
 
             clusterResults
                 >>= B.writeFile (unOutputDirectory output' FP.</> "cluster_diversity.csv")
@@ -320,7 +382,7 @@ makeTreeMain opts = do
                     , T.intercalate "," . fmap (showt . unCluster) $ c:cs
                     )
                  )
-          . clusterList
+          . _clusterList
 
     -- | Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
@@ -353,7 +415,7 @@ makeTreeMain opts = do
                         _ -> return $ fmap plotLabelLegend labelColorMap
 
             plot <- if drawDendrogram'
-                    then return . plotDendrogram legend drawLeaf' cm . clusterDend $ cr
+                    then return . plotDendrogram legend drawLeaf' cm . _clusterDend $ cr
                     else do
                         plotGraph legend drawConfig cm gr
 
@@ -365,7 +427,7 @@ makeTreeMain opts = do
         -- Plot clustering.
         (H.io clusterResults)
           >>= plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
-            . clusterList
+            . _clusterList
             -- >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
             -- . D.renderAxis
             -- . plotClusters
@@ -391,7 +453,7 @@ differentialMain opts = do
             . B.readFile
             $ crInput
 
-    gr <- fmap (dendrogramToGraph . clusterDend) cr
+    gr <- fmap (dendrogramToGraph . _clusterDend) cr
 
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         res <- getDEGraph
@@ -484,6 +546,6 @@ main = do
                       \ Clusters and analyzes single cell data."
 
     case opts of
-        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
-        (Differential _ _ _ _ _ _ _ _)             -> differentialMain opts
-        (Main.Diversity _ _ _ _ _ _)               -> diversityMain opts
+        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
+        (Differential _ _ _ _ _ _ _ _)                 -> differentialMain opts
+        (Main.Diversity _ _ _ _ _ _)                   -> diversityMain opts

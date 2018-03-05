@@ -243,12 +243,11 @@ pcaRMat (RMatObsRow mat) = do
         [r| mat = prcomp(t(mat_hs), tol = 0.95)$rotation
         |]
 
--- | Conduct PCA on a matrix, retaining 80% of variance.
-pcaDenseMat :: MatObsRow -> IO MatObsRow
-pcaDenseMat (MatObsRow mat) = do
-    return
-        . MatObsRow
+-- | Conduct PCA on a matrix, retaining a percentage of variance.
+pcaDenseMat :: PCAVar -> MatObsRow -> MatObsRow
+pcaDenseMat (PCAVar pcaVar) (MatObsRow mat) = do
+    MatObsRow
         . hToSparseMat
         . L.view L._3
         . getDimReducer_rv (sparseToHMat mat)
-        $ 0.8
+        $ pcaVar
