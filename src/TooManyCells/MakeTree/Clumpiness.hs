@@ -9,7 +9,8 @@ dendrogram.
 {-# LANGUAGE OverloadedStrings #-}
 
 module TooManyCells.MakeTree.Clumpiness
-    ( dendToClumpCsv
+    ( dendToClumpList
+    , clumpToCsv
     ) where
 
 -- Remote
@@ -45,9 +46,12 @@ dendToClumpDend (LabelMap labelMap) =
 clumpToCsv :: [(T.Text, T.Text, Double)] -> B.ByteString
 clumpToCsv = (<>) "label1,label2,value\n" . CSV.encode
 
--- | Get the clumpiness of the single cell labels and return a ready to print
--- CSV string.
-dendToClumpCsv :: LabelMap -> HC.Dendrogram (V.Vector CellInfo) -> B.ByteString
-dendToClumpCsv labelMap = clumpToCsv
-                        . Clump.getClumpiness Clump.AllExclusive False False
-                        . dendToClumpDend labelMap
+-- | Get the clumpiness of the single cell labels.
+dendToClumpList
+    :: Clump.Exclusivity
+    -> LabelMap
+    -> HC.Dendrogram (V.Vector CellInfo)
+    -> [(T.Text, T.Text, Double)]
+dendToClumpList exclusivity labelMap =
+    Clump.getClumpiness exclusivity False False
+        . dendToClumpDend labelMap

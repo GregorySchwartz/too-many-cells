@@ -96,14 +96,14 @@ sizeCutDendrogram n (HC.Branch d l@(HC.Leaf ls) r) =
 sizeCutDendrogram n (HC.Branch d l r@(HC.Leaf rs)) =
     if length rs < n
         then HC.Leaf . mconcat $ rs : HC.elements l
-        else HC.Branch d (sizeCutDendrogram n l) (HC.Leaf rs) 
+        else HC.Branch d (sizeCutDendrogram n l) (HC.Leaf rs)
 sizeCutDendrogram n (HC.Branch d l r) =
     if lengthElements l + lengthElements r < n
         then HC.Leaf . mconcat $ HC.elements l <> HC.elements r
         else HC.Branch d (sizeCutDendrogram n l) (sizeCutDendrogram n r)
   where
     lengthElements = sum . fmap length . HC.elements
-        
+
 -- | Cut a dendrogram based off of the minimum size of a leaf. For vectors only,
 -- faster for length calculation.
 sizeCutDendrogramV :: Int
@@ -121,7 +121,7 @@ sizeCutDendrogramV n (HC.Branch d l@(HC.Leaf ls) r) =
 sizeCutDendrogramV n (HC.Branch d l r@(HC.Leaf rs)) =
     if V.length rs < n
         then HC.Leaf . mconcat $ rs : HC.elements l
-        else HC.Branch d (sizeCutDendrogram n l) (HC.Leaf rs) 
+        else HC.Branch d (sizeCutDendrogram n l) (HC.Leaf rs)
 sizeCutDendrogramV n (HC.Branch d l r) =
     if lengthElements l + lengthElements r < n
         then HC.Leaf . mconcat $ HC.elements l <> HC.elements r
@@ -129,7 +129,7 @@ sizeCutDendrogramV n (HC.Branch d l r) =
   where
     lengthElements = sum . fmap V.length . HC.elements
 
--- | Convert a dendrogram with height as accumulating Q values to a graph for
+-- | Convert a dendrogram with height as Q values to a graph for
 -- plotting with leaves containing all information. This also means that the
 -- node must be in the label as well.
 dendrogramToGraph

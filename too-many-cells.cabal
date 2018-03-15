@@ -97,6 +97,7 @@ executable too-many-cells
                      , directory
                      , fgl
                      , filepath
+                     , find-clumpiness
                      , graphviz
                      , hierarchical-spectral-clustering
                      , inline-r

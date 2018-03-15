@@ -115,6 +115,12 @@ data ClusterResults = ClusterResults
     , _clusterDend :: HC.Dendrogram (Vector CellInfo)
     } deriving (Read,Show,Generic)
 
+data ClusterInfo = ClusterInfo
+    { _clusterId :: Cluster
+    , _diversityPath :: [Int]
+    , _sizePath :: [Double]
+    }
+
 class TreeItem a where
     getId :: a -> Id
 

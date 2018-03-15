@@ -15,6 +15,7 @@ Collects the functions pertaining to plotting the clusterings.
 module TooManyCells.MakeTree.Plot
     ( plotClusters
     , plotClustersR
+    , plotClumpinessHeatmapR
     , plotDendrogram
     , plotGraph
     , getLabelColorMap
@@ -89,7 +90,7 @@ plotClustersR outputPlot clusterList = do
         ys = fmap (unY . snd . projection . fst) clusterListOrdered
         cs = fmap (show . unCluster . snd) clusterListOrdered
     [r| suppressMessages(library(ggplot2))
-        library(cowplot)
+        suppressMessages(library(cowplot))
         df = data.frame(x = xs_hs, y = ys_hs, c = cs_hs)
         df$c = factor(df$c, unique(df$c))
         p = ggplot(df, aes(x = x, y = y, color = factor(c))) +
@@ -98,7 +99,7 @@ plotClustersR outputPlot clusterList = do
                 ylab("TNSE 2") +
                 scale_color_discrete(guide = guide_legend(title = "Cluster"))
 
-        ggsave(p, file = outputPlot_hs)
+        suppressMessages(ggsave(p, file = outputPlot_hs))
     |]
 
     return ()
@@ -162,6 +163,44 @@ plotClustersOnlyR outputPlot (RMatObsRow mat) clustering = do
 
     --     dev.off()
     -- |]
+
+    return ()
+
+-- | Plot heatmap in R.
+plotClumpinessHeatmapR :: String -> [(T.Text, T.Text, Double)] -> R s ()
+plotClumpinessHeatmapR outputPlot cs = do
+    let xs = fmap (T.unpack . L.view L._1) cs
+        ys = fmap (T.unpack . L.view L._2) cs
+        vs = fmap (L.view L._3) cs
+
+    [r| suppressMessages(library(ggplot2))
+        suppressMessages(library(cowplot))
+        library(scales)
+        library(reshape2)
+
+        df = data.frame(x = xs_hs, y = ys_hs, v = vs_hs)
+
+        # Convert to wide to cluster.
+        dfWide = dcast(df, x ~ y, value.var = c("v"))
+
+        # Cluster and get order of labels.
+        ord = hclust(dist(dfWide, method = "euclidean"))$order
+        levels = colnames(dfWide)[-1][ord]
+
+        df$x = factor(df$x, levels = levels)
+        df$y = factor(df$y, levels = levels)
+
+        # Plot.
+        p = ggplot(df, aes(x = x, y = y, fill = v)) +
+                geom_tile(color = "white") +
+                coord_equal() +
+                xlab("") +
+                ylab("") +
+                scale_fill_gradient2(guide = guide_colorbar(title = "Clumpiness"), midpoint = 0.5, low = muted("blue"), high = muted("red")) +
+                theme(axis.text.x = element_text(angle = 315, hjust = 0))
+
+        suppressMessages(ggsave(p, file = outputPlot_hs))
+    |]
 
     return ()
 

@@ -17,14 +17,16 @@ module TooManyCells.MakeTree.Cluster
     , dendrogramToClusterList
     , clusterDiversity
     , printClusterDiversity
+    , printClusterInfo
     ) where
 
 -- Remote
 import Data.Function (on)
-import Data.List (sortBy, groupBy, zip4)
+import Data.List (sortBy, groupBy, zip4, genericLength)
 import Data.Int (Int32)
-import Data.Maybe (fromMaybe, catMaybes)
+import Data.Maybe (fromMaybe, catMaybes, mapMaybe)
 import Data.Monoid ((<>))
+import Data.Tuple (swap)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
@@ -34,14 +36,17 @@ import Math.Diversity.Diversity (diversity)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
 import Safe (headMay)
+import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
+import qualified Data.Graph.Inductive as G
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
 import qualified Numeric.LinearAlgebra as H
@@ -170,13 +175,21 @@ dendrogramToClusterList =
         . dendrogramToGraph
 
 -- | Find the diversity of each leaf cluster.
-clusterDiversity :: Order -> LabelMap -> ClusterResults -> [(Cluster, Diversity)]
+clusterDiversity :: Order
+                 -> LabelMap
+                 -> ClusterResults
+                 -> [(Cluster, Diversity, Size)]
 clusterDiversity (Order order) (LabelMap lm) =
     getDiversityOfCluster . _clusterList
   where
-    getDiversityOfCluster :: [(CellInfo, [Cluster])] -> [(Cluster, Diversity)]
+    getDiversityOfCluster :: [(CellInfo, [Cluster])]
+                          -> [(Cluster, Diversity, Size)]
     getDiversityOfCluster =
-        fmap (L.over L._2 (Diversity . diversity order . fmap cellInfoToLabel))
+        fmap (\ (!c, !xs)
+             -> ( c
+                , Diversity . diversity order . fmap cellInfoToLabel $ xs
+                , Size $ genericLength xs)
+             )
             . groupCellsByCluster
     cellInfoToLabel :: CellInfo -> Label
     cellInfoToLabel =
@@ -198,6 +211,38 @@ clusterDiversity (Order order) (LabelMap lm) =
 -- | Print the diversity of each leaf cluster.
 printClusterDiversity :: Order -> LabelMap -> ClusterResults -> B.ByteString
 printClusterDiversity order lm =
-    (<>) "cluster,diversity\n" . CSV.encode
-        . fmap (L.over L._2 unDiversity . L.over L._1 unCluster)
+    (<>) "cluster,diversity,size\n" . CSV.encode
+        . fmap ( L.over L._3 unSize
+               . L.over L._2 unDiversity
+               . L.over L._1 unCluster
+               )
         . clusterDiversity order lm
+
+-- | Get the size and modularity path of each leaf cluster path. Modularity
+-- starts from the parent of the cluster to the root for modularity.
+clusterInfo :: (TreeItem a) => ClusterGraph a -> [(Cluster, [Double], [Int])]
+clusterInfo (ClusterGraph gr) =
+    F.toList
+        . fmap (\ !x -> (Cluster . fst . snd $ x, getQs x, getSizes x))
+        . getGraphLeavesWithParents gr
+        $ 0
+  where
+    getSizes :: ([G.Node], a) -> [Int]
+    getSizes = fmap getSize . fst
+    getSize :: G.Node -> Int
+    getSize = sum . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
+    getQs :: ([G.Node], a) -> [Double]
+    getQs = mapMaybe getQ . fst
+    getQ :: G.Node -> Maybe Double
+    getQ  = fmap snd . headMay . G.lsuc gr
+
+-- | Get the information of each leaf cluster path. Modularity
+-- starts from the parent of the cluster to the root for modularity.
+printClusterInfo :: (TreeItem a) => ClusterGraph a -> B.ByteString
+printClusterInfo =
+    (<>) "cluster,modularity,size\n" . CSV.encode
+        . fmap ( L.over L._3 (T.intercalate "/" . fmap showt)
+               . L.over L._2 (T.intercalate "/" . fmap showt)
+               . L.over L._1 unCluster
+               )
+        . clusterInfo
