@@ -75,6 +75,7 @@ data Options
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), and DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.)."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
+               , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
                , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
@@ -204,6 +205,7 @@ makeTreeMain opts = do
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
         drawLeaf'         = maybe DrawText read . unHelpful . drawLeaf $ opts
         drawPie'          = maybe PieRing read . unHelpful . drawPie $ opts
+        drawMark'         = maybe MarkNone read . unHelpful . drawMark $ opts
         drawDendrogram'   = unHelpful . drawDendrogram $ opts
         drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
         drawMaxNodeSize'  =
@@ -344,10 +346,6 @@ makeTreeMain opts = do
                         . (FP.</> "cluster_info.csv")
                         . unOutputDirectory
                         $ output'
-                    FP.copyFile cdInput
-                        . (FP.</> "cluster_diversity.csv")
-                        . unOutputDirectory
-                        $ output'
                 _ -> do
                     B.writeFile
                         (unOutputDirectory output' FP.</> "cluster_results.json")
@@ -363,13 +361,14 @@ makeTreeMain opts = do
                         (unOutputDirectory output' FP.</> "cluster_info.csv")
                         . printClusterInfo
                         $ gr'
-                    case labelMap of
-                        Nothing   -> return ()
-                        (Just lm) ->
-                            B.writeFile
-                                (unOutputDirectory output' FP.</> "cluster_diversity.csv")
-                                . printClusterDiversity order' lm
-                                $ cr'
+
+            case labelMap of
+                Nothing   -> return ()
+                (Just lm) ->
+                    B.writeFile
+                        (unOutputDirectory output' FP.</> "cluster_diversity.csv")
+                        . printClusterDiversity order' lm
+                        $ cr'
 
             return (return cr', b, return gr')
 
@@ -446,10 +445,14 @@ makeTreeMain opts = do
                                 processedSc
                         _ -> return $ fmap plotLabelLegend labelColorMap
 
+            let markColorMap = case drawMark' of
+                                MarkModularity -> Just $ getMarkColorMap gr
+                                _ -> Nothing
+
             plot <- if drawDendrogram'
                     then return . plotDendrogram legend drawLeaf' cm . _clusterDend $ cr
                     else do
-                        plotGraph legend drawConfig cm gr
+                        plotGraph legend drawConfig cm markColorMap gr
 
             D.renderCairo
                     (unOutputDirectory output' FP.</> "dendrogram.pdf")
@@ -578,6 +581,6 @@ main = do
                       \ Clusters and analyzes single cell data."
 
     case opts of
-        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
-        (Differential _ _ _ _ _ _ _ _)                   -> differentialMain opts
-        (Main.Diversity _ _ _ _ _ _)                     -> diversityMain opts
+        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
+        (Differential _ _ _ _ _ _ _ _)                     -> differentialMain opts
+        (Main.Diversity _ _ _ _ _ _)                       -> diversityMain opts

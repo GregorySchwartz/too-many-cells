@@ -14,6 +14,7 @@ Collects the types used in the program
 module TooManyCells.MakeTree.Types where
 
 -- Remote
+import Data.Colour (AlphaColour)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
 import Data.Map.Strict (Map)
@@ -82,6 +83,9 @@ newtype LabelColorMap = LabelColorMap
 newtype ItemColorMap = ItemColorMap
     { unItemColorMap :: Map Id Kolor
     } deriving (Read,Show)
+newtype MarkColorMap = MarkColorMap
+    { unMarkColorMap :: Map G.Node (AlphaColour Double)
+    } deriving (Read,Show)
 newtype ClusterGraph a = ClusterGraph
     { unClusterGraph :: G.Gr (G.Node, Maybe (Seq.Seq a)) HC.Distance
     } deriving (Read, Show)
@@ -99,6 +103,7 @@ data DrawItemType
     deriving (Read,Show)
 data DrawLeaf = DrawItem DrawItemType | DrawText deriving (Read, Show)
 data DrawPie  = PieRing | PieChart | PieNone deriving (Read, Show)
+data DrawNodeMark = MarkModularity | MarkNone deriving (Read, Show)
 
 data Palette = Set1 | Hcl
 

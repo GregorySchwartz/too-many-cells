@@ -22,6 +22,7 @@ module TooManyCells.MakeTree.Plot
     , getLabelMapThresholdContinuous
     , labelToItemColorMap
     , getItemColorMapContinuous
+    , getMarkColorMap
     , plotLabelLegend
     , plotContinuousLegend
     ) where
@@ -29,7 +30,7 @@ module TooManyCells.MakeTree.Plot
 -- Remote
 import Control.Monad (forM, mapM, join)
 import Control.Monad.State (State (..))
-import Data.Colour (AffineSpace (..))
+import Data.Colour (AffineSpace (..), withOpacity)
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..), Kolor)
 import qualified Data.Colour.Palette.BrewerSet as Brewer
@@ -525,6 +526,19 @@ getLabelMapThresholdContinuous gs mat =
              . getColNames
              $ mat
 
+-- | Use the outgoing edges of a node to define the mark around the node.
+-- Min max normalization.
+getMarkColorMap :: ClusterGraph a -> MarkColorMap
+getMarkColorMap g =
+    MarkColorMap . Map.map (withOpacity black) $ valMap
+  where
+    valMap   = Map.map minMaxNorm . Map.fromList $ valAssoc
+    minMaxNorm x = (x - minVal) / (maxVal - minVal)
+    minVal   = minimum . fmap snd $ valAssoc
+    maxVal   = maximum . fmap snd $ valAssoc
+    valAssoc = fmap nodeValue . G.labEdges . unClusterGraph $ g
+    nodeValue (n1, n2, v) = (n1, v)
+
 -- | Get the maximum cluster size from a graph.
 maxClusterSize :: G.Gr (G.Node, Maybe (Seq.Seq a)) e -> Int
 maxClusterSize = maximum
@@ -619,17 +633,18 @@ drawGraphPath opts cm gr (n1, _) p1 (n2, _) p2 _ _ =
     c1           = getGraphColor cm $ getGraphLeafItems gr n1
     c2           = getGraphColor cm $ getGraphLeafItems gr n2
     trail        = getEdgeTrail p1 p2 (height draw1) (height draw2)
-    drawNode n p = drawGraphNode opts cm gr (n, Nothing) p -- DrawText is irrelevant here.
+    drawNode n p = drawGraphNode opts cm Nothing gr (n, Nothing) p -- DrawText is irrelevant here.
 
 -- | Draw the final node of a graph.
 drawGraphNode :: (TreeItem a)
               => DrawConfig
               -> Maybe ItemColorMap
+              -> Maybe MarkColorMap
               -> ClusterGraph a
               -> (G.Node, Maybe (Seq.Seq a))
               -> P2 Double
               -> Diagram B
-drawGraphNode opts@(DrawConfig { _drawLeaf = DrawText }) cm _ (n, Just items) pos =
+drawGraphNode opts@(DrawConfig { _drawLeaf = DrawText }) cm _ _ (n, Just items) pos =
     (textDia dnn <> drawGraphLabel cm items)
         # scaleUToY 36
         # moveTo pos
@@ -637,7 +652,7 @@ drawGraphNode opts@(DrawConfig { _drawLeaf = DrawText }) cm _ (n, Just items) po
     textDia True  = text (show n) # fc black
     textDia False = mempty
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
-drawGraphNode opts@(DrawConfig { _drawLeaf = (DrawItem _) }) cm gr (n, Just items) pos =
+drawGraphNode opts@(DrawConfig { _drawLeaf = (DrawItem _) }) cm _ gr (n, Just items) pos =
     ( pieDia (_drawPie opts)
    <> itemsDia
    <> background (_drawPie opts)
@@ -661,11 +676,19 @@ drawGraphNode opts@(DrawConfig { _drawLeaf = (DrawItem _) }) cm gr (n, Just item
     textDia True  = text (show n) # fc black
     textDia False = mempty
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
-drawGraphNode opts cm gr (n, Nothing) pos               =
-    (textDia dnn <> (circle 1 # fc color # rootDiffer n))
-        # scaleUToY (getNodeSize (_drawNoScaleNodesFlag opts) items)
-        # moveTo pos
+drawGraphNode opts cm mcm gr (n, Nothing) pos =
+    (mark mcm <> mainNode) # moveTo pos
   where
+    mainNode = (textDia dnn <> (circle 1 # fc color # rootDiffer n))
+             # scaleUToY (getNodeSize (_drawNoScaleNodesFlag opts) items)
+    mark :: Maybe MarkColorMap -> Diagram B
+    mark Nothing = mempty
+    mark (Just (MarkColorMap cm)) =
+        circle 1
+            # fcA transparent
+            # lcA (Map.findWithDefault transparent n cm)
+            # lw 0.4
+            # scaleUToY (unDrawMaxNodeSize . _drawMaxNodeSize $ opts)
     dnn = unDrawNodeNumber . _drawNodeNumber $ opts
     textDia True  = text (show n) # fc black
     textDia False = mempty
@@ -689,9 +712,10 @@ plotGraph
     => Maybe (Diagram B)
     -> DrawConfig
     -> Maybe ItemColorMap
+    -> Maybe MarkColorMap
     -> ClusterGraph a
     -> IO (Diagram B)
-plotGraph legend opts cm (ClusterGraph gr) = do
+plotGraph legend opts cm mcm (ClusterGraph gr) = do
     let numClusters :: Double
         numClusters = fromIntegral . Seq.length $ getGraphLeaves gr 0
         params :: (TreeItem a) => G.GraphvizParams Int (G.Node, Maybe (Seq.Seq a)) HC.Distance () (G.Node, Maybe (Seq.Seq a))
@@ -704,7 +728,7 @@ plotGraph legend opts cm (ClusterGraph gr) = do
 
     let treeDia =
             G.drawGraph'
-                (drawGraphNode opts cm (ClusterGraph gr))
+                (drawGraphNode opts cm mcm (ClusterGraph gr))
                 (drawGraphPath opts cm (ClusterGraph gr))
                 layout
         dia = case legend of
