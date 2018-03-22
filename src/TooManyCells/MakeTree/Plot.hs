@@ -22,9 +22,11 @@ module TooManyCells.MakeTree.Plot
     , getLabelMapThresholdContinuous
     , labelToItemColorMap
     , getItemColorMapContinuous
+    , getItemColorMapSumContinuous
     , getMarkColorMap
     , plotLabelLegend
     , plotContinuousLegend
+    , plotSumContinuousLegend
     ) where
 
 -- Remote
@@ -98,7 +100,8 @@ plotClustersR outputPlot clusterList = do
                 geom_point() +
                 xlab("TNSE 1") +
                 ylab("TNSE 2") +
-                scale_color_discrete(guide = guide_legend(title = "Cluster"))
+                scale_color_discrete(guide = guide_legend(title = "Cluster")) +
+                theme(aspect.ratio = 1)
 
         suppressMessages(ggsave(p, file = outputPlot_hs))
     |]
@@ -313,6 +316,7 @@ dendrogramPathLabel
     -> Diagram B
 dendrogramPathLabel _ Nothing _ d                       = d
 dendrogramPathLabel (DrawItem (DrawContinuous _)) _ _ d = d
+dendrogramPathLabel (DrawItem DrawSumContinuous) _ _ d  = d
 dendrogramPathLabel _ (Just cm) dend d                  = lc color d
   where
     color = getMostFrequentColorDend cm dend
@@ -429,7 +433,7 @@ plotLabelLegend = flip (drawLegend emptyBox) legendOpts
     size :: Double
     size = (/ 2.5) $ (def :: Legend B Double) ^. legendSpacing
 
--- | Get the legend for expression. Bar from
+-- | Get the legend for a feature. Bar from
 -- https://archives.haskell.org/projects.haskell.org/diagrams/blog/2013-12-03-Palette1.html
 plotContinuousLegend :: (MatrixLike a) => Feature -> a -> Diagram B
 plotContinuousLegend g mat =
@@ -452,6 +456,25 @@ plotContinuousLegend g mat =
         . getColNames
         $ mat
 
+-- | Get the legend for the sum of all features. Bar from
+-- https://archives.haskell.org/projects.haskell.org/diagrams/blog/2013-12-03-Palette1.html
+plotSumContinuousLegend :: (MatrixLike a) => a -> Diagram B
+plotSumContinuousLegend mat =
+    rotateBy (3 / 4)
+        $ renderColourBar cbOpts cm (fromMaybe 0 minVal, fromMaybe 0 maxVal) 100
+  where
+    cbOpts :: ColourBar B Double
+    cbOpts = over tickLabelStyle (font "Arial")
+           . set visible True
+           $ defColourBar
+    cm =
+        colourMap . zip [1..] . fmap (\x -> sRGB 1 (1 - x) (1 - x)) $ [0,0.1..1]
+    (minVal, maxVal) = Fold.fold ((,) <$> Fold.minimum <*> Fold.maximum)
+                     . fmap sum
+                     . S.toRowsL
+                     . getMatrix
+                     $ mat
+
 -- | Get the colors of each label.
 getLabelColorMap9 :: LabelMap -> LabelColorMap
 getLabelColorMap9 (LabelMap lm) =
@@ -472,10 +495,13 @@ getContinuousColor :: [Double] -> [Kolor]
 getContinuousColor =
     fmap (\x -> sRGB 1 (1 - x) (1 - x))
         . Fold.fold
-            ( (\xs m -> fmap (/ (fromMaybe (error "Feature does not exist.") m)) xs)
+            ( (\xs mi ma -> fmap (minMaxNorm (getExist mi) (getExist ma)) xs)
                     <$> Fold.list
+                    <*> Fold.minimum
                     <*> Fold.maximum
             )
+  where
+    getExist = fromMaybe (error "Feature does not exist or no cells found.") 
 
 -- | Get the colors of each item, where the color is determined by expression.
 getItemColorMapContinuous :: (MatrixLike a) => Feature -> a -> ItemColorMap
@@ -526,14 +552,26 @@ getLabelMapThresholdContinuous gs mat =
              . getColNames
              $ mat
 
+-- | Get the colors of each item, where the color is determined by the sum of
+-- features in that cell.
+getItemColorMapSumContinuous :: (MatrixLike a) => a -> ItemColorMap
+getItemColorMapSumContinuous mat =
+    ItemColorMap
+        . Map.fromList
+        . zip (fmap Id . V.toList . getRowNames $ mat)
+        . getContinuousColor
+        . fmap sum
+        . S.toRowsL
+        . getMatrix
+        $ mat
+
 -- | Use the outgoing edges of a node to define the mark around the node.
 -- Min max normalization.
 getMarkColorMap :: ClusterGraph a -> MarkColorMap
 getMarkColorMap g =
     MarkColorMap . Map.map (withOpacity black) $ valMap
   where
-    valMap   = Map.map minMaxNorm . Map.fromList $ valAssoc
-    minMaxNorm x = (x - minVal) / (maxVal - minVal)
+    valMap   = Map.map (minMaxNorm minVal maxVal) . Map.fromList $ valAssoc
     minVal   = minimum . fmap snd $ valAssoc
     maxVal   = maximum . fmap snd $ valAssoc
     valAssoc = fmap nodeValue . G.labEdges . unClusterGraph $ g

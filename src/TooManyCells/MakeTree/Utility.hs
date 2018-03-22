@@ -20,6 +20,7 @@ module TooManyCells.MakeTree.Utility
     , getGraphLeavesWithParents
     , lchPalette
     , getLabelColorMap
+    , minMaxNorm
     ) where
 
 -- Remote
@@ -243,3 +244,7 @@ getLabelColorMap palette (LabelMap lm) = do
         . Map.fromList
         . flip zip colors
         $ labels
+
+-- | Min max normalization.
+minMaxNorm :: Double -> Double -> Double -> Double
+minMaxNorm mi ma v = (v - mi) / (ma - mi)

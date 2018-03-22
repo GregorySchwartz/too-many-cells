@@ -100,6 +100,7 @@ data DrawItemType
     = DrawLabel
     | DrawContinuous Text
     | DrawThresholdContinuous [(Text, Double)]
+    | DrawSumContinuous
     deriving (Read,Show)
 data DrawLeaf = DrawItem DrawItemType | DrawText deriving (Read, Show)
 data DrawPie  = PieRing | PieChart | PieNone deriving (Read, Show)
