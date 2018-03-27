@@ -91,6 +91,7 @@ executable too-many-cells
                      , aeson
                      , bytestring
                      , cassava
+                     , colour
                      , containers
                      , diagrams-lib
                      , diagrams-cairo

@@ -18,6 +18,7 @@ module Main where
 -- Remote
 import Control.Monad (when, unless, join)
 import Data.Bool (bool)
+import Data.Colour.SRGB (sRGB24read)
 import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
@@ -80,6 +81,7 @@ data Options
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
+               , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels. Will repeat if more labels than provided colors. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
@@ -212,8 +214,16 @@ makeTreeMain opts = do
             DrawMaxNodeSize . fromMaybe 72 . unHelpful . drawMaxNodeSize $ opts
         drawNoScaleNodes' =
             DrawNoScaleNodesFlag . unHelpful . drawNoScaleNodes $ opts
+        drawColors'       = fmap ( CustomColors
+                                 . fmap sRGB24read
+                                 . (\x -> read x :: [String])
+                                 )
+                          . unHelpful
+                          . drawColors
+                          $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
-        clumpinessMethod' = maybe Clump.Majority read . unHelpful . clumpinessMethod $ opts
+        clumpinessMethod' =
+            maybe Clump.Majority read . unHelpful . clumpinessMethod $ opts
         output'           =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
 
@@ -419,7 +429,12 @@ makeTreeMain opts = do
                     . printClusterDiversity order' lcm
 
         -- Get the color of each label.
-        labelColorMap <- sequence $ fmap (getLabelColorMap Set1) labelMap
+        labelColorMap <- case drawColors' of
+                            Nothing   ->
+                                sequence $ fmap (getLabelColorMap Set1) labelMap
+                            (Just cs) ->
+                                return
+                                    $ fmap (getLabelCustomColorMap cs) labelMap
 
         let defaultGetItemColorMap = do
                 lcm <- labelColorMap
@@ -585,6 +600,6 @@ main = do
                       \ Clusters and analyzes single cell data."
 
     case opts of
-        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
-        (Differential _ _ _ _ _ _ _ _)                     -> differentialMain opts
-        (Main.Diversity _ _ _ _ _ _)                       -> diversityMain opts
+        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
+        (Differential _ _ _ _ _ _ _ _)                       -> differentialMain opts
+        (Main.Diversity _ _ _ _ _ _)                         -> diversityMain opts

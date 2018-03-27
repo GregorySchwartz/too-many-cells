@@ -18,7 +18,6 @@ module TooManyCells.MakeTree.Plot
     , plotClumpinessHeatmapR
     , plotDendrogram
     , plotGraph
-    , getLabelColorMap
     , getLabelMapThresholdContinuous
     , labelToItemColorMap
     , getItemColorMapContinuous

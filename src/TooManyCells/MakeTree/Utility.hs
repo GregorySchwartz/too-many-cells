@@ -20,6 +20,7 @@ module TooManyCells.MakeTree.Utility
     , getGraphLeavesWithParents
     , lchPalette
     , getLabelColorMap
+    , getLabelCustomColorMap
     , minMaxNorm
     ) where
 
@@ -244,6 +245,17 @@ getLabelColorMap palette (LabelMap lm) = do
         . Map.fromList
         . flip zip colors
         $ labels
+
+-- | Get the colors of each label using custom colors.
+getLabelCustomColorMap :: CustomColors -> LabelMap -> LabelColorMap
+getLabelCustomColorMap (CustomColors cs) (LabelMap lm) =
+    LabelColorMap
+        . Map.fromList
+        . flip zip cs
+        . Set.toAscList
+        . Set.fromList
+        . Map.elems
+        $ lm
 
 -- | Min max normalization.
 minMaxNorm :: Double -> Double -> Double -> Double

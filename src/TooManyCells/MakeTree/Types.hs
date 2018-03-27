@@ -89,6 +89,9 @@ newtype MarkColorMap = MarkColorMap
 newtype ClusterGraph a = ClusterGraph
     { unClusterGraph :: G.Gr (G.Node, Maybe (Seq.Seq a)) HC.Distance
     } deriving (Read, Show)
+newtype CustomColors = CustomColors
+    { unCustomColors :: [Kolor]
+    } deriving (Read, Show)
 newtype L = L Double
 newtype C = C Double
 newtype H = H Double
