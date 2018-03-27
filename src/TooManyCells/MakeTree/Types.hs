@@ -87,9 +87,9 @@ instance A.ToJSON Q where
     toEncoding = A.genericToEncoding A.defaultOptions
 instance A.FromJSON Q
 
-instance (A.ToJSON a, Generic a) => A.ToJSON (ClusteringVertex a) where
+instance (A.ToJSON a) => A.ToJSON (ClusteringVertex a) where
     toEncoding = A.genericToEncoding A.defaultOptions
-instance (A.FromJSON a, Generic a) => A.FromJSON (ClusteringVertex a)
+instance (A.FromJSON a) => A.FromJSON (ClusteringVertex a)
 
 L.makeLenses ''ClusterResults
 A.deriveJSON (A.defaultOptions {A.fieldLabelModifier = drop 1}) ''ClusterResults -- So the field does not have an underscore. Unfortunately needed for backwards compatibility.

@@ -12,7 +12,7 @@ module TooManyCells.MakeTree.Load
     ) where
 
 -- Remote
-import BirchBeer.Types
+import BirchBeer.Types hiding (LabelFile, Delimiter)
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
@@ -59,7 +59,7 @@ loadLabelData (Delimiter delim) (LabelFile file) = do
     let toLabelMap :: Map.Map T.Text T.Text -> Map.Map Id Label
         toLabelMap m =
             Map.singleton
-                (Id $ Map.findWithDefault (error "No \"cell\" column in label file.") "cell" m)
+                (Id $ Map.findWithDefault (error "No \"item\" column in label file.") "item" m)
                 (Label $ Map.findWithDefault (error "No \"label\" column in label file.") "label" m)
 
     return . LabelMap . Map.unions . fmap toLabelMap . V.toList $ rows
