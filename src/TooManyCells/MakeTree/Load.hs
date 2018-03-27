@@ -12,6 +12,7 @@ module TooManyCells.MakeTree.Load
     ) where
 
 -- Remote
+import BirchBeer.Types
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
@@ -41,7 +42,6 @@ import qualified Streaming.With.Lifted as SW
 -- Local
 import TooManyCells.File.Types
 import TooManyCells.MakeTree.Types
-import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Types
 
 -- | Load a CSV containing the label of each cell.

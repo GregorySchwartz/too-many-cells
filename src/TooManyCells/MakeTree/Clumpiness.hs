@@ -14,6 +14,7 @@ module TooManyCells.MakeTree.Clumpiness
     ) where
 
 -- Remote
+import BirchBeer.Types
 import Data.Monoid ((<>))
 import Data.Tree (Tree(..))
 import qualified "find-clumpiness" Clumpiness as Clump

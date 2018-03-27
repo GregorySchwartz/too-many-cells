@@ -62,6 +62,7 @@ extra-deps:
   - /home/gw/code/utility/modularity/
   - /home/gw/code/utility/hierarchical-spectral-clustering/
   - /home/gw/code/utility/differential/
+  - /home/gw/code/utility/birch-beer/
   - /home/gw/git_repos/diagrams-graphviz/
   - /home/gw/git_repos/sparse-linear-algebra/
   - git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git

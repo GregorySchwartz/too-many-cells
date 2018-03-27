@@ -16,6 +16,8 @@ module TooManyCells.Differential.Differential
     ) where
 
 -- Remote
+import BirchBeer.Types
+import BirchBeer.Utility (getGraphLeaves)
 import Control.Monad (join)
 import Data.List (sort)
 import Data.Maybe (fromMaybe)
@@ -37,7 +39,6 @@ import qualified Data.Vector as V
 -- Local
 import TooManyCells.Differential.Types
 import TooManyCells.MakeTree.Types
-import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Types
 
 -- | Convert a single cell matrix to a two dimensional matrix.

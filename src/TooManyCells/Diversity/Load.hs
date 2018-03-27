@@ -12,6 +12,7 @@ module TooManyCells.Diversity.Load
     ) where
 
 -- Remote
+import BirchBeer.Types
 import Data.Maybe (fromMaybe)
 import Data.Tuple (swap)
 import Control.Monad.Except (runExceptT, ExceptT (..))

@@ -18,7 +18,6 @@ import qualified Data.Sparse.Common as S
 
 -- Local
 import TooManyCells.MakeTree.Types
-import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Utility
 

@@ -21,6 +21,8 @@ module TooManyCells.MakeTree.Cluster
     ) where
 
 -- Remote
+import BirchBeer.Types
+import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents, dendrogramToGraph)
 import Data.Function (on)
 import Data.List (sortBy, groupBy, zip4, genericLength)
 import Data.Int (Int32)
@@ -54,7 +56,6 @@ import qualified Numeric.LinearAlgebra as H
 -- Local
 import TooManyCells.MakeTree.Adjacency
 import TooManyCells.MakeTree.Types
-import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Types
 import TooManyCells.Diversity.Types
 

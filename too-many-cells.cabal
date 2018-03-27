@@ -26,7 +26,6 @@ library
                      , TooManyCells.MakeTree.Load
                      , TooManyCells.MakeTree.Plot
                      , TooManyCells.MakeTree.Types
-                     , TooManyCells.MakeTree.Utility
                      , TooManyCells.Matrix.Load
                      , TooManyCells.Matrix.Preprocess
                      , TooManyCells.Matrix.Types
@@ -35,6 +34,7 @@ library
                      , TooManyCells.Differential.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson
+                     , birch-beer
                      , bytestring
                      , cassava
                      , colour
@@ -89,6 +89,7 @@ executable too-many-cells
   build-depends:       base
                      , too-many-cells
                      , aeson
+                     , birch-beer
                      , bytestring
                      , cassava
                      , colour

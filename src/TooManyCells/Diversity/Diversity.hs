@@ -13,6 +13,7 @@ module TooManyCells.Diversity.Diversity
     ) where
 
 -- Remote
+import BirchBeer.Types
 import Data.Maybe (fromMaybe)
 import Math.Diversity.Diversity (diversityOfMap, chao1, rarefactionCurve)
 import qualified Data.Map.Strict as Map

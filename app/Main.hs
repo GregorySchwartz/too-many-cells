@@ -16,6 +16,10 @@ Clusters single cell data.
 module Main where
 
 -- Remote
+import BirchBeer.ColorMap
+import BirchBeer.Plot
+import BirchBeer.Types
+import BirchBeer.Utility
 import Control.Monad (when, unless, join)
 import Data.Bool (bool)
 import Data.Colour.SRGB (sRGB24read)
@@ -59,7 +63,6 @@ import TooManyCells.MakeTree.Cluster
 import TooManyCells.MakeTree.Load
 import TooManyCells.MakeTree.Plot
 import TooManyCells.MakeTree.Types
-import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Load
 import TooManyCells.Matrix.Preprocess
 import TooManyCells.Matrix.Types

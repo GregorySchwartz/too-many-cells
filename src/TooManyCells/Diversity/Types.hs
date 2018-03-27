@@ -10,6 +10,7 @@ Collects the types used in the program
 module TooManyCells.Diversity.Types where
 
 -- Remote
+import BirchBeer.Types
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map

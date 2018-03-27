@@ -20,6 +20,7 @@ module TooManyCells.Diversity.Plot
     ) where
 
 -- Remote
+import BirchBeer.Types
 import Diagrams.Prelude
 import Diagrams.Backend.Cairo
 import Data.Colour.Palette.BrewerSet (ColorCat (..), brewerSet)
