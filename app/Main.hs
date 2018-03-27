@@ -77,7 +77,7 @@ data Options
                , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
-               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf if --labels-file is provided, otherwise the leaves are labeled by majority cell label in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.), and DrawItem DrawSumContinuous, where each cell is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default)."
+               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.), and DrawItem DrawSumContinuous, where each cell is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default). The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
                , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
@@ -120,6 +120,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
     short "clumpinessMethod"     = Just 'u'
+    short "drawColors"           = Just 'R'
     short x                      = firstLetter x
 
 instance ParseRecord Options where
@@ -208,7 +209,11 @@ makeTreeMain opts = do
             maybe B1Norm read . unHelpful . normalization $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
-        drawLeaf'         = maybe DrawText read . unHelpful . drawLeaf $ opts
+        drawLeaf'         =
+            maybe (maybe DrawText (const (DrawItem DrawLabel)) labelsFile') read
+                . unHelpful
+                . drawLeaf
+                $ opts
         drawPie'          = maybe PieRing read . unHelpful . drawPie $ opts
         drawMark'         = maybe MarkNone read . unHelpful . drawMark $ opts
         drawDendrogram'   = unHelpful . drawDendrogram $ opts
