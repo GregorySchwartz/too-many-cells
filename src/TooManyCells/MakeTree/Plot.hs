@@ -177,7 +177,11 @@ plotClumpinessHeatmapR outputPlot cs = do
         dfWide = dcast(df, x ~ y, value.var = c("v"))
 
         # Cluster and get order of labels.
-        ord = hclust(dist(dfWide, method = "euclidean"))$order
+        if (length(unique(df$x)) <= 2) {
+            ord = c(1:length(unique(df$x)))
+        } else {
+            ord = hclust(dist(dfWide, method = "euclidean"))$order
+        }
         levels = colnames(dfWide)[-1][ord]
 
         df$x = factor(df$x, levels = levels)

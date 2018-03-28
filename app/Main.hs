@@ -17,6 +17,7 @@ module Main where
 
 -- Remote
 import BirchBeer.ColorMap
+import BirchBeer.MainDiagram
 import BirchBeer.Plot
 import BirchBeer.Types hiding (Delimiter, LabelFile)
 import BirchBeer.Utility
@@ -80,7 +81,7 @@ data Options
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.), and DrawItem DrawSumContinuous, where each cell is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default). The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
-               , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
+               -- Disable for now. , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
@@ -115,7 +116,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "clusterNormalization" = Just 'C'
     short "normalization"        = Just 'z'
     short "drawLeaf"             = Just 'L'
-    short "drawDendrogram"       = Just 'D'
+    -- short "drawDendrogram"       = Just 'D'
     short "drawNodeNumber"       = Just 'N'
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
@@ -198,7 +199,7 @@ loadAllSSM opts = do
     return processedSc
 
 makeTreeMain :: Options -> IO ()
-makeTreeMain opts = do
+makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     let labelsFile'       =
             fmap LabelFile . unHelpful . labelsFile $ opts
         prior'            =
@@ -216,7 +217,7 @@ makeTreeMain opts = do
                 $ opts
         drawPie'          = maybe PieRing read . unHelpful . drawPie $ opts
         drawMark'         = maybe MarkNone read . unHelpful . drawMark $ opts
-        drawDendrogram'   = unHelpful . drawDendrogram $ opts
+        -- drawDendrogram'   = unHelpful . drawDendrogram $ opts
         drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
         drawMaxNodeSize'  =
             DrawMaxNodeSize . fromMaybe 72 . unHelpful . drawMaxNodeSize $ opts
@@ -270,23 +271,56 @@ makeTreeMain opts = do
         -- For agglomerative clustering.
         --let clusterResults = fmap hClust processedSc
 
-    -- Load previous results or write if first run.
-    (clusterResults, bMat, graph) <- case prior' of
+    -- Load previous results or calculate results if first run.
+    (originalClusterResults, bMat) <- case prior' of
         Nothing -> do
-            (fullCr, b, gr) <- fmap (hSpecClust normalization') processedSc
+            (fullCr, b, _) <- fmap (hSpecClust normalization') processedSc
 
-            let dend  = _clusterDend fullCr
-                dend' = (\ y
-                        -> maybe
-                            y
-                            (flip sizeCutDendrogramV y . unMinClusterSize)
-                            minSize'
-                        )
-                        . maybe dend (flip stepCutDendrogram dend . unMaxStep)
-                        $ maxStep'
-                clusterList' = dendrogramToClusterList dend'
-                gr' = dendrogramToGraph dend'
+            return (fullCr, return b) :: IO (ClusterResults, IO B)
+        (Just x) -> do
+            let crInput = (FP.</> "cluster_results.json") . unPriorPath $ x
+                bInput  = (FP.</> "b.mtx") . unPriorPath $ x
+
+            -- Strict loading in order to avoid locked file.
+            !fullCr <- fmap (either error id . A.eitherDecode)
+                     . B.readFile
+                     $ crInput
+
+            let b :: IO B
+                b  = fmap (B . matToSpMat)
+                    . readMatrix
+                    $ bInput
+            return (fullCr, b)
+
+    birchMat <- case unHelpful . matrixPath $ opts of
+                    [] -> return Nothing
+                    _  -> fmap Just processedSc
+
+    let config :: BirchBeer.Types.Config CellInfo SingleCells
+        config = BirchBeer.Types.Config
+                    {_birchLabelMap = labelMap
+                    , _birchMinStep = minSize'
+                    , _birchMaxStep = maxStep'
+                    , _birchDrawLeaf = drawLeaf'
+                    , _birchDrawPie = drawPie'
+                    , _birchDrawMark = drawMark'
+                    , _birchDrawNodeNumber = drawNodeNumber'
+                    , _birchDrawMaxNodeSize = drawMaxNodeSize'
+                    , _birchDrawNoScaleNodes = drawNoScaleNodes'
+                    , _birchDrawColors = drawColors'
+                    , _birchDend = _clusterDend originalClusterResults
+                    , _birchMat = birchMat
+                    }
+
+    (plot, labelColorMap, itemColorMap, markColorMap, dend', gr') <- mainDiagram config
+
+    -- Write results.
+    clusterResults <- case prior' of
+        Nothing -> do
+            let clusterList' = dendrogramToClusterList dend'
                 cr' = ClusterResults clusterList' dend'
+
+            b <- bMat
 
             writeMatrix (unOutputDirectory output' FP.</> "b.mtx")
                 . spMatToMat
@@ -314,7 +348,8 @@ makeTreeMain opts = do
                         . printClusterDiversity order' lm
                         $ cr'
 
-            return ((return cr', return b, return gr') :: (IO ClusterResults, IO B, IO (ClusterGraph CellInfo)))
+            return cr'
+
         (Just x) -> do
             let crInput = (FP.</> "cluster_results.json") . unPriorPath $ x
                 ciInput = (FP.</> "cluster_info.csv") . unPriorPath $ x
@@ -322,27 +357,8 @@ makeTreeMain opts = do
                 bInput  = (FP.</> "b.mtx") . unPriorPath $ x
                 grInput  = (FP.</> "graph.dot") . unPriorPath $ x
 
-            -- Strict loading in order to avoid locked file.
-            !fullCr <- fmap (either error id . A.eitherDecode)
-                     . B.readFile
-                     $ crInput
-
-            let dend  = _clusterDend fullCr
-                dend' = (\ y
-                        -> maybe
-                            y
-                            (flip sizeCutDendrogramV y . unMinClusterSize)
-                            minSize'
-                        )
-                        . maybe dend (flip stepCutDendrogram dend . unMaxStep)
-                        $ maxStep'
-                clusterList' = dendrogramToClusterList dend'
-                gr' = dendrogramToGraph dend'
+            let clusterList' = dendrogramToClusterList dend'
                 cr' = ClusterResults clusterList' dend'
-                b :: IO B
-                b  = fmap (B . matToSpMat)
-                    . readMatrix
-                    $ bInput
 
             -- Write results to files.
             FP.copyFile bInput
@@ -388,37 +404,35 @@ makeTreeMain opts = do
                         . printClusterDiversity order' lm
                         $ cr'
 
-            return (return cr', b, return gr')
+            return cr'
 
     -- Header
     B.putStrLn $ "cell,cluster,path"
 
     -- Body
-    clusterResults
-        >>= B.putStrLn
-          . CSV.encode
-          . fmap (\ (!ci, !(c:cs))
-                 -> ( unCell . barcode $ ci
-                    , showt $ unCluster c
-                    , T.intercalate "," . fmap (showt . unCluster) $ c:cs
-                    )
-                 )
-          . _clusterList
+    B.putStrLn
+        . CSV.encode
+        . fmap (\ (!ci, !(c:cs))
+                -> ( unCell . barcode $ ci
+                , showt $ unCluster c
+                , T.intercalate "," . fmap (showt . unCluster) $ c:cs
+                )
+                )
+        . _clusterList
+        $ clusterResults
 
     -- Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
-    H.withEmbeddedR defaultConfig $ H.runRegion $ do
+    H.runRegion $ do
         -- Calculations with the label map (clumpiness and cluster diversity).
         case labelMap of
             Nothing ->
                 H.io $ hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
-            (Just lcm) -> do
+            (Just lm) -> do
                 -- Get clumpiness.
-                clumpList <-
-                    H.io
-                        $ fmap
-                            (dendToClumpList clumpinessMethod' lcm . _clusterDend)
-                            clusterResults
+                let clumpList = dendToClumpList clumpinessMethod' lm
+                              . _clusterDend
+                              $ clusterResults
 
                 -- Plot clumpiness.
                 plotClumpinessHeatmapR
@@ -432,54 +446,20 @@ makeTreeMain opts = do
                     $ clumpList
 
                 H.io
+                    . B.writeFile (unOutputDirectory output' FP.</> "cluster_diversity.csv")
+                    . printClusterDiversity order' lm
                     $ clusterResults
-                  >>= B.writeFile (unOutputDirectory output' FP.</> "cluster_diversity.csv")
-                    . printClusterDiversity order' lcm
 
-        -- Get the color of each label.
-        labelColorMap <- case drawColors' of
-                            Nothing   ->
-                                sequence $ fmap (getLabelColorMap Set1) labelMap
-                            (Just cs) ->
-                                return
-                                    $ fmap (getLabelCustomColorMap cs) labelMap
-
-        let defaultGetItemColorMap = do
-                lcm <- labelColorMap
-                lm  <- labelMap
-                return $ labelToItemColorMap lcm lm
-            itemColorMap =
-                case drawLeaf' of
-                    DrawItem (DrawContinuous x) ->
-                        fmap
-                            (Just . getItemColorMapContinuous (Feature x))
-                            processedSc
-                    DrawItem DrawSumContinuous  ->
-                        fmap (Just . getItemColorMapSumContinuous) processedSc
-                    _                           -> return defaultGetItemColorMap
-
-        -- Plot dendrogram.
+        -- Plot.
         H.io $ do
-            cr <- clusterResults
-            gr <- graph
-            cm <- itemColorMap
-            legend <- case drawLeaf' of
-                        (DrawItem (DrawContinuous g)) ->
-                            fmap
-                                (Just . plotContinuousLegend (Feature g))
-                                processedSc
-                        (DrawItem DrawSumContinuous) ->
-                            fmap (Just . plotSumContinuousLegend) processedSc
-                        _ -> return $ fmap plotLabelLegend labelColorMap
+            -- cr <- clusterResults
+            -- gr <- graph
+            -- cm <- itemColorMap
 
-            let markColorMap = case drawMark' of
-                                MarkModularity -> Just $ getMarkColorMap gr
-                                _ -> Nothing
-
-            plot <- if drawDendrogram'
-                    then return . plotDendrogram legend drawLeaf' cm . _clusterDend $ cr
-                    else do
-                        plotGraph legend drawConfig cm markColorMap gr
+            -- plot <- if drawDendrogram'
+            --         then return . plotDendrogram legend drawLeaf' cm . _clusterDend $ cr
+            --         else do
+            --             plotGraph legend drawConfig cm markColorMap gr
 
             D.renderCairo
                     (unOutputDirectory output' FP.</> "dendrogram.pdf")
@@ -487,9 +467,9 @@ makeTreeMain opts = do
                     plot
 
         -- Plot clustering.
-        (H.io clusterResults)
-          >>= plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
+        plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
             . _clusterList
+            $ clusterResults
             -- >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
             -- . D.renderAxis
             -- . plotClusters
@@ -608,6 +588,6 @@ main = do
                       \ Clusters and analyzes single cell data."
 
     case opts of
-        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
-        (Differential _ _ _ _ _ _ _ _)                       -> differentialMain opts
-        (Main.Diversity _ _ _ _ _ _)                         -> diversityMain opts
+        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
+        (Differential _ _ _ _ _ _ _ _)                     -> differentialMain opts
+        (Main.Diversity _ _ _ _ _ _)                       -> diversityMain opts
