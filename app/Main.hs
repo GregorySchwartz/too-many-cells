@@ -17,6 +17,7 @@ module Main where
 
 -- Remote
 import BirchBeer.ColorMap
+import BirchBeer.Interactive
 import BirchBeer.MainDiagram
 import BirchBeer.Plot
 import BirchBeer.Types hiding (Delimiter, LabelFile)
@@ -81,8 +82,9 @@ data Options
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.), and DrawItem DrawSumContinuous, where each cell is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default). The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
-               -- Disable for now. , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
-               , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
+               ,
+                 -- Disable for now. , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
+                 drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels. Will repeat if more labels than provided colors. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
@@ -91,6 +93,13 @@ data Options
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                , clumpinessMethod :: Maybe String <?> "([Majority] | Exclusive | AllExclusive) The method used when calculating clumpiness: Majority labels leaves according to the most abundant label, Exclusive only looks at leaves consisting of cells solely from one label, and AllExclusive treats the leaf as containing both labels."
                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
+    | Interactive { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
+                  , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
+                  , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
+                  , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
+                  , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+                  , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
+                  , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
     | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                    , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
@@ -105,7 +114,7 @@ data Options
                 , end :: Maybe Integer <?> "([N] | INT) For the rarefaction curve, which subsample to stop at. By default, the curve stops at the observed number of species for each population."
                 , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                 , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
-    deriving (Generic)
+    deriving ((Generic))
 
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
@@ -476,6 +485,36 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
         return ()
 
+-- | Interactive tree interface.
+interactiveMain :: Options -> IO ()
+interactiveMain opts = H.withEmbeddedR defaultConfig $ do
+    let labelsFile'    =
+            fmap LabelFile . unHelpful . labelsFile $ opts
+        prior'         = maybe (error "Requires --prior") PriorPath
+                       . unHelpful
+                       . prior
+                       $ opts
+        delimiter'     =
+            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        normalization' =
+            maybe B1Norm read . unHelpful . normalization $ opts
+
+        processedSc = loadAllSSM opts
+
+    labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
+
+    let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
+
+    fullCr <- fmap (either error id . A.eitherDecode) . B.readFile $ crInput
+
+    let dend = _clusterDend fullCr
+
+    mat <- processedSc
+
+    interactiveDiagram dend labelMap $ Just mat
+
+    return ()
+
 -- | Differential path.
 differentialMain :: Options -> IO ()
 differentialMain opts = do
@@ -589,5 +628,6 @@ main = do
 
     case opts of
         (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
+        (Interactive _ _ _ _ _ _ _)                          -> interactiveMain opts
         (Differential _ _ _ _ _ _ _ _)                     -> differentialMain opts
         (Main.Diversity _ _ _ _ _ _)                       -> diversityMain opts

@@ -44,10 +44,20 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
+  # - diagrams-graphviz-1.4
+  - /home/gw/code/utility/birch-beer/
+  - /home/gw/code/utility/differential/
+  - /home/gw/code/utility/hierarchical-spectral-clustering/
+  - /home/gw/code/utility/modularity/
+  - /home/gw/code/utility/spectral-clustering/
+  - /home/gw/git_repos/diagrams-graphviz/
+  - /home/gw/git_repos/sparse-linear-algebra/
   - aeson-1.1.2.0
   - attoparsec-0.13.1.0
-  # - diagrams-graphviz-1.4
+  - diagrams-gtk-1.4
   - discrimination-0.3
+  - gio-0.13.4.1
+  - gtk-0.14.7
   - hmatrix-svdlibc-0.4.1
   - inline-r-0.9.0.2
   - mmorph-1.0.9
@@ -58,13 +68,7 @@ extra-deps:
   - streaming-commons-0.1.17
   - streaming-utils-0.1.4.7
   - streaming-with-0.2.0.0
-  - /home/gw/code/utility/spectral-clustering/
-  - /home/gw/code/utility/modularity/
-  - /home/gw/code/utility/hierarchical-spectral-clustering/
-  - /home/gw/code/utility/differential/
-  - /home/gw/code/utility/birch-beer/
-  - /home/gw/git_repos/diagrams-graphviz/
-  - /home/gw/git_repos/sparse-linear-algebra/
+  - typed-spreadsheet-1.1.2
   - git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git
     commit: b92d8cc9b5275df38198ede27b58f7e35aaf69d1
 
