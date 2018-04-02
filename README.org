@@ -1,0 +1,8 @@
+* =too-many-cells=
+
+** Installation
+
+*** Dependencies
+- =pangocairo= (=libcairo2-dev=, =libpango1.0-dev=)
+- =graphviz=
+- =gtk=
