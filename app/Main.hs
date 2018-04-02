@@ -104,6 +104,7 @@ data Options
     | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                    , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
+                   , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                    , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
@@ -630,5 +631,5 @@ main = do
     case opts of
         (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
         (Interactive _ _ _ _ _ _ _ _)                      -> interactiveMain opts
-        (Differential _ _ _ _ _ _ _ _)                     -> differentialMain opts
+        (Differential _ _ _ _ _ _ _ _ _)                   -> differentialMain opts
         (Main.Diversity _ _ _ _ _ _)                       -> diversityMain opts
