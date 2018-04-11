@@ -64,6 +64,7 @@ import TooManyCells.MakeTree.Clumpiness
 import TooManyCells.MakeTree.Cluster
 import TooManyCells.MakeTree.Load
 import TooManyCells.MakeTree.Plot
+import TooManyCells.MakeTree.Print
 import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Load
 import TooManyCells.Matrix.Preprocess
@@ -122,6 +123,7 @@ modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
     short "minSize"              = Just 'M'
+    short "maxStep"              = Just 'T'
     short "projectionFile"       = Just 'j'
     short "priors"               = Just 'P'
     short "clusterNormalization" = Just 'C'
@@ -351,6 +353,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 (unOutputDirectory output' FP.</> "cluster_info.csv")
                 . printClusterInfo
                 $ gr'
+            B.writeFile
+                (unOutputDirectory output' FP.</> "node_info.csv")
+                . printNodeInfo
+                $ gr'
             case labelMap of
                 Nothing   -> return ()
                 (Just lm) ->
@@ -364,6 +370,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (Just x) -> do
             let crInput = (FP.</> "cluster_results.json") . unPriorPath $ x
                 ciInput = (FP.</> "cluster_info.csv") . unPriorPath $ x
+                niInput = (FP.</> "node_info.csv") . unPriorPath $ x
                 cdInput = (FP.</> "cluster_diversity.csv") . unPriorPath $ x
                 bInput  = (FP.</> "b.mtx") . unPriorPath $ x
                 grInput  = (FP.</> "graph.dot") . unPriorPath $ x
@@ -391,6 +398,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                         . (FP.</> "cluster_info.csv")
                         . unOutputDirectory
                         $ output'
+                    FP.copyFile niInput
+                        . (FP.</> "node_info.csv")
+                        . unOutputDirectory
+                        $ output'
                 _ -> do
                     B.writeFile
                         (unOutputDirectory output' FP.</> "cluster_results.json")
@@ -405,6 +416,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     B.writeFile
                         (unOutputDirectory output' FP.</> "cluster_info.csv")
                         . printClusterInfo
+                        $ gr'
+                    B.writeFile
+                        (unOutputDirectory output' FP.</> "node_info.csv")
+                        . printNodeInfo
                         $ gr'
 
             case labelMap of
@@ -629,7 +644,7 @@ main = do
                       \ Clusters and analyzes single cell data."
 
     case opts of
-        (MakeTree _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> makeTreeMain opts
-        (Interactive _ _ _ _ _ _ _ _)                      -> interactiveMain opts
-        (Differential _ _ _ _ _ _ _ _ _)                   -> differentialMain opts
-        (Main.Diversity _ _ _ _ _ _)                       -> diversityMain opts
+        MakeTree{}       -> makeTreeMain opts
+        Interactive{}    -> interactiveMain opts
+        Differential{}   -> differentialMain opts
+        Main.Diversity{} -> diversityMain opts

@@ -75,6 +75,13 @@ data ClusterInfo = ClusterInfo
     , _sizePath :: [Double]
     }
 
+data NodeInfo = NodeInfo
+    { _nodeId   :: Int
+    , _nodeSize :: Int
+    , _nodeSplitProportion :: Maybe Double
+    , _nodeModularity :: Maybe Double
+    }
+
 instance TreeItem CellInfo where
     getId = Id . unCell . barcode
 

@@ -50,8 +50,8 @@ extra-deps:
   - /home/gw/code/utility/hierarchical-spectral-clustering/
   - /home/gw/code/utility/modularity/
   - /home/gw/code/utility/spectral-clustering/
-  - /home/gw/git_repos/diagrams-graphviz/
-  - /home/gw/git_repos/sparse-linear-algebra/
+  #- /home/gw/git_repos/diagrams-graphviz/
+  #- /home/gw/git_repos/sparse-linear-algebra/
   - aeson-1.1.2.0
   - attoparsec-0.13.1.0
   - diagrams-gtk-1.4
@@ -71,6 +71,10 @@ extra-deps:
   - typed-spreadsheet-1.1.2
   - git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git
     commit: b92d8cc9b5275df38198ede27b58f7e35aaf69d1
+  - git: https://github.com/ocramz/sparse-linear-algebra.git
+    commit: 3a8a0bff35d32d2e8a96ea96dbea76e4cb5bd18a
+  - git: https://github.com/diagrams/diagrams-graphviz.git
+    commit: a3a8af2ab46263b1c7d12ff0056748cb70e40619
 
 # Override default flag values for local packages and extra-deps
 flags: {}
@@ -95,5 +99,8 @@ extra-package-dbs: []
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
-  
+
 allow-newer: true
+
+docker:
+  enable: false

@@ -25,6 +25,7 @@ library
                      , TooManyCells.MakeTree.Cluster
                      , TooManyCells.MakeTree.Load
                      , TooManyCells.MakeTree.Plot
+                     , TooManyCells.MakeTree.Print
                      , TooManyCells.MakeTree.Types
                      , TooManyCells.Matrix.Load
                      , TooManyCells.Matrix.Preprocess

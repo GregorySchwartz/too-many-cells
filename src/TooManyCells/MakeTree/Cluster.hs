@@ -16,8 +16,6 @@ module TooManyCells.MakeTree.Cluster
     , assignClusters
     , dendrogramToClusterList
     , clusterDiversity
-    , printClusterDiversity
-    , printClusterInfo
     ) where
 
 -- Remote
@@ -208,42 +206,3 @@ clusterDiversity (Order order) (LabelMap lm) =
         ( fromMaybe (error "No cluster for cell.") . headMay . snd $ x
         , fmap fst all
         )
-
--- | Print the diversity of each leaf cluster.
-printClusterDiversity :: Order -> LabelMap -> ClusterResults -> B.ByteString
-printClusterDiversity order lm =
-    (<>) "cluster,diversity,size\n" . CSV.encode
-        . fmap ( L.over L._3 unSize
-               . L.over L._2 unDiversity
-               . L.over L._1 unCluster
-               )
-        . clusterDiversity order lm
-
--- | Get the size and modularity path of each leaf cluster path. Modularity
--- starts from the parent of the cluster to the root for modularity.
-clusterInfo :: (TreeItem a) => ClusterGraph a -> [(Cluster, [Double], [Int])]
-clusterInfo (ClusterGraph gr) =
-    F.toList
-        . fmap (\ !x -> (Cluster . fst . snd $ x, getQs x, getSizes x))
-        . getGraphLeavesWithParents gr
-        $ 0
-  where
-    getSizes :: ([G.Node], a) -> [Int]
-    getSizes = fmap getSize . fst
-    getSize :: G.Node -> Int
-    getSize = sum . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
-    getQs :: ([G.Node], a) -> [Double]
-    getQs = mapMaybe getQ . fst
-    getQ :: G.Node -> Maybe Double
-    getQ  = fmap snd . headMay . G.lsuc gr
-
--- | Get the information of each leaf cluster path. Modularity
--- starts from the parent of the cluster to the root for modularity.
-printClusterInfo :: (TreeItem a) => ClusterGraph a -> B.ByteString
-printClusterInfo =
-    (<>) "cluster,modularity,size\n" . CSV.encode
-        . fmap ( L.over L._3 (T.intercalate "/" . fmap showt)
-               . L.over L._2 (T.intercalate "/" . fmap showt)
-               . L.over L._1 unCluster
-               )
-        . clusterInfo
