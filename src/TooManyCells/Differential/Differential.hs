@@ -32,7 +32,6 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.Graph.Inductive as G
-import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
 
@@ -61,7 +60,7 @@ getStatuses
 getStatuses v1 v2 (ClusterGraph gr) =
     sort
         . F.toList
-        $ (Seq.><) (collapseStatus (1 :: Int) v1) (collapseStatus (2 :: Int) v2)
+        $ mappend (collapseStatus (1 :: Int) v1) (collapseStatus (2 :: Int) v2)
   where
     collapseStatus s =
         fmap (\ !x -> (unRow . cellRow $ x, barcode x, Diff.Status . showt $ s))
@@ -80,7 +79,7 @@ getDEGraph (TopN topN) sc v1 v2 gr = do
     let cellGroups = getStatuses v1 v2 gr
         mat        = scToTwoD cellGroups sc
 
-    Diff.edgeR topN mat 
+    Diff.edgeR topN mat
 
 -- | Get the differential expression of two sets of cells.
 getDEString :: [(Diff.Name, Double, Diff.PValue, Diff.FDR)]

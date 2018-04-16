@@ -15,7 +15,7 @@
 # resolver:
 #  name: custom-snapshot
 #  location: "./custom-snapshot.yaml"
-resolver: lts-10.4
+resolver: lts-11.4
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -44,22 +44,32 @@ packages:
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps:
-  # - diagrams-graphviz-1.4
   - /home/gw/code/utility/birch-beer/
   - /home/gw/code/utility/differential/
   - /home/gw/code/utility/hierarchical-spectral-clustering/
   - /home/gw/code/utility/modularity/
   - /home/gw/code/utility/spectral-clustering/
-  #- /home/gw/git_repos/diagrams-graphviz/
-  #- /home/gw/git_repos/sparse-linear-algebra/
+  - SVGFonts-1.6.0.3
   - aeson-1.1.2.0
   - attoparsec-0.13.1.0
+  - cubicbezier-0.6.0.5
+  - diagrams-1.4
+  - diagrams-cairo-1.4
+  - diagrams-contrib-1.4.2.1
+  - diagrams-core-1.4.1
   - diagrams-gtk-1.4
+  - diagrams-lib-1.4.2
+  - diagrams-solve-0.1.1
+  - diagrams-svg-1.4.1.1
   - discrimination-0.3
+  - dual-tree-0.2.1.1
+  - fast-math-1.0.2
   - gio-0.13.4.1
+  - graphviz-2999.19.0.0
   - gtk-0.14.7
   - hmatrix-svdlibc-0.4.1
   - inline-r-0.9.0.2
+  - mfsolve-0.3.2.0
   - mmorph-1.0.9
   - plots-0.1.0.2
   - streaming-0.1.4.5
