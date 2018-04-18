@@ -80,7 +80,10 @@ data Options
                , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
-               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of cells in that leaf. DrawItem is the collection of cells represented by circles, consisting of: DrawItem DrawLabel, where each cell is colored by its label, DrawItem (DrawContinuous GENE), where each cell is colored by the expression of GENE (corresponding to a gene name in the input matrix), DrawItem (DrawThresholdContinuous [(GENE, DOUBLE)], where each cell is colored by the binary high / low expression of GENE based on DOUBLE and multiple GENEs can be used to combinatorically label cells (GENE1 high / GENE2 low, etc.), and DrawItem DrawSumContinuous, where each cell is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default). The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
+               , maxProportion :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE proportion split. So a node N with L and R children will stop with this criteria at 0.5 if |L| / |R| < 0.5 or > 2 (absolute log2 transformed), that is, if one child has over twice as many items as the other child. Includes L and R in the final result."
+               , minDistance :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE distance. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Includes L and R in the final result."
+               , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, and --min-distance based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
+               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous FEATURE), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)], where each item is colored by the binary high / low expression of FEATURE based on DOUBLE and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
                , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
                ,
@@ -123,18 +126,24 @@ modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
     short "minSize"              = Just 'M'
-    short "maxStep"              = Just 'T'
+    short "maxStep"              = Just 'S'
+    short "maxProportion"        = Just 'X'
+    short "maxDistance"          = Just 'T'
+    short "drawLeaf"             = Just 'L'
+    short "drawDendrogram"       = Just 'D'
+    short "drawNodeNumber"       = Just 'N'
+    short "drawMark"             = Just 'K'
+    short "drawColors"           = Just 'R'
+    short "drawNoScaleNodes"     = Just 'W'
+    short "drawMaxNodeSize"      = Just 'A'
     short "projectionFile"       = Just 'j'
     short "priors"               = Just 'P'
     short "clusterNormalization" = Just 'C'
     short "normalization"        = Just 'z'
-    short "drawLeaf"             = Just 'L'
     -- short "drawDendrogram"       = Just 'D'
-    short "drawNodeNumber"       = Just 'N'
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
     short "clumpinessMethod"     = Just 'u'
-    short "drawColors"           = Just 'R'
     short x                      = firstLetter x
 
 instance ParseRecord Options where
@@ -223,6 +232,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             maybe B1Norm read . unHelpful . normalization $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
+        maxProportion'    = fmap MaxProportion . unHelpful . maxProportion $ opts
+        minDistance'      = fmap MinDistance . unHelpful . minDistance $ opts
+        smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
         drawLeaf'         =
             maybe (maybe DrawText (const (DrawItem DrawLabel)) labelsFile') read
                 . unHelpful
@@ -311,9 +323,13 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
     let config :: BirchBeer.Types.Config CellInfo SingleCells
         config = BirchBeer.Types.Config
-                    {_birchLabelMap = labelMap
-                    , _birchMinStep = minSize'
+                    { _birchLabelMap = labelMap
+                    , _birchMinSize = minSize'
                     , _birchMaxStep = maxStep'
+                    , _birchMaxProportion = maxProportion'
+                    , _birchMinDistance = minDistance'
+                    , _birchSmartCutoff = smartCutoff'
+                    , _birchOrder = Just order'
                     , _birchDrawLeaf = drawLeaf'
                     , _birchDrawPie = drawPie'
                     , _birchDrawMark = drawMark'
@@ -335,47 +351,17 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
             b <- bMat
 
+            -- Write results to files.
             writeMatrix (unOutputDirectory output' FP.</> "b.mtx")
                 . spMatToMat
                 . unB
                 $ b
-            B.writeFile
-                (unOutputDirectory output' FP.</> "cluster_results.json")
-                . A.encode
-                $ cr'
-            T.writeFile
-                (unOutputDirectory output' FP.</> "graph.dot")
-                . G.printDotGraph
-                . G.graphToDot G.nonClusteredParams
-                . unClusterGraph
-                $ gr'
-            B.writeFile
-                (unOutputDirectory output' FP.</> "cluster_info.csv")
-                . printClusterInfo
-                $ gr'
-            B.writeFile
-                (unOutputDirectory output' FP.</> "node_info.csv")
-                . printNodeInfo
-                $ gr'
-            case labelMap of
-                Nothing   -> return ()
-                (Just lm) ->
-                    B.writeFile
-                        (unOutputDirectory output' FP.</> "cluster_diversity.csv")
-                        . printClusterDiversity order' lm
-                        $ cr'
 
             return cr'
 
         (Just x) -> do
-            let crInput = (FP.</> "cluster_results.json") . unPriorPath $ x
-                ciInput = (FP.</> "cluster_info.csv") . unPriorPath $ x
-                niInput = (FP.</> "node_info.csv") . unPriorPath $ x
-                cdInput = (FP.</> "cluster_diversity.csv") . unPriorPath $ x
-                bInput  = (FP.</> "b.mtx") . unPriorPath $ x
-                grInput  = (FP.</> "graph.dot") . unPriorPath $ x
-
-            let clusterList' = dendrogramToClusterList dend'
+            let bInput  = (FP.</> "b.mtx") . unPriorPath $ x
+                clusterList' = dendrogramToClusterList dend'
                 cr' = ClusterResults clusterList' dend'
 
             -- Write results to files.
@@ -384,53 +370,33 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 . unOutputDirectory
                 $ output'
 
-            case (minSize', maxStep') of
-                (Nothing, Nothing) -> do
-                    FP.copyFile crInput
-                        . (FP.</> "cluster_results.json")
-                        . unOutputDirectory
-                        $ output'
-                    FP.copyFile grInput
-                        . (FP.</> "graph.dot")
-                        . unOutputDirectory
-                        $ output'
-                    FP.copyFile ciInput
-                        . (FP.</> "cluster_info.csv")
-                        . unOutputDirectory
-                        $ output'
-                    FP.copyFile niInput
-                        . (FP.</> "node_info.csv")
-                        . unOutputDirectory
-                        $ output'
-                _ -> do
-                    B.writeFile
-                        (unOutputDirectory output' FP.</> "cluster_results.json")
-                        . A.encode
-                        $ cr'
-                    T.writeFile
-                        (unOutputDirectory output' FP.</> "graph.dot")
-                        . G.printDotGraph
-                        . G.graphToDot G.nonClusteredParams
-                        . unClusterGraph
-                        $ gr'
-                    B.writeFile
-                        (unOutputDirectory output' FP.</> "cluster_info.csv")
-                        . printClusterInfo
-                        $ gr'
-                    B.writeFile
-                        (unOutputDirectory output' FP.</> "node_info.csv")
-                        . printNodeInfo
-                        $ gr'
-
-            case labelMap of
-                Nothing   -> return ()
-                (Just lm) ->
-                    B.writeFile
-                        (unOutputDirectory output' FP.</> "cluster_diversity.csv")
-                        . printClusterDiversity order' lm
-                        $ cr'
-
             return cr'
+
+    B.writeFile
+        (unOutputDirectory output' FP.</> "cluster_results.json")
+        . A.encode
+        $ clusterResults
+    T.writeFile
+        (unOutputDirectory output' FP.</> "graph.dot")
+        . G.printDotGraph
+        . G.graphToDot G.nonClusteredParams
+        . unClusterGraph
+        $ gr'
+    B.writeFile
+        (unOutputDirectory output' FP.</> "cluster_info.csv")
+        . printClusterInfo
+        $ gr'
+    B.writeFile
+        (unOutputDirectory output' FP.</> "node_info.csv")
+        . printNodeInfo
+        $ gr'
+    case labelMap of
+        Nothing   -> return ()
+        (Just lm) ->
+            B.writeFile
+                (unOutputDirectory output' FP.</> "cluster_diversity.csv")
+                . printClusterDiversity order' lm
+                $ clusterResults
 
     -- Header
     B.putStrLn $ "cell,cluster,path"

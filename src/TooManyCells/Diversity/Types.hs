@@ -21,7 +21,6 @@ import TooManyCells.Matrix.Types
 
 
 -- Basic
-newtype Order       = Order { unOrder :: Double } deriving (Eq, Ord, Read, Show)
 newtype Size        = Size { unSize :: Integer } deriving (Eq, Ord, Read, Show)
 newtype Start       = Start { unStart :: Integer } deriving (Eq, Ord, Read, Show)
 newtype Interval    = Interval { unInterval :: Integer } deriving (Eq, Ord, Read, Show)
