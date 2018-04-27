@@ -48,6 +48,9 @@ newtype CellWhitelist = CellWhitelist
 newtype PCAVar = PCAVar
     { unPCAVar :: Double
     } deriving (Eq,Ord,Read,Show)
+newtype NoFilterFlag = NoFilterFlag
+    { unNoFilterFlag :: Bool
+    } deriving (Read,Show)
 newtype X = X
     { unX :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)

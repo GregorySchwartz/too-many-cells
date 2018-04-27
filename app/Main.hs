@@ -93,6 +93,7 @@ data Options
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels. Will repeat if more labels than provided colors. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
+               , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                , clumpinessMethod :: Maybe String <?> "([Majority] | Exclusive | AllExclusive) The method used when calculating clumpiness: Majority labels leaves according to the most abundant label, Exclusive only looks at leaves consisting of cells solely from one label, and AllExclusive treats the leaf as containing both labels."
@@ -104,11 +105,13 @@ data Options
                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                   , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
                   , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
+                  , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
     | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                    , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, the resulting plot will use the first two features."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
+                   , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                    , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
@@ -143,6 +146,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     -- short "drawDendrogram"       = Just 'D'
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
+    short "noFilter"             = Just 'F'
     short "clumpinessMethod"     = Just 'u'
     short x                      = firstLetter x
 
@@ -199,6 +203,7 @@ loadAllSSM opts = do
         normalization'     =
             maybe B1Norm read . unHelpful . normalization $ opts
         pca'               = fmap PCAVar . unHelpful . pca $ opts
+        noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
 
     cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
 
@@ -207,9 +212,13 @@ loadAllSSM opts = do
     let whiteListFilter Nothing = id
         whiteListFilter (Just wl) = filterWhitelistSparseMat wl
         unFilteredSc = mconcat mats
-        sc           = filterNumSparseMat
-                     . whiteListFilter cellWhitelist
-                     $ unFilteredSc
+        sc           =
+            (\ x -> if unNoFilterFlag noFilterFlag'
+                        then x
+                        else filterNumSparseMat x
+            )
+                . whiteListFilter cellWhitelist
+                $ unFilteredSc
         normMat NoneNorm     = id
         normMat B1Norm       = id -- Normalize during clustering.
         normMat WishboneNorm = scaleSparseMat
