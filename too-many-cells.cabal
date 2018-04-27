@@ -112,6 +112,7 @@ executable too-many-cells
                      , streaming
                      , streaming-bytestring
                      , streaming-utils
+                     , terminal-progress-bar
                      , text
                      , text-show
                      , vector

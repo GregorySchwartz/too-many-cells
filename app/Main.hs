@@ -51,6 +51,7 @@ import qualified H.Prelude as H
 import qualified Plots as D
 import qualified System.Directory as FP
 import qualified System.FilePath as FP
+import qualified System.ProgressBar as Progress
 
 -- Local
 import TooManyCells.Differential.Differential
@@ -282,6 +283,13 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Notify user of limitations.
     limitationWarningsErrors opts
 
+    -- Start progress bar.
+    (progBar, _) <- Progress.startProgress
+                        (Progress.msg "Planting tree")
+                        Progress.percentage
+                        80
+                  $ Progress.Progress 0 9
+
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
 
@@ -295,6 +303,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                             )
                             processedSc
                     _ -> sequence . fmap (loadLabelData delimiter') $ labelsFile'
+
+    -- Increment progress bar.
+    Progress.incProgress progBar 1
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -326,9 +337,15 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     $ bInput
             return (fullCr, b)
 
+    -- Increment progress bar.
+    Progress.incProgress progBar 1
+
     birchMat <- case unHelpful . matrixPath $ opts of
                     [] -> return Nothing
                     _  -> fmap Just processedSc
+
+    -- Increment progress bar.
+    Progress.incProgress progBar 1
 
     let config :: BirchBeer.Types.Config CellInfo SingleCells
         config = BirchBeer.Types.Config
@@ -351,6 +368,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     }
 
     (plot, labelColorMap, itemColorMap, markColorMap, dend', gr') <- mainDiagram config
+
+    -- Increment progress bar.
+    Progress.incProgress progBar 1
 
     -- Write results.
     clusterResults <- case prior' of
@@ -407,6 +427,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 . printClusterDiversity order' lm
                 $ clusterResults
 
+    -- Increment progress bar.
+    Progress.incProgress progBar 1
+
     -- Header
     B.putStrLn $ "cell,cluster,path"
 
@@ -421,6 +444,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 )
         . _clusterList
         $ clusterResults
+
+    -- Increment progress bar.
+    Progress.incProgress progBar 1
 
     -- Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
@@ -451,6 +477,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     . printClusterDiversity order' lm
                     $ clusterResults
 
+        -- Increment progress bar.
+        H.io $ Progress.incProgress progBar 1
+
         -- Plot.
         H.io $ do
             -- cr <- clusterResults
@@ -467,6 +496,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     (D.mkHeight 1000)
                     plot
 
+        -- Increment progress bar.
+        H.io $ Progress.incProgress progBar 1
+
         -- Plot clustering.
         plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
             . _clusterList
@@ -474,6 +506,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             -- >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
             -- . D.renderAxis
             -- . plotClusters
+
+        -- Increment progress bar.
+        H.io $ Progress.incProgress progBar 1
 
         return ()
 
