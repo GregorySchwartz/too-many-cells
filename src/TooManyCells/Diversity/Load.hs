@@ -75,7 +75,7 @@ priorToPopulation :: ClusterResults -> Population
 priorToPopulation = Population
                   . Map.fromListWith (Seq.><)
                   . fmap ( L.over L._1 (fromMaybe (error "No cluster for cell.") . headMay)
-                         . L.over L._2 (Seq.singleton . barcode)
+                         . L.over L._2 (Seq.singleton . _barcode)
                          . swap
                          )
                   . _clusterList

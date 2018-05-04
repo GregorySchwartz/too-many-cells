@@ -75,7 +75,7 @@ hClust sc =
   where
     cDend = fmap ( V.singleton
                  . (\ (!w, _, !y, !z)
-                   -> CellInfo { barcode = w, cellRow = y, projection = z }
+                   -> CellInfo { _barcode = w, _cellRow = y, _projection = z }
                    )
                  )
             dend
@@ -90,14 +90,14 @@ hClust sc =
         sqrt . sum . fmap (** 2) $ S.liftU2 (-) (L.view L._2 y) (L.view L._2 x)
     items = (\ fs
             -> zip4
-                   (V.toList $ rowNames sc)
+                   (V.toList $ _rowNames sc)
                    fs
-                   (fmap Row . take (V.length . rowNames $ sc) . iterate (+ 1) $ 0)
-                   (V.toList $ projections sc)
+                   (fmap Row . take (V.length . _rowNames $ sc) . iterate (+ 1) $ 0)
+                   (V.toList $ _projections sc)
             )
           . S.toRowsL
           . unMatObsRow
-          . matrix
+          . _matrix
           $ sc
 
 -- | Assign clusters to values. Thanks to hierarchical clustering, we can have
@@ -122,19 +122,18 @@ clustersToClusterList sc clustering = do
     io . hPutStrLn stderr $ "Calculating clusters."
     clusters <- [r| clustering_hs$cluster |]
     return
-        . zip (V.toList . rowNames $ sc)
+        . zip (V.toList . _rowNames $ sc)
         . fmap (Cluster . fromIntegral)
         $ (R.fromSomeSEXP clusters :: [Int32])
 
 -- | Hierarchical spectral clustering.
 hSpecClust :: NormType
            -> SingleCells
-           -> (ClusterResults, B, ClusterGraph CellInfo)
+           -> (ClusterResults, ClusterGraph CellInfo)
 hSpecClust norm sc =
     ( ClusterResults { _clusterList = clustering
                      , _clusterDend = dend
                      }
-    , b
     , gr
     )
   where
@@ -149,16 +148,16 @@ hSpecClust norm sc =
             $ gr
     gr         = dendrogramToGraph dend
     dend       = clusteringTreeToDendrogram tree
-    (tree, b)  = hSpecCommand norm
+    (tree, _)  = hSpecCommand norm
                . Left
                . unMatObsRow
-               . matrix
+               . _matrix
                $ sc
     items      = V.zipWith3
                     (\x y z -> CellInfo x y z)
-                    (rowNames sc)
-                    (fmap Row . flip V.generate id . V.length . rowNames $ sc)
-                    (projections sc)
+                    (_rowNames sc)
+                    (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
+                    (_projections sc)
     hSpecCommand B1Norm = hierarchicalSpectralCluster True Nothing items
     hSpecCommand _      = hierarchicalSpectralCluster False Nothing items
 
@@ -195,7 +194,7 @@ clusterDiversity (Order order) (LabelMap lm) =
         flip (Map.findWithDefault (error "Cell missing a label.")) lm
             . Id
             . unCell
-            . barcode
+            . _barcode
     groupCellsByCluster :: [(CellInfo, [Cluster])] -> [(Cluster, [CellInfo])]
     groupCellsByCluster = fmap assignCluster
                         . groupBy ((==) `on` (headMay . snd))

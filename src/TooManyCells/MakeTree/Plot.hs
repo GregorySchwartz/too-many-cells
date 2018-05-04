@@ -66,7 +66,7 @@ import TooManyCells.Matrix.Types
 plotClusters :: [(CellInfo, Cluster)] -> Axis B V2 Double
 plotClusters vs = r2Axis &~ do
 
-    forM vs $ \(CellInfo { projection = (X !x, Y !y)}, Cluster c) ->
+    forM vs $ \(CellInfo { _projection = (X !x, Y !y)}, Cluster c) ->
         scatterPlot [(x, y)] $ do
             let color = (cycle colours2) !! c
             plotMarker .= circle 1 # fc color # lwO 1 # lc color
@@ -78,8 +78,8 @@ plotClustersR :: String -> [(CellInfo, [Cluster])] -> R s ()
 plotClustersR outputPlot clusterList = do
     let clusterListOrdered =
             sortBy (compare `on` snd) . fmap (L.over L._2 head) $ clusterList -- The first element in the list is the main cluster.
-        xs = fmap (unX . fst . projection . fst) clusterListOrdered
-        ys = fmap (unY . snd . projection . fst) clusterListOrdered
+        xs = fmap (unX . fst . _projection . fst) clusterListOrdered
+        ys = fmap (unY . snd . _projection . fst) clusterListOrdered
         cs = fmap (show . unCluster . snd) clusterListOrdered
     [r| suppressMessages(library(ggplot2))
         suppressMessages(library(cowplot))

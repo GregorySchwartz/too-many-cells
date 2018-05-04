@@ -109,6 +109,7 @@ executable too-many-cells
                      , matrix-market-attoparsec
                      , optparse-generic
                      , plots
+                     , spectral-clustering
                      , streaming
                      , streaming-bytestring
                      , streaming-utils

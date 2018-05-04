@@ -108,16 +108,16 @@ scaleSparseMol xs = fmap (/ med) xs
 -- | Filter a matrix to remove low count cells and genes.
 filterDenseMat :: SingleCells -> SingleCells
 filterDenseMat sc =
-    SingleCells { matrix   = m
-                , rowNames = r
-                , colNames = c
-                , projections = p
+    SingleCells { _matrix   = m
+                , _rowNames = r
+                , _colNames = c
+                , _projections = p
                 }
   where
     m = MatObsRow . hToSparseMat $ colFilteredMat
     rowFilter = (>= 250) . H.sumElements
     colFilter = (> 0) . H.sumElements
-    mat            = sparseToHMat . unMatObsRow . matrix $ sc
+    mat            = sparseToHMat . unMatObsRow . _matrix $ sc
     rowFilteredMat = H.fromRows
                    . filter rowFilter
                    . H.toRows
@@ -127,28 +127,28 @@ filterDenseMat sc =
                    . H.toColumns
                    $ rowFilteredMat
     r = V.ifilter (\i _ -> rowFilter . (H.!) mat $ i)
-      . rowNames
+      . _rowNames
       $ sc
     c = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
-      . colNames
+      . _colNames
       $ sc
     p = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
-      . projections
+      . _projections
       $ sc
 
 -- | Filter a matrix to remove low count cells and genes.
 filterNumSparseMat :: SingleCells -> SingleCells
 filterNumSparseMat sc =
-    SingleCells { matrix   = m
-                , rowNames = r
-                , colNames = c
-                , projections = p
+    SingleCells { _matrix   = m
+                , _rowNames = r
+                , _colNames = c
+                , _projections = p
                 }
   where
     m = MatObsRow colFilteredMat
     rowFilter = (>= 250) . sum
     colFilter = (> 0) . sum
-    mat            = unMatObsRow . matrix $ sc
+    mat            = unMatObsRow . _matrix $ sc
     mat'           = S.transposeSM mat
     rowFilteredMat = S.transposeSM
                    . S.fromColsL
@@ -161,13 +161,13 @@ filterNumSparseMat sc =
                    . S.transposeSM
                    $ rowFilteredMat
     r = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
-      . rowNames
+      . _rowNames
       $ sc
     c = V.ifilter (\i _ -> colFilter . S.extractRow mat' $ i) -- Rows of transpose are faster.
-      . colNames
+      . _colNames
       $ sc
     p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
-      . projections
+      . _projections
       $ sc
 
 -- | Filter a matrix to keep whitelist cells.
@@ -175,26 +175,26 @@ filterWhitelistSparseMat :: CellWhitelist
                          -> SingleCells
                          -> SingleCells
 filterWhitelistSparseMat (CellWhitelist wl) sc =
-    sc { matrix   = m
-       , rowNames = r
-       , projections = p
+    sc { _matrix   = m
+       , _rowNames = r
+       , _projections = p
        }
   where
     m = MatObsRow rowFilteredMat
-    mat            = unMatObsRow . matrix $ sc
+    mat            = unMatObsRow . _matrix $ sc
     validIdx       = sort
                    . fmap fst
                    . filter (\(_, !c) -> Set.member c wl)
                    . zip [0..]
                    . V.toList
-                   . rowNames
+                   . _rowNames
                    $ sc
     rowFilteredMat = S.transposeSM
                    . S.fromColsL
                    . fmap (S.extractRow mat)
                    $ validIdx
-    r = V.fromList . fmap ((V.!) (rowNames sc)) $ validIdx
-    p = V.fromList . fmap ((V.!) (projections sc)) $ validIdx
+    r = V.fromList . fmap ((V.!) (_rowNames sc)) $ validIdx
+    p = V.fromList . fmap ((V.!) (_projections sc)) $ validIdx
 
 -- | Get a cell white list from a file.
 getCellWhitelist :: CellWhitelistFile -> IO CellWhitelist

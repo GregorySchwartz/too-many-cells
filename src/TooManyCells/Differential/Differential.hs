@@ -45,13 +45,13 @@ scToTwoD :: [(Int, Cell, Diff.Status)] -> SingleCells -> Diff.TwoDMat
 scToTwoD cellGroups sc =
     Diff.TwoDMat rNames cNames statuses nRows nCols . S.toListSM $ filteredMat
   where
-    rNames = fmap (Diff.Name . unGene) . V.toList . colNames $ sc
+    rNames = fmap (Diff.Name . unGene) . V.toList . _colNames $ sc
     cNames = fmap (Diff.Name . unCell . L.view L._2) cellGroups -- We flip row and column because cells are columns here
     statuses = fmap (L.view L._3) cellGroups
     nRows    = S.nrows filteredMat
     nCols    = S.ncols filteredMat
     filteredMat = S.fromColsL -- Here the columns should be observations.
-                . fmap (S.extractRow (unMatObsRow . matrix $ sc) . L.view L._1)
+                . fmap (S.extractRow (unMatObsRow . _matrix $ sc) . L.view L._1)
                 $ cellGroups
 
 -- | Get the indices and statuses for two lists of nodes.
@@ -63,7 +63,7 @@ getStatuses v1 v2 (ClusterGraph gr) =
         $ mappend (collapseStatus (1 :: Int) v1) (collapseStatus (2 :: Int) v2)
   where
     collapseStatus s =
-        fmap (\ !x -> (unRow . cellRow $ x, barcode x, Diff.Status . showt $ s))
+        fmap (\ !x -> (unRow . _cellRow $ x, _barcode x, Diff.Status . showt $ s))
             . join
             . mconcat
             . fmap (fmap (fromMaybe mempty . snd) . getGraphLeaves gr)

@@ -57,10 +57,10 @@ scToRMat :: SingleCells -> R s (RMatObsRow s)
 scToRMat sc = do
     [r| library(Matrix) |]
 
-    let rowNamesR = fmap (T.unpack . unCell) . V.toList . rowNames $ sc
-        colNamesR = fmap (T.unpack . unGene) . V.toList . colNames $ sc
+    let rowNamesR = fmap (T.unpack . unCell) . V.toList . _rowNames $ sc
+        colNamesR = fmap (T.unpack . unGene) . V.toList . _colNames $ sc
 
-    mat <- fmap unRMatObsRow . matToRMat . matrix $ sc
+    mat <- fmap unRMatObsRow . matToRMat . _matrix $ sc
 
     -- namedMat <- [r| rownames(mat_hs) = rowNamesR_hs
     --                 colnames(mat_hs) = colNamesR_hs

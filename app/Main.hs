@@ -30,7 +30,7 @@ import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
 import Language.R as R
 import Language.R.QQ (r)
-import Math.Clustering.Hierarchical.Spectral.Sparse (B (..))
+import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend)
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
@@ -85,7 +85,7 @@ data Options
                , minDistance :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE distance. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Includes L and R in the final result."
                , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, and --min-distance based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous FEATURE), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)], where each item is colored by the binary high / low expression of FEATURE based on DOUBLE and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
-               , drawPie :: Maybe String <?> "([PieRing] | PieChart | PieNone) How to draw cell leaves in the dendrogram. PieRing draws a pie chart ring around the cells. PieChart only draws a pie chart instead of cells. PieNone only draws cells, no pie rings or charts."
+               , drawCollection :: Maybe String <?> "([PieRing] | PieChart | PieNone | CollectionGraph DOUBLE) How to draw item leaves in the dendrogram. PieRing draws a pie chart ring around the items. PieChart only draws a pie chart instead of items. PieNone only draws items, no pie rings or charts. (CollectionGraph DOUBLE) draws the nodes and edges within that leaf based on the input matrix (converted to B2 based on cosine similarity) and removes edges for display less than DOUBLE."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
                ,
                  -- Disable for now. , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
@@ -134,6 +134,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "maxProportion"        = Just 'X'
     short "maxDistance"          = Just 'T'
     short "drawLeaf"             = Just 'L'
+    short "drawCollection"       = Just 'E'
     short "drawDendrogram"       = Just 'D'
     short "drawNodeNumber"       = Just 'N'
     short "drawMark"             = Just 'K'
@@ -225,8 +226,8 @@ loadAllSSM opts = do
         normMat WishboneNorm = scaleSparseMat
         processMat  = (\m -> maybe m (flip pcaDenseMat m) pca')
                     . normMat normalization'
-                    . matrix
-        processedSc = sc { matrix = processMat sc }
+                    . _matrix
+        processedSc = sc { _matrix = processMat sc }
 
     return processedSc
 
@@ -250,7 +251,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 . unHelpful
                 . drawLeaf
                 $ opts
-        drawPie'          = maybe PieRing read . unHelpful . drawPie $ opts
+        drawCollection'          = maybe PieRing read . unHelpful . drawCollection $ opts
         drawMark'         = maybe MarkNone read . unHelpful . drawMark $ opts
         -- drawDendrogram'   = unHelpful . drawDendrogram $ opts
         drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
@@ -273,7 +274,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
         drawConfig        = DrawConfig
                                 drawLeaf'
-                                drawPie'
+                                drawCollection'
                                 drawNodeNumber'
                                 drawMaxNodeSize'
                                 drawNoScaleNodes'
@@ -283,12 +284,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Notify user of limitations.
     limitationWarningsErrors opts
 
-    -- Start progress bar.
-    (progBar, _) <- Progress.startProgress
-                        (Progress.msg "Planting tree")
-                        Progress.percentage
-                        80
-                  $ Progress.Progress 0 9
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Planning leaf colors")
+        Progress.percentage
+        80
+        $ Progress.Progress 0 9
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
@@ -304,8 +305,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                             processedSc
                     _ -> sequence . fmap (loadLabelData delimiter') $ labelsFile'
 
-    -- Increment progress bar.
-    Progress.incProgress progBar 1
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Planting tree")
+        Progress.percentage
+        80
+        $ Progress.Progress 1 9
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -317,35 +322,49 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         --let clusterResults = fmap hClust processedSc
 
     -- Load previous results or calculate results if first run.
-    (originalClusterResults, bMat) <- case prior' of
+    originalClusterResults <- case prior' of
         Nothing -> do
-            (fullCr, b, _) <- fmap (hSpecClust normalization') processedSc
+            (fullCr, _) <- fmap (hSpecClust normalization') processedSc
 
-            return (fullCr, return b) :: IO (ClusterResults, IO B)
+            return fullCr :: IO ClusterResults
         (Just x) -> do
             let crInput = (FP.</> "cluster_results.json") . unPriorPath $ x
-                bInput  = (FP.</> "b.mtx") . unPriorPath $ x
 
             -- Strict loading in order to avoid locked file.
             !fullCr <- fmap (either error id . A.eitherDecode)
                      . B.readFile
                      $ crInput
 
-            let b :: IO B
-                b  = fmap (B . matToSpMat)
-                    . readMatrix
-                    $ bInput
-            return (fullCr, b)
+            return fullCr
 
-    -- Increment progress bar.
-    Progress.incProgress progBar 1
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Measuring roots")
+        Progress.percentage
+        80
+        $ Progress.Progress 2 9
 
     birchMat <- case unHelpful . matrixPath $ opts of
                     [] -> return Nothing
                     _  -> fmap Just processedSc
 
-    -- Increment progress bar.
-    Progress.incProgress progBar 1
+    birchSimMat <-
+        case (not . null . unHelpful . matrixPath $ opts, drawCollection') of
+            (True, CollectionGraph _)  ->
+                fmap
+                    ( Just
+                    . B2Matrix
+                    . L.over matrix (MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow)
+                    )
+                    processedSc
+            _ -> return Nothing
+
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Sketching tree")
+        Progress.percentage
+        80
+        $ Progress.Progress 3 9
 
     let config :: BirchBeer.Types.Config CellInfo SingleCells
         config = BirchBeer.Types.Config
@@ -357,7 +376,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchSmartCutoff = smartCutoff'
                     , _birchOrder = Just order'
                     , _birchDrawLeaf = drawLeaf'
-                    , _birchDrawPie = drawPie'
+                    , _birchDrawCollection = drawCollection'
                     , _birchDrawMark = drawMark'
                     , _birchDrawNodeNumber = drawNodeNumber'
                     , _birchDrawMaxNodeSize = drawMaxNodeSize'
@@ -365,12 +384,17 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawColors = drawColors'
                     , _birchDend = _clusterDend originalClusterResults
                     , _birchMat = birchMat
+                    , _birchSimMat = birchSimMat
                     }
 
     (plot, labelColorMap, itemColorMap, markColorMap, dend', gr') <- mainDiagram config
 
-    -- Increment progress bar.
-    Progress.incProgress progBar 1
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Recording tree measurements")
+        Progress.percentage
+        80
+        $ Progress.Progress 4 9
 
     -- Write results.
     clusterResults <- case prior' of
@@ -378,26 +402,11 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             let clusterList' = dendrogramToClusterList dend'
                 cr' = ClusterResults clusterList' dend'
 
-            b <- bMat
-
-            -- Write results to files.
-            writeMatrix (unOutputDirectory output' FP.</> "b.mtx")
-                . spMatToMat
-                . unB
-                $ b
-
             return cr'
 
         (Just x) -> do
-            let bInput  = (FP.</> "b.mtx") . unPriorPath $ x
-                clusterList' = dendrogramToClusterList dend'
+            let clusterList' = dendrogramToClusterList dend'
                 cr' = ClusterResults clusterList' dend'
-
-            -- Write results to files.
-            FP.copyFile bInput
-                . (FP.</> "b.mtx")
-                . unOutputDirectory
-                $ output'
 
             return cr'
 
@@ -427,8 +436,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 . printClusterDiversity order' lm
                 $ clusterResults
 
-    -- Increment progress bar.
-    Progress.incProgress progBar 1
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Counting leaves")
+        Progress.percentage
+        80
+        $ Progress.Progress 5 9
 
     -- Header
     B.putStrLn $ "cell,cluster,path"
@@ -437,7 +450,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     B.putStrLn
         . CSV.encode
         . fmap (\ (!ci, !(c:cs))
-                -> ( unCell . barcode $ ci
+                -> ( unCell . _barcode $ ci
                 , showt $ unCluster c
                 , T.intercalate "/" . fmap (showt . unCluster) $ c:cs
                 )
@@ -445,8 +458,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         . _clusterList
         $ clusterResults
 
-    -- Increment progress bar.
-    Progress.incProgress progBar 1
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Painting sketches")
+        Progress.percentage
+        80
+        $ Progress.Progress 6 9
 
     -- Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
@@ -477,8 +494,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     . printClusterDiversity order' lm
                     $ clusterResults
 
-        -- Increment progress bar.
-        H.io $ Progress.incProgress progBar 1
+        -- Increment  progress bar.
+        H.io $ Progress.autoProgressBar
+            (Progress.msg "Painting tree")
+            Progress.percentage
+            80
+            $ Progress.Progress 7 9
 
         -- Plot.
         H.io $ do
@@ -496,8 +517,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     (D.mkHeight 1000)
                     plot
 
-        -- Increment progress bar.
-        H.io $ Progress.incProgress progBar 1
+        -- Increment  progress bar.
+        H.io $ Progress.autoProgressBar
+            (Progress.msg "Squishing tree")
+            Progress.percentage
+            80
+            $ Progress.Progress 8 9
 
         -- Plot clustering.
         plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
@@ -507,8 +532,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             -- . D.renderAxis
             -- . plotClusters
 
-        -- Increment progress bar.
-        H.io $ Progress.incProgress progBar 1
+        -- Increment  progress bar.
+        H.io $ Progress.autoProgressBar
+            (Progress.msg "Packing up")
+            Progress.percentage
+            80
+            $ Progress.Progress 9 9
 
         return ()
 
@@ -538,7 +567,14 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
 
     mat <- processedSc
 
-    interactiveDiagram dend labelMap $ Just mat
+    interactiveDiagram
+        dend
+        labelMap
+        (Just mat)
+        . Just
+        . B2Matrix
+        . L.over matrix (MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow)
+        $ mat
 
     return ()
 

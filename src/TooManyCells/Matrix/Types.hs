@@ -9,6 +9,7 @@ Collects the types used in the program concerning the matrix.
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module TooManyCells.Matrix.Types where
 
@@ -25,6 +26,7 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
 import Math.Modularity.Types (Q (..))
+import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
@@ -71,18 +73,20 @@ newtype MatObsRow = MatObsRow
     } deriving (Show)
 
 -- Advanced
-data SingleCells = SingleCells { matrix :: MatObsRow
-                               , rowNames :: Vector Cell
-                               , colNames :: Vector Gene
-                               , projections :: Vector (X, Y)
+data SingleCells = SingleCells { _matrix :: MatObsRow
+                               , _rowNames :: Vector Cell
+                               , _colNames :: Vector Gene
+                               , _projections :: Vector (X, Y)
                                }
                      deriving (Show)
+L.makeLenses ''SingleCells
 
 data CellInfo = CellInfo
-    { barcode :: Cell
-    , cellRow :: Row
-    , projection :: (X, Y)
+    { _barcode :: Cell
+    , _cellRow :: Row
+    , _projection :: (X, Y)
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
+L.makeLenses ''CellInfo
 
 data NormType = B1Norm | WishboneNorm | NoneNorm deriving (Read, Show)
 
@@ -93,14 +97,14 @@ instance Monoid MatObsRow where
     mappend (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
 
 instance Monoid SingleCells where
-    mempty  = SingleCells { matrix = mempty
-                          , rowNames = V.empty
-                          , colNames = V.empty
-                          , projections = V.empty
+    mempty  = SingleCells { _matrix = mempty
+                          , _rowNames = V.empty
+                          , _colNames = V.empty
+                          , _projections = V.empty
                           }
     mappend x y =
-        SingleCells { matrix      = mappend (matrix x) (matrix y)
-                    , rowNames    = (V.++) (rowNames x) (rowNames y)
-                    , colNames    = colNames x
-                    , projections = (V.++) (projections x) (projections y)
+        SingleCells { _matrix      = mappend (_matrix x) (_matrix y)
+                    , _rowNames    = (V.++) (_rowNames x) (_rowNames y)
+                    , _colNames    = _colNames x
+                    , _projections = (V.++) (_projections x) (_projections y)
                     }

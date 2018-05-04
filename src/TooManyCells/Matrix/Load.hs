@@ -80,10 +80,10 @@ loadCellrangerData pf gf cf mf = do
     p <- maybe (return . projectMatrix $ m) loadProjectionFile $ pf
 
     return $
-        SingleCells { matrix   = m -- We want observations as rows.
-                    , rowNames = c
-                    , colNames = g
-                    , projections = p
+        SingleCells { _matrix   = m -- We want observations as rows.
+                    , _rowNames = c
+                    , _colNames = g
+                    , _projections = p
                     }
 
 -- | Load an H Matrix in CSV format (rows were features) with row names and
@@ -117,10 +117,10 @@ loadHMatrixData (Delimiter delim) pf mf = do
     p <- maybe (return . projectMatrix $ m) loadProjectionFile $ pf
 
     return $
-        SingleCells { matrix   = m
-                    , rowNames = c
-                    , colNames = g
-                    , projections = p
+        SingleCells { _matrix   = m
+                    , _rowNames = c
+                    , _colNames = g
+                    , _projections = p
                     }
 
 -- | Load a sparse matrix in CSV format (rows were features) with row names and
@@ -151,10 +151,10 @@ loadSparseMatrixData (Delimiter delim) pf mf = do
     p <- maybe (return . projectMatrix $ m) loadProjectionFile pf
 
     return $
-        SingleCells { matrix   = m
-                    , rowNames = c
-                    , colNames = g
-                    , projections = p
+        SingleCells { _matrix   = m
+                    , _rowNames = c
+                    , _colNames = g
+                    , _projections = p
                     }
 
 -- | Load a sparse matrix streaming in CSV format (rows were features) with row
@@ -192,10 +192,10 @@ loadSparseMatrixDataStream (Delimiter delim) pf mf = do
            $ maybe (return . projectMatrix $ finalMat) loadProjectionFile pf
 
         return $
-            SingleCells { matrix   = finalMat
-                        , rowNames = V.fromList c
-                        , colNames = V.fromList g
-                        , projections = p
+            SingleCells { _matrix   = finalMat
+                        , _rowNames = V.fromList c
+                        , _colNames = V.fromList g
+                        , _projections = p
                         }
 
     return res

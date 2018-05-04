@@ -83,12 +83,12 @@ data NodeInfo = NodeInfo
     }
 
 instance TreeItem CellInfo where
-    getId = Id . unCell . barcode
+    getId = Id . unCell . _barcode
 
 instance MatrixLike SingleCells where
-    getMatrix   = unMatObsRow . matrix
-    getRowNames = fmap unCell . rowNames
-    getColNames = fmap unGene . colNames
+    getMatrix   = unMatObsRow . _matrix
+    getRowNames = fmap unCell . _rowNames
+    getColNames = fmap unGene . _colNames
 
 instance A.ToJSON Q where
     toEncoding = A.genericToEncoding A.defaultOptions
