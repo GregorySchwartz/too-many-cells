@@ -513,7 +513,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             --             plotGraph legend drawConfig cm markColorMap gr
 
             D.renderCairo
-                    (unOutputDirectory output' FP.</> "dendrogram.pdf")
+                    (unOutputDirectory output' FP.</> "dendrogram.svg")
                     (D.mkHeight 1000)
                     plot
 
