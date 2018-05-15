@@ -70,6 +70,9 @@ import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Load
 import TooManyCells.Matrix.Preprocess
 import TooManyCells.Matrix.Types
+import TooManyCells.Paths.Distance
+import TooManyCells.Paths.Plot
+import TooManyCells.Paths.Types
 
 -- | Command line arguments
 data Options
@@ -124,7 +127,14 @@ data Options
                 , end :: Maybe Integer <?> "([N] | INT) For the rarefaction curve, which subsample to stop at. By default, the curve stops at the observed number of species for each population."
                 , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                 , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
-    deriving ((Generic))
+    | Paths { prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
+            , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
+            , flipDirection :: Bool <?> "Flip the starting node when calculating the distances."
+            , pathDistance :: Maybe String <?> "([PathModularity] | PathStep) How to measure the distance from the starting leaf. PathModularity weighs the steps by the modularity, while PathStep counts the number of steps."
+            , bandwidth :: Maybe Double <?> "([1] | DOUBLE) Bandwidth of the density plot."
+            , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+            , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
+    deriving (Generic)
 
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
@@ -684,6 +694,59 @@ diversityMain opts = do
 
     return ()
 
+-- | Paths path.
+pathsMain :: Options -> IO ()
+pathsMain opts = do
+    let labelsFile'   =
+            maybe (error "Need a label file.") LabelFile
+                . unHelpful
+                . labelsFile
+                $ opts
+        prior'        =
+            maybe (error "Need a prior path containing tree.") PriorPath
+                . unHelpful
+                . prior
+                $ opts
+        delimiter'    =
+            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        bandwidth'    = Bandwidth . fromMaybe 1 . unHelpful . bandwidth $ opts
+        direction'    = FlipFlag . unHelpful . flipDirection $ opts
+        pathDistance' =
+            maybe PathModularity read . unHelpful . pathDistance $ opts
+        output'       =
+            OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
+
+    -- Where to place output files.
+    FP.createDirectoryIfMissing True . unOutputDirectory $ output'
+
+    -- Get the label map from a file.
+    labelMap <- loadLabelData delimiter' labelsFile'
+
+    -- Load previous results or calculate results if first run.
+    dend <- do
+        let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
+
+        fullCr <- fmap (either error id . A.eitherDecode)
+                . B.readFile
+                $ crInput
+
+        return . _clusterDend $ fullCr
+
+    let gr = dendrogramToGraph dend
+        pathDistances :: [(CellInfo, Double)]
+        pathDistances = linearItemDistance direction' pathDistance' gr
+        labeledPathDistances =
+            labelItemDistance labelMap pathDistances
+
+    H.withEmbeddedR defaultConfig $ H.runRegion $ do
+        plotPathDistanceR
+            (unOutputDirectory output' FP.</> "path_distances.pdf")
+            bandwidth'
+            labeledPathDistances
+        return ()
+
+    return ()
+
 main :: IO ()
 main = do
     opts <- getRecord "too-many-cells, Gregory W. Schwartz.\
@@ -694,3 +757,4 @@ main = do
         Interactive{}    -> interactiveMain opts
         Differential{}   -> differentialMain opts
         Main.Diversity{} -> diversityMain opts
+        Paths{}          -> pathsMain opts

@@ -16,6 +16,8 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     TooManyCells.Diversity.Diversity
+                     , TooManyCells.Differential.Differential
+                     , TooManyCells.Differential.Types
                      , TooManyCells.Diversity.Load
                      , TooManyCells.Diversity.Plot
                      , TooManyCells.Diversity.Types
@@ -31,8 +33,9 @@ library
                      , TooManyCells.Matrix.Preprocess
                      , TooManyCells.Matrix.Types
                      , TooManyCells.Matrix.Utility
-                     , TooManyCells.Differential.Differential
-                     , TooManyCells.Differential.Types
+                     , TooManyCells.Paths.Distance
+                     , TooManyCells.Paths.Plot
+                     , TooManyCells.Paths.Types
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , birch-beer
