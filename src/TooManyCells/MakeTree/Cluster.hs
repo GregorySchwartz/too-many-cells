@@ -31,7 +31,7 @@ import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster, B (..))
-import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram, getClusterItemsDend)
+import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram, getClusterItemsDend, EigenGroup (..))
 import Math.Diversity.Diversity (diversity)
 import Statistics.Quantile (continuousBy, s)
 import System.IO (hPutStrLn, stderr)
@@ -127,10 +127,11 @@ clustersToClusterList sc clustering = do
         $ (R.fromSomeSEXP clusters :: [Int32])
 
 -- | Hierarchical spectral clustering.
-hSpecClust :: NormType
+hSpecClust :: EigenGroup
+           -> NormType
            -> SingleCells
            -> (ClusterResults, ClusterGraph CellInfo)
-hSpecClust norm sc =
+hSpecClust eigenGroup norm sc =
     ( ClusterResults { _clusterList = clustering
                      , _clusterDend = dend
                      }
@@ -158,8 +159,10 @@ hSpecClust norm sc =
                     (_rowNames sc)
                     (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
                     (_projections sc)
-    hSpecCommand B1Norm = hierarchicalSpectralCluster True Nothing items
-    hSpecCommand _      = hierarchicalSpectralCluster False Nothing items
+    hSpecCommand B1Norm =
+        hierarchicalSpectralCluster eigenGroup True Nothing items
+    hSpecCommand _      =
+        hierarchicalSpectralCluster eigenGroup False Nothing items
 
 dendrogramToClusterList :: HC.Dendrogram (V.Vector CellInfo)
                         -> [(CellInfo, [Cluster])]

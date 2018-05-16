@@ -1,8 +1,166 @@
 * =too-many-cells=
 
+** Description
+
+=too-many-cells= is an "ism". That is, /too manyism/. More specifically,
+=too-many-cells= is a different perspective on existing single cell tools.
+Rather than opt for a unique positioning of each cell using dimensionality
+reduction approaches like tSNE, PCA, and other, =too-many-cells= recursively
+divides cells into clusters and relates clusters rather than individual cells.
+In fact, by recursively dividing until further dividing would be considered
+noise or random partitioning, we can eliminate noisy relationships at the
+fine-grain level. The resulting binary tree serves as a basis for a different
+perspective of single cells, using our =birch-beer= visualization and tree
+measures to describe simultaneously large and small populations, without
+additional parameters or runs. See below for a full list of features.
+
 ** Installation
 
-*** Dependencies
-- =pangocairo= (=libcairo2-dev=, =libpango1.0-dev=)
-- =graphviz=
-- =gtk=
+*** Install =stack=
+
+See [[https://docs.haskellstack.org/en/stable/README/]] for more details.
+
+#+BEGIN_SRC sh
+curl -sSL https://get.haskellstack.org/ | sh
+stack setup
+#+END_SRC
+
+*** Install =too-many-cells=
+
+**** Online
+
+#+BEGIN_SRC sh
+stack install too-many-cells
+#+END_SRC
+
+**** Source
+
+#+BEGIN_SRC sh
+stack install
+#+END_SRC
+
+** Usage
+
+=too-many-cells= has several entry points depending on the desired analysis. 
+
+| Argument       | Analysis                                                                                    |
+|----------------+---------------------------------------------------------------------------------------------|
+| =make-tree=    | Generate the tree from single cell data with various measurement outputs and visualize tree |
+| =interactive=  | Interactive visuzalization of the tree, very slow                                           |
+| =differential= | Find differentially expressed genes between two nodes                                       |
+| =diversity=    | Conduct diversity analyses of multiple cell populations                                     |
+| =paths=        | The binary tree equivalent of the so called "pseudotime", or 1D dimensionality reduction    |
+
+The main workflow is to first generate and plot the population tree using
+=too-many-cells make-tree=, then use the rest of the entry points as needed.
+
+At any point, use =-h= to see the help of each entry point.
+
+*** =make-tree=
+
+=too-many-cells make-tree= generates a binary tree using hierarchical spectral
+clustering. We start with all cells in a single node. Spectral clustering
+partitions the cells into two groups. We assess the clustering using
+Newman-Girvan modularity: if \(Q > 0\) then we recursively continue with
+hierarchical spectral clustering. If not, then there is only a single community
+and we do not partition -- the resulting node is a leaf and is considered the
+finest-grain cluster.
+
+*The most important argument is the =--prior= argument.* Making the tree may
+take some time, so if the tree was already generated and other analysis or
+visualizations need to be run on the tree, point the =--prior= argument to the
+output folder from a previous run of =too-many-cells=. *If you do not use
+=--prior=, the entire tree will be recalculated even if you just wanted to
+change the visualization!*
+
+The main input is the =--matrix-path= argument. When a directory is supplied,
+=too-many-cells= interprets the folder to have =matrix.mtx=, =genes.tsv=, and
+=barcodes.tsv= files (=cellranger= outputs, see =cellranger= for specifics). If
+a file is supplied, we assume a =csv= file containing gene row names and cell
+column names. This argument can be called multiple times to combine multiple
+single cell matrices: =--matrixPath input1 --matrixPath input2=.
+
+The second most important argument is =--labels-file=. Supply with a =csv= with
+a format and header of "item,label" to provide colorings and statistics of the
+relationships between labels. Here the "item" column contains the name of each
+cell (barcode) and the label is any property of the cell (the tissue of origin,
+hour in a time course, celltype, etc.).
+
+To see the full list of options, use =too-many-cells -h=.
+
+**** Output
+
+=too-many-cells make-tree= generates several files in the output folder. Below
+is a short description of each file.
+
+| File                    | Description                                                                                                                                                                                                                          |
+|-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| =clumpiness.csv=        | When labels are provided, uses the clumpiness measure to determine the level of aggregation between each label within the tree.                                                                                                      |
+| =clumpiness.pdf=        | When labels are provided, a figure of the clumpiness between labels.                                                                                                                                                                 |
+| =cluster_diversity.csv= | When labels are provided, the diversity, or "effective number of labels", of each cluster.                                                                                                                                           |
+| =cluster_info.csv=      | Various bits of information for each cluster and the path leading up to each cluster, from that cluster to the root. For instance, the =size= column has =cluster_size/parent_size/parent_parent_size/.../root_size=                 |
+| =cluster_results.json=  | The =json= file containing a list of clusterings and the output tree in a recursive format.                                                                                                                                          |
+| =dendrogram.svg=        | The visualization of the tree. There are many possible options for this visualization included.                                                                                                                                      |
+| =graph.dot=             | A =dot= file of the tree, with less information than the tree in =cluster_results.json=.                                                                                                                                             |
+| =node_info.csv=         | Various information of each node in the tree.                                                                                                                                                                                        |
+| =projection.pdf=        | When =--projection= is supplied with a file of the format "barcode,x,y", provides a plot of each cell at the specified x and y coordinates (for instance, when looking at tSNE plots with the same labelings as the dendrogram here. |
+
+**** Example
+
+We start with our input matrix.
+
+#+HEADER: :results output verbatim
+#+BEGIN_SRC sh
+ls ./input
+#+END_SRC
+
+#+RESULTS:
+: barcodes.tsv  genes.tsv  matrix.mtx
+
+We also know where each cell came from, so we mark that down as well in a
+=labels.csv= file.
+
+#+CAPTION: labels.csv
+#+BEGIN_EXAMPLE
+item,label
+TTTGTCATCGGCTTGG-1,Trachea
+TTTGTCATCTTACCGC-1,Trachea
+TTTGTCATCTTGTTTG-1,Trachea
+...
+#+END_EXAMPLE
+
+We can now run the =too-many-cells= algorithm on our data.
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --matrix-path input \
+    --labels-file labels.csv \
+    --draw-leaf "DrawItem DrawLabel" \
+    --output out
+#+END_SRC
+
+What if we want pie charts instead of showing each individual cell? We don't
+have to recalculate the entire tree, we can just supply the previous results:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --matrix-path input \
+    --labels-file labels.csv \
+    --draw-leaf "DrawItem DrawLabel" \
+    --draw-collection "PieChart" \
+    --output out
+#+END_SRC
+
+What if we want to draw the gene expression onto the tree in another folder?
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --matrix-path input \
+    --labels-file labels.csv \
+    --draw-leaf "DrawItem (DrawContinuous \"ENSG00000012048\")" \
+    --output out_gene_expression
+#+END_SRC
+
+** Documentation

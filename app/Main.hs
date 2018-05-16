@@ -31,7 +31,7 @@ import Data.Monoid ((<>))
 import Language.R as R
 import Language.R.QQ (r)
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
-import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend)
+import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import TextShow (showt)
@@ -82,6 +82,7 @@ data Options
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                , normalization :: Maybe String <?> "([B1Norm] | [None] | WishboneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as None will become the default."
+               , eigenGroup :: Maybe String <?> "([SignGroup] | KMeansGroup) Whether to group the eigenvector using the sign or kmeans while clustering. While the default is sign, kmeans may be more accurate (but starting points are arbitrary)."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
                , maxProportion :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE proportion split. So a node N with L and R children will stop with this criteria at 0.5 if |L| / |R| < 0.5 or > 2 (absolute log2 transformed), that is, if one child has over twice as many items as the other child. Includes L and R in the final result."
@@ -160,6 +161,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "pca"                  = Just 'a'
     short "noFilter"             = Just 'F'
     short "clumpinessMethod"     = Just 'u'
+    short "eigenGroup"           = Just 'B'
     short x                      = firstLetter x
 
 instance ParseRecord Options where
@@ -249,11 +251,13 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             fmap PriorPath . unHelpful . prior $ opts
         delimiter'        =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        eigenGroup'       = maybe SignGroup read . unHelpful . eigenGroup $ opts
         normalization' =
             maybe B1Norm read . unHelpful . normalization $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
-        maxProportion'    = fmap MaxProportion . unHelpful . maxProportion $ opts
+        maxProportion'    =
+            fmap MaxProportion . unHelpful . maxProportion $ opts
         minDistance'      = fmap MinDistance . unHelpful . minDistance $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
         drawLeaf'         =
@@ -261,7 +265,8 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 . unHelpful
                 . drawLeaf
                 $ opts
-        drawCollection'          = maybe PieRing read . unHelpful . drawCollection $ opts
+        drawCollection'   =
+            maybe PieRing read . unHelpful . drawCollection $ opts
         drawMark'         = maybe MarkNone read . unHelpful . drawMark $ opts
         -- drawDendrogram'   = unHelpful . drawDendrogram $ opts
         drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
@@ -334,7 +339,8 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Load previous results or calculate results if first run.
     originalClusterResults <- case prior' of
         Nothing -> do
-            (fullCr, _) <- fmap (hSpecClust normalization') processedSc
+            (fullCr, _) <-
+                fmap (hSpecClust eigenGroup' normalization') processedSc
 
             return fullCr :: IO ClusterResults
         (Just x) -> do
