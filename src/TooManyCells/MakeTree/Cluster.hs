@@ -149,7 +149,7 @@ hSpecClust eigenGroup norm sc =
             $ gr
     gr         = dendrogramToGraph dend
     dend       = clusteringTreeToDendrogram tree
-    (tree, _)  = hSpecCommand norm
+    tree       = hSpecCommand norm
                . Left
                . unMatObsRow
                . _matrix

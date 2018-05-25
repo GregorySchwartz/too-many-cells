@@ -46,6 +46,7 @@ packages:
 extra-deps:
   - /home/gw/code/utility/birch-beer/
   - /home/gw/code/utility/differential/
+  - /home/gw/code/utility/eigen-sparse-utils/
   - /home/gw/code/utility/hierarchical-spectral-clustering/
   - /home/gw/code/utility/modularity/
   - /home/gw/code/utility/spectral-clustering/
@@ -63,6 +64,7 @@ extra-deps:
   - diagrams-svg-1.4.1.1
   - discrimination-0.3
   - dual-tree-0.2.1.1
+  - eigen-2.1.7
   - fast-math-1.0.2
   - gio-0.13.4.1
   - graphviz-2999.19.0.0
