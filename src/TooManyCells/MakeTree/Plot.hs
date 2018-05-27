@@ -15,6 +15,7 @@ Collects the functions pertaining to plotting the clusterings.
 module TooManyCells.MakeTree.Plot
     ( plotClusters
     , plotClustersR
+    , plotLabelClustersR
     , plotClumpinessHeatmapR
     ) where
 
@@ -26,7 +27,7 @@ import Data.Colour (AffineSpace (..), withOpacity)
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..), Kolor)
 import qualified Data.Colour.Palette.BrewerSet as Brewer
-import Data.Colour.SRGB (RGB (..), toSRGB)
+import Data.Colour.SRGB (RGB (..), toSRGB, sRGB24show)
 import Data.Function (on)
 import Data.List (nub, sort, sortBy, foldl1', transpose)
 import Data.Maybe (fromMaybe)
@@ -90,6 +91,43 @@ plotClustersR outputPlot clusterList = do
                 xlab("TNSE 1") +
                 ylab("TNSE 2") +
                 scale_color_discrete(guide = guide_legend(title = "Cluster")) +
+                theme(aspect.ratio = 1)
+
+        suppressMessages(ggsave(p, file = outputPlot_hs))
+    |]
+
+    return ()
+
+-- | Plot clusters.
+plotLabelClustersR :: String
+                   -> LabelMap
+                   -> ItemColorMap 
+                   -> [(CellInfo, [Cluster])]
+                   -> R s ()
+plotLabelClustersR outputPlot (LabelMap lm) (ItemColorMap icm) clusterList = do
+    let clusterListOrdered =
+            sortBy (compare `on` snd) . fmap (L.over L._2 head) $ clusterList -- The first element in the list is the main cluster.
+        barcodeToColor x = sRGB24show $ Map.findWithDefault black x icm
+        barcodeToLabel x = Map.findWithDefault (Label "") x lm
+        xs = fmap (unX . fst . _projection . fst) clusterListOrdered
+        ys = fmap (unY . snd . _projection . fst) clusterListOrdered
+        ls = fmap
+                (T.unpack . unLabel . barcodeToLabel . getId . fst)
+                clusterListOrdered
+        cs = fmap (barcodeToColor . getId . fst) clusterListOrdered
+    [r| suppressMessages(library(ggplot2))
+        suppressMessages(library(cowplot))
+        df = data.frame(x = xs_hs, y = ys_hs, l = ls_hs, c = cs_hs)
+        colorMap = toupper(as.character(df$c))
+        names(colorMap) = df$l
+        colorMap = colorMap[!duplicated(colorMap)]
+        p = ggplot(df, aes(x = x, y = y, color = l)) +
+                geom_point() +
+                xlab("TNSE 1") +
+                ylab("TNSE 2") +
+                scale_color_manual( guide = guide_legend(title = "Label")
+                                  , values = colorMap
+                                  ) +
                 theme(aspect.ratio = 1)
 
         suppressMessages(ggsave(p, file = outputPlot_hs))

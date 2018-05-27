@@ -48,15 +48,6 @@ newtype IsLeaf = IsLeaf {unIsLeaf :: Bool} deriving (Eq, Ord, Read, Show)
 newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)
-newtype LabelColorMap = LabelColorMap
-    { unLabelColorMap :: Map Label Kolor
-    } deriving (Read,Show)
-newtype ItemColorMap = ItemColorMap
-    { unItemColorMap :: Map Id Kolor
-    } deriving (Read,Show)
-newtype MarkColorMap = MarkColorMap
-    { unMarkColorMap :: Map G.Node (AlphaColour Double)
-    } deriving (Read,Show)
 newtype L = L Double
 newtype C = C Double
 newtype H = H Double

@@ -544,9 +544,16 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
             . _clusterList
             $ clusterResults
-            -- >>= D.renderCairo (x <> ".pdf") (D.mkWidth 1000)
-            -- . D.renderAxis
-            -- . plotClusters
+
+        -- Plot clustering with labels.
+        case (labelMap, itemColorMap) of
+            (Just lm, Just icm) ->
+                plotLabelClustersR
+                    (unOutputDirectory output' FP.</> "label_projection.pdf")
+                    lm
+                    icm
+                    (_clusterList clusterResults)
+            _ -> return ()
 
         -- Increment  progress bar.
         H.io $ Progress.autoProgressBar
