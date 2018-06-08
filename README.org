@@ -123,9 +123,9 @@ We also know where each cell came from, so we mark that down as well in a
 #+CAPTION: labels.csv
 #+BEGIN_EXAMPLE
 item,label
-TTTGTCATCGGCTTGG-1,Trachea
-TTTGTCATCTTACCGC-1,Trachea
-TTTGTCATCTTGTTTG-1,Trachea
+AAACCTGAGATTACCC-1,Tongue
+AAACCTGAGTGCCAGA-1,Tongue
+AAACCTGCAAATCCGT-1,Tongue
 ...
 #+END_EXAMPLE
 

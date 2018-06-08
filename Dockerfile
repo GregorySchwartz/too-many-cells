@@ -7,6 +7,7 @@ COPY utility/differential /opt/build/differential
 COPY utility/hierarchical-spectral-clustering /opt/build/hierarchical-spectral-clustering
 COPY utility/modularity /opt/build/modularity
 COPY utility/spectral-clustering /opt/build/spectral-clustering
+COPY utility/eigen-sparse-utils /opt/build/eigen-sparse-utils
 
 # Copy source.
 COPY single_cell/too-many-cells /opt/build
