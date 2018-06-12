@@ -1,6 +1,16 @@
-* =too-many-cells=
+#+TITLE: too-many-cells
+#+AUTHOR: Gregory W. Schwartz
+#+OPTIONS: date:nil creator:nil timestamp:nil toc:t
 
-** Description
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/htmlize.css"/>
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="http://www.pirilampo.org/styles/readtheorg/css/readtheorg.css"/>
+
+#+HTML_HEAD: <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+#+HTML_HEAD: <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/lib/js/jquery.stickytableheaders.js"></script>
+#+HTML_HEAD: <script type="text/javascript" src="http://www.pirilampo.org/styles/readtheorg/js/readtheorg.js"></script>
+
+* Description
 
 =too-many-cells= is an "ism". That is, /too manyism/. More specifically,
 =too-many-cells= is a different perspective on existing single cell tools.
@@ -14,9 +24,9 @@ perspective of single cells, using our =birch-beer= visualization and tree
 measures to describe simultaneously large and small populations, without
 additional parameters or runs. See below for a full list of features.
 
-** Installation
+* Installation
 
-*** Install =stack=
+** Install =stack=
 
 See [[https://docs.haskellstack.org/en/stable/README/]] for more details.
 
@@ -25,21 +35,21 @@ curl -sSL https://get.haskellstack.org/ | sh
 stack setup
 #+END_SRC
 
-*** Install =too-many-cells=
+** Install =too-many-cells=
 
-**** Online
+*** Online
 
 #+BEGIN_SRC sh
 stack install too-many-cells
 #+END_SRC
 
-**** Source
+*** Source
 
 #+BEGIN_SRC sh
 stack install
 #+END_SRC
 
-** Usage
+* Usage
 
 =too-many-cells= has several entry points depending on the desired analysis. 
 
@@ -56,7 +66,7 @@ The main workflow is to first generate and plot the population tree using
 
 At any point, use =-h= to see the help of each entry point.
 
-*** =make-tree=
+** =make-tree=
 
 =too-many-cells make-tree= generates a binary tree using hierarchical spectral
 clustering. We start with all cells in a single node. Spectral clustering
@@ -88,7 +98,7 @@ hour in a time course, celltype, etc.).
 
 To see the full list of options, use =too-many-cells -h=.
 
-**** Output
+*** Output
 
 =too-many-cells make-tree= generates several files in the output folder. Below
 is a short description of each file.
@@ -105,7 +115,9 @@ is a short description of each file.
 | =node_info.csv=         | Various information of each node in the tree.                                                                                                                                                                                        |
 | =projection.pdf=        | When =--projection= is supplied with a file of the format "barcode,x,y", provides a plot of each cell at the specified x and y coordinates (for instance, when looking at tSNE plots with the same labelings as the dendrogram here. |
 
-**** Example
+*** Example
+
+**** Setup
 
 We start with our input matrix.
 
@@ -123,11 +135,13 @@ We also know where each cell came from, so we mark that down as well in a
 #+CAPTION: labels.csv
 #+BEGIN_EXAMPLE
 item,label
-AAACCTGAGATTACCC-1,Tongue
-AAACCTGAGTGCCAGA-1,Tongue
-AAACCTGCAAATCCGT-1,Tongue
+TTTGTCATCGGCTTGG-1,Trachea
+TTTGTCATCTTACCGC-1,Trachea
+TTTGTCATCTTGTTTG-1,Trachea
 ...
 #+END_EXAMPLE
+
+**** Default run
 
 We can now run the =too-many-cells= algorithm on our data.
 
@@ -135,32 +149,198 @@ We can now run the =too-many-cells= algorithm on our data.
 too-many-cells make-tree \
     --matrix-path input \
     --labels-file labels.csv \
-    --draw-leaf "DrawItem DrawLabel" \
     --output out
 #+END_SRC
 
-What if we want pie charts instead of showing each individual cell? We don't
-have to recalculate the entire tree, we can just supply the previous results:
+[[file:img/complete_default_tree.svg]]
+
+**** Pruning tree
+
+Large cell populations can result in a very large tree. What if we only want to
+see larger subpopulations rather than the large (inner nodes) and small
+(leaves)? We can use the =--min-size 100= argument to set the minimum size of a
+leaf to 100 in this case. Alternatively, we can specify =--smart-cutoff 4= in
+addition to =--min-size 1= to set the minimum size of a node to \(4 *
+\text{median absolute deviation (MAD)}\) of the nodes in the original tree.
+Varying the number of MADs varies the number of leaves in the tree.
+=--smart-cutoff= should be used in addition to =--min-size=, =max-proportion=,
+or =min-distance= to decide which cutoff variable to use. The value supplied to
+the cutoff variable is ignored when =--smart-cutoff= is specified. We'll prune
+the tree for better visibility in this document.
+
+*Note: the pruning arguments change the tree file, not just the plot, so be sure
+to output into a different directory.*
+
+Also, *we do not need to recalculate the entire tree!* We can just supply the
+previous results using =--prior= (we can also remove =--matrix-path= with
+=--prior= to speed things up, but miss out on some features if needed):
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
     --prior out \
-    --matrix-path input \
     --labels-file labels.csv \
-    --draw-leaf "DrawItem DrawLabel" \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --output pruned_out
+#+END_SRC
+
+[[file:img/pruned_tree.svg]]
+
+**** Pie charts
+
+What if we want pie charts instead of showing each individual cell?
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
     --draw-collection "PieChart" \
-    --output out
+    --output pruned_out
 #+END_SRC
 
-What if we want to draw the gene expression onto the tree in another folder?
+[[file:img/piechart_pruned_tree.svg]]
+
+**** Node numbering
+
+Now that we see the relationships between clusters and nodes in the dendrogram,
+how can we go back to the data -- which nodes represent which node IDs in the
+data?
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --draw-collection "PieChart" \
+    --draw-node-number \
+    --output pruned_out
+#+END_SRC
+
+[[file:img/numbered_pruned_tree.svg]]
+
+**** Branch width
+
+We can also change the width of the nodes and branches, for instance if we want
+thinner branches:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --draw-collection "PieChart" \
+    --draw-max-node-size 40 \
+    --output pruned_out
+#+END_SRC
+
+[[file:img/thin_pruned_tree.svg]]
+
+**** No scaling
+
+We can remove all scaling for a normal tree and still control the branch widths:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --draw-collection "PieChart" \
+    --draw-max-node-size 40 \
+    --draw-no-scale-nodes \
+    --output pruned_out
+#+END_SRC
+
+[[file:img/no_scaling_pruned_tree.svg]]
+
+How strong is each split? We can tell by drawing the modularity of the children
+on top of each node:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --draw-collection "PieChart" \
+    --draw-mark "MarkModularity" \
+    --output pruned_out
+#+END_SRC
+
+[[file:img/modularity_pruned_tree.svg]]
+
+**** Gene expression
+
+What if we want to draw the gene expression onto the tree in another folder
+(requires =--matrix-path=, may take some time depending on matrix size)?
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
     --prior out \
     --matrix-path input \
     --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
     --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
+    --draw-max-node-size 10 \
+    --draw-no-scale-nodes \
     --output out_gene_expression
 #+END_SRC
 
-** Documentation
+[[file:img/cd4_pruned_tree.svg]]
+
+While this representation shows the expression of /Cd4/ in each cell and blends
+those levels together, due to the sparsity of single cell data these cells and
+their respective subtrees may be hard to see without additional processing.
+Let's make the branches thicker to see the colors a bit better.
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --matrix-path input \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
+    --draw-max-node-size 40 \
+    --draw-no-scale-nodes \
+    --output out_gene_expression
+#+END_SRC
+
+[[file:img/cd4_large_pruned_tree.svg]]
+
+While this tree makes the expression a bit more visible, there is another tactic
+we can use. Instead of the continuous color spectrum of expression values, we
+can have a binary "high" and "low" expression. Here, we'll continue to have the
+red and white colors represent high and low expressions respectively using the
+=--draw-colors= argument. Note that this binary expression technique can be used
+for multiple features, hence it's a list of features with cutoffs (so you can be
+high in a gene and low in another gene, etc. for all possible combinations).
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --matrix-path input \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", 0)])" \
+    --draw-max-node-size 40 \
+    --draw-no-scale-nodes \
+    --draw-colors "[\"#e41a1c\", \"#ffffff\"]" \
+    --output out_gene_expression
+#+END_SRC
+
+[[file:img/cd4_binary_large_pruned_tree.svg]]
+
+There, much better! Now it's clearly enriched in the subtree containing the
+thymus, where we would expect many T cells to be. If it's still difficult to see
+expression, consider using a program like =inkscape= to change the color channel
+to a binary, such that instead of displaying blends we can show just the color.
+This process has the drawback of losing the fraction of expressing cells, however.
+
+* Documentation
