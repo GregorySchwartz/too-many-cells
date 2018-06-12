@@ -159,7 +159,7 @@ too-many-cells make-tree \
     --prior out \
     --matrix-path input \
     --labels-file labels.csv \
-    --draw-leaf "DrawItem (DrawContinuous \"ENSG00000012048\")" \
+    --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
     --output out_gene_expression
 #+END_SRC
 
