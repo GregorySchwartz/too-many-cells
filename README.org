@@ -13,8 +13,9 @@
 * Description
 
 =too-many-cells= is an "ism". That is, /too manyism/. More specifically,
-=too-many-cells= is a different perspective on existing single cell tools.
-Rather than opt for a unique positioning of each cell using dimensionality
+=too-many-cells= is a different perspective on existing single cell tools. While
+=too-many-cells= was intended for single cell RNA-seq, any abundance data can be
+used. Rather than opt for a unique positioning of each cell using dimensionality
 reduction approaches like tSNE, PCA, and other, =too-many-cells= recursively
 divides cells into clusters and relates clusters rather than individual cells.
 In fact, by recursively dividing until further dividing would be considered
@@ -113,7 +114,7 @@ is a short description of each file.
 | =dendrogram.svg=        | The visualization of the tree. There are many possible options for this visualization included.                                                                                                                                      |
 | =graph.dot=             | A =dot= file of the tree, with less information than the tree in =cluster_results.json=.                                                                                                                                             |
 | =node_info.csv=         | Various information of each node in the tree.                                                                                                                                                                                        |
-| =projection.pdf=        | When =--projection= is supplied with a file of the format "barcode,x,y", provides a plot of each cell at the specified x and y coordinates (for instance, when looking at tSNE plots with the same labelings as the dendrogram here. |
+| =projection.pdf=        | When =--projection= is supplied with a file of the format "barcode,x,y", provides a plot of each cell at the specified x and y coordinates (for instance, when looking at tSNE plots with the same labelings as the dendrogram here). |
 
 *** Example
 
@@ -135,11 +136,23 @@ We also know where each cell came from, so we mark that down as well in a
 #+CAPTION: labels.csv
 #+BEGIN_EXAMPLE
 item,label
-TTTGTCATCGGCTTGG-1,Trachea
-TTTGTCATCTTACCGC-1,Trachea
-TTTGTCATCTTGTTTG-1,Trachea
+AAAGTAGAGATGCCAG-1,Bladder
+AACCGCGTCCAACCAA-1,Bladder
+AACTCCCGTCGGGTCT-1,Bladder
+AACTCTTAGTTGCAGG-1,Bladder
+AACTCTTTCATAACCG-1,Bladder
 ...
 #+END_EXAMPLE
+
+This can be easily accomplished with =sed=:
+
+#+BEGIN_SRC sh
+cat barcodes.tsv | sed "s/-1/-1,Bladder/" | s/-2/etc... > labels.csv
+#+END_SRC
+
+For =cellranger=, note that the =-1=, =-2=, etc. postfixes denote the first,
+second, etc. label in the aggregation =csv= file used as input for =cellranger
+aggr=.
 
 **** Default run
 
@@ -181,7 +194,7 @@ too-many-cells make-tree \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
-    --output pruned_out
+    --output out_pruned
 #+END_SRC
 
 [[file:img/pruned_tree.svg]]
@@ -197,7 +210,7 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --draw-collection "PieChart" \
-    --output pruned_out
+    --output out_pruned
 #+END_SRC
 
 [[file:img/piechart_pruned_tree.svg]]
@@ -216,7 +229,7 @@ too-many-cells make-tree \
     --min-size 1 \
     --draw-collection "PieChart" \
     --draw-node-number \
-    --output pruned_out
+    --output out_pruned
 #+END_SRC
 
 [[file:img/numbered_pruned_tree.svg]]
@@ -234,7 +247,7 @@ too-many-cells make-tree \
     --min-size 1 \
     --draw-collection "PieChart" \
     --draw-max-node-size 40 \
-    --output pruned_out
+    --output out_pruned
 #+END_SRC
 
 [[file:img/thin_pruned_tree.svg]]
@@ -252,7 +265,7 @@ too-many-cells make-tree \
     --draw-collection "PieChart" \
     --draw-max-node-size 40 \
     --draw-no-scale-nodes \
-    --output pruned_out
+    --output out_pruned
 #+END_SRC
 
 [[file:img/no_scaling_pruned_tree.svg]]
@@ -268,7 +281,7 @@ too-many-cells make-tree \
     --min-size 1 \
     --draw-collection "PieChart" \
     --draw-mark "MarkModularity" \
-    --output pruned_out
+    --output out_pruned
 #+END_SRC
 
 [[file:img/modularity_pruned_tree.svg]]
@@ -329,18 +342,123 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", 0)])" \
-    --draw-max-node-size 40 \
-    --draw-no-scale-nodes \
     --draw-colors "[\"#e41a1c\", \"#ffffff\"]" \
     --output out_gene_expression
 #+END_SRC
 
-[[file:img/cd4_binary_large_pruned_tree.svg]]
+[[file:img/pruned_tree_cd4_binary.svg]]
 
 There, much better! Now it's clearly enriched in the subtree containing the
 thymus, where we would expect many T cells to be. If it's still difficult to see
 expression, consider using a program like =inkscape= to change the color channel
 to a binary, such that instead of displaying blends we can show just the color.
 This process has the drawback of losing the fraction of expressing cells, however.
+
+**** Diversity
+
+We can also see an overview of the diversity of cell labels within each subtree
+and leaves.
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --prior out \
+    --matrix-path input \
+    --labels-file labels.csv \
+    --smart-cutoff 4 \
+    --min-size 1 \
+    --draw-leaf "DrawItem DrawDiversity"
+    --output out_diversity
+#+END_SRC
+
+[[file:img/diversity_pruned_tree.svg]]
+
+Here, the deeper the red, the more diverse (a larger "effective number of cell
+states") the cell labels in that group are. Note that the inner nodes are
+colored relative to themselves, while the leaves are colored relative to all
+leaves, so there are two different scales.
+
+
+** =interactive=
+
+The =interactive= entry point has a basic GUI interface for quick plotting with
+a few features. We recommend limited use of this feature, however,
+as it can be quite slow at this stage, has fewer customizations, and requires
+specific dependencies.
+
+#+BEGIN_SRC sh
+too-many-cells interactive \
+    --prior out \
+    --labels-file labels.csv
+#+END_SRC
+
+
+** =differential=
+
+A main use of single cell clustering is to find differential genes between
+multiple groups of cells. The =differential= aids in this endeavor by allowing
+comparisons with =edgeR=. Let's find the differential genes between the liver
+group and all other cells. Consider our pruned tree from earlier:
+
+[[file:img/piechart_pruned_tree.svg]]
+
+We can see the id of each group with =--draw-node-number=.
+
+[[file:img/numbered_pruned_tree.svg]]
+
+We need to define two groups to compare. Well, it looks like node 98 defines the
+liver cluster. Then, since we don't want 98 to be in the other group, we say
+that all other cells are within nodes 89 and 1. As a result, we end up with a
+tuple containing two lists: ([89, 1], [98]). Then our differential genes for
+(liver / others) can be found with =differential=:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --matrix-path input \
+    -n "([89, 1], [98])"
+#+END_SRC
+
+** =diversity=
+
+Diversity is the measure of the "effective number of entities within a system",
+originating from ecology (See Jost: Entropy and Diversity). Here, each cell is
+an organism and each cell label or cluster is a species, depending on the
+question. In ecology, the diversity index measures the effective number of
+species within a population such that the minimum is a diversity of 1 for a
+single dominant species up to maximum of the total number of species (evenly
+abundant). If our species is a cluster, then here the diversity is the effective
+number of cell states within a population (for labels, =make-tree= generates
+these results automatically in "diversity" columns). Say we have two populations
+and we generated the trees using =make-tree= into two different output folders,
+=out1= and =out2=. We can find the diversity of each population using the
+=diversity= entry point.
+
+#+BEGIN_SRC sh
+too-many-cells diversity\
+    --priors out1 \
+    --priors out2 \
+    -o out_diversity_stats
+#+END_SRC
+
+We can then find a simple plot of diversity in =diversity_output=. In addition,
+we also provide rarefaction curves for comparing the number of different cell
+states at each subsampling useful for comparing the number of cell states where
+the population sizes differ.
+
+** =paths=
+
+"Pseudotime" refers to the one dimensional relationship between cells, useful
+for looking at the ordering of cell states or labels. The implementation of
+pseudotime in a =too-many-cells= point-of-view is by finding the distance
+between all cells and the cells found in the longest path from the root in the
+tree. Then each cell has a distance from the "start" and thus we plot those
+distances.
+
+#+BEGIN_SRC sh
+too-many-cells paths\
+    --prior out \
+    --labels-file labels.csv \
+    --bandwidth 3 \
+    -o out_paths
+#+END_SRC
 
 * Documentation

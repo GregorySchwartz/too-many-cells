@@ -730,7 +730,7 @@ pathsMain opts = do
         bandwidth'    = Bandwidth . fromMaybe 1 . unHelpful . bandwidth $ opts
         direction'    = FlipFlag . unHelpful . flipDirection $ opts
         pathDistance' =
-            maybe PathModularity read . unHelpful . pathDistance $ opts
+            maybe PathStep read . unHelpful . pathDistance $ opts
         output'       =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
 
