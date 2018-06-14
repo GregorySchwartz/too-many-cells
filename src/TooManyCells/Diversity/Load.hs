@@ -81,7 +81,7 @@ priorToPopulation = Population
                   . _clusterList
 
 loadPopulation :: PriorPath
-               -> IO (Population, Maybe ClusterResults, Maybe B)
+               -> IO (Population, Maybe ClusterResults)
 loadPopulation (PriorPath path) = do
     dirExist <- FP.doesDirectoryExist path
     fileExist <- FP.doesFileExist path
@@ -89,15 +89,13 @@ loadPopulation (PriorPath path) = do
         (False, False) -> error "Input does not exist."
         (_, True)      -> do
             pop <- loadPopulationCsv . PriorPath $ path
-            return (pop, Nothing, Nothing)
+            return (pop, Nothing)
         otherwise      -> do
             let crInput = path FP.</> "cluster_results.json"
-                bInput  = path FP.</> "b.mtx"
 
             cr  <-
                 fmap (either error id . A.eitherDecode) . B.readFile $ crInput
-            b   <- fmap (B . matToSpMat) . readMatrix $ bInput
 
             let pop = priorToPopulation cr
 
-            return (pop, Just cr, Just b)
+            return (pop, Just cr)
