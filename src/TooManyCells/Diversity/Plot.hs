@@ -167,7 +167,7 @@ plotRarefactionR pops = do
 
         df = data.frame(x = valuesX_hs, y = valuesY_hs, labels = labels_hs)
 
-        ggplot(df, aes(x = x, y = y, color = labels))
+        ggplot(df, aes(x = x, y = y, color = labels)) +
             geom_line() +
             coord_fixed()
     |]
