@@ -120,7 +120,7 @@ plotLabelClustersR outputPlot (LabelMap lm) (ItemColorMap icm) clusterList = do
         df = data.frame(x = xs_hs, y = ys_hs, l = ls_hs, c = cs_hs)
         colorMap = toupper(as.character(df$c))
         names(colorMap) = df$l
-        colorMap = colorMap[!duplicated(colorMap)]
+        # colorMap = colorMap[!duplicated(colorMap)]
         p = ggplot(df, aes(x = x, y = y, color = l)) +
                 geom_point() +
                 xlab("TNSE 1") +
