@@ -142,6 +142,7 @@ plotChao1R pops = do
 
         ggplot(df, aes(x = x, y = y, fill = x)) +
             geom_col() +
+            coord_fixed() +
             theme(axis.text.x = element_text(angle = 315, hjust = 0))
     |]
 
@@ -160,11 +161,13 @@ plotRarefactionR pops = do
             fmap (unX . fst) . concatMap (unRarefaction . popRarefaction) $ pops
         valuesY =
             fmap (unY . snd) . concatMap (unRarefaction . popRarefaction) $ pops
-        
+
     [r| library(ggplot2)
         library(cowplot)
 
         df = data.frame(x = valuesX_hs, y = valuesY_hs, labels = labels_hs)
 
-        ggplot(df, aes(x = x, y = y, color = labels)) + geom_line()
+        ggplot(df, aes(x = x, y = y, color = labels))
+            geom_line() +
+            coord_fixed()
     |]

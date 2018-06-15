@@ -24,6 +24,7 @@ module TooManyCells.Matrix.Preprocess
 
 -- Remote
 import Data.List (sort)
+import Data.Maybe (fromMaybe)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
@@ -193,8 +194,16 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
                    . S.fromColsL
                    . fmap (S.extractRow mat)
                    $ validIdx
-    r = V.fromList . fmap ((V.!) (_rowNames sc)) $ validIdx
-    p = V.fromList . fmap ((V.!) (_projections sc)) $ validIdx
+    r = V.fromList
+      . fmap ( fromMaybe (error "Whitelist row index out of bounds (do the whitelist barcodes match the data?).")
+             . (V.!?) (_rowNames sc)
+             )
+      $ validIdx
+    p = V.fromList
+      . fmap ( (error "Whitelist projection index out of bounds (do the whitelist barcodes match the data?).")
+             . (V.!?) (_projections sc)
+             )
+      $ validIdx
 
 -- | Get a cell white list from a file.
 getCellWhitelist :: CellWhitelistFile -> IO CellWhitelist
