@@ -48,11 +48,11 @@ loadPopulationCsv file = do
     let getCols :: Map.Map T.Text T.Text -> (Cluster, Seq.Seq Cell)
         getCols m =
             ( maybe
-                (error "No cluster column.")
+                (error "\nNo cluster column.")
                 (either error (Cluster . fst) . T.decimal)
             . Map.lookup "cluster"
             $ m
-            , maybe (error "No cell column.") (Seq.singleton . Cell)
+            , maybe (error "\nNo cell column.") (Seq.singleton . Cell)
             . Map.lookup "cell"
             $ m
             )
@@ -74,7 +74,7 @@ loadPopulationCsv file = do
 priorToPopulation :: ClusterResults -> Population
 priorToPopulation = Population
                   . Map.fromListWith (Seq.><)
-                  . fmap ( L.over L._1 (fromMaybe (error "No cluster for cell.") . headMay)
+                  . fmap ( L.over L._1 (fromMaybe (error "\nNo cluster for cell.") . headMay)
                          . L.over L._2 (Seq.singleton . _barcode)
                          . swap
                          )
@@ -86,7 +86,7 @@ loadPopulation (PriorPath path) = do
     dirExist <- FP.doesDirectoryExist path
     fileExist <- FP.doesFileExist path
     case (dirExist, fileExist) of
-        (False, False) -> error "Input does not exist."
+        (False, False) -> error "\nInput does not exist."
         (_, True)      -> do
             pop <- loadPopulationCsv . PriorPath $ path
             return (pop, Nothing)

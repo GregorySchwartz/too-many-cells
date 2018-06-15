@@ -21,6 +21,7 @@ module TooManyCells.MakeTree.Cluster
 -- Remote
 import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents, dendrogramToGraph)
+import Control.Monad (join)
 import Data.Function (on)
 import Data.List (sortBy, groupBy, zip4, genericLength)
 import Data.Int (Int32)
@@ -181,32 +182,44 @@ dendrogramToClusterList =
 clusterDiversity :: Order
                  -> LabelMap
                  -> ClusterResults
-                 -> [(Cluster, Diversity, Size)]
-clusterDiversity (Order order) (LabelMap lm) =
+                 -> Either String [(Cluster, Diversity, Size)]
+clusterDiversity (Order order) (LabelMap lm) = do
+    let getDiversityOfCluster :: [(CellInfo, [Cluster])]
+                              -> Either String [(Cluster, Diversity, Size)]
+        getDiversityOfCluster =
+            join
+                . fmap ( sequence
+                       . fmap
+                            (\ (!c, !xs)
+                            -> do
+                                diversities <- fmap (Diversity . diversity order)
+                                                . sequence
+                                                . fmap cellInfoToLabel
+                                                $ xs
+                                return (c, diversities, Size $ genericLength xs)
+                            )
+                       )
+                . groupCellsByCluster
+        cellInfoToLabel :: CellInfo -> Either String Label
+        cellInfoToLabel =
+            flip (Map.findWithDefault (Left "\nCell missing a label.")) (fmap Right lm)
+                . Id
+                . unCell
+                . _barcode
+        groupCellsByCluster :: [(CellInfo, [Cluster])]
+                            -> Either String [(Cluster, [CellInfo])]
+        groupCellsByCluster = sequence
+                            . fmap assignCluster
+                            . groupBy ((==) `on` (headMay . snd))
+                            . sortBy (compare `on` (headMay . snd))
+        assignCluster :: [(CellInfo, [Cluster])] -> Either String (Cluster, [CellInfo])
+        assignCluster [] = Left "\nEmpty cluster."
+        assignCluster all@(x:_) = do
+            cluster <- fromMaybe (Left "\nNo cluster for cell.")
+                    . fmap Right
+                    . headMay
+                    . snd
+                    $ x
+            return (cluster, fmap fst all)
+
     getDiversityOfCluster . _clusterList
-  where
-    getDiversityOfCluster :: [(CellInfo, [Cluster])]
-                          -> [(Cluster, Diversity, Size)]
-    getDiversityOfCluster =
-        fmap (\ (!c, !xs)
-             -> ( c
-                , Diversity . diversity order . fmap cellInfoToLabel $ xs
-                , Size $ genericLength xs)
-             )
-            . groupCellsByCluster
-    cellInfoToLabel :: CellInfo -> Label
-    cellInfoToLabel =
-        flip (Map.findWithDefault (error "Cell missing a label.")) lm
-            . Id
-            . unCell
-            . _barcode
-    groupCellsByCluster :: [(CellInfo, [Cluster])] -> [(Cluster, [CellInfo])]
-    groupCellsByCluster = fmap assignCluster
-                        . groupBy ((==) `on` (headMay . snd))
-                        . sortBy (compare `on` (headMay . snd))
-    assignCluster :: [(CellInfo, [Cluster])] -> (Cluster, [CellInfo])
-    assignCluster [] = error "Empty cluster."
-    assignCluster all@(x:_) =
-        ( fromMaybe (error "No cluster for cell.") . headMay . snd $ x
-        , fmap fst all
-        )

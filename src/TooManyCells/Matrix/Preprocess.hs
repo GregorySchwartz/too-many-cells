@@ -195,12 +195,12 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
                    . fmap (S.extractRow mat)
                    $ validIdx
     r = V.fromList
-      . fmap ( fromMaybe (error "Whitelist row index out of bounds (do the whitelist barcodes match the data?).")
+      . fmap ( fromMaybe (error "\nWhitelist row index out of bounds (do the whitelist barcodes match the data?).")
              . (V.!?) (_rowNames sc)
              )
       $ validIdx
     p = V.fromList
-      . fmap ( (error "Whitelist projection index out of bounds (do the whitelist barcodes match the data?).")
+      . fmap ( (error "\nWhitelist projection index out of bounds (do the whitelist barcodes match the data?).")
              . (V.!?) (_projections sc)
              )
       $ validIdx

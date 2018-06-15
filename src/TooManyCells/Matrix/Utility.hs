@@ -90,7 +90,7 @@ matToHMat (IntMatrix size _ _ xs) =
     H.assoc size 0
         . fmap (\(!x, !y, !z) -> ((fromIntegral x - 1, fromIntegral y - 1), fromIntegral z))
         $ xs
-matToHMat _ = error "Input matrix is not a Real matrix."
+matToHMat _ = error "\nInput matrix is not a Real matrix."
 
 -- | Convert a Matrix to a sparse matrix.
 matToSpMat :: Matrix Scientific -> S.SpMatrix Double
@@ -102,7 +102,7 @@ matToSpMat (IntMatrix size _ _ xs) =
     S.fromListSM size
         . fmap (\(!x, !y, !z) -> (fromIntegral x - 1, fromIntegral y - 1, fromIntegral z))
         $ xs
-matToSpMat _ = error "Input matrix is not a Real matrix."
+matToSpMat _ = error "\nInput matrix is not a Real matrix."
 
 -- | Convert a sparse matrix to a Matrix.
 spMatToMat :: S.SpMatrix Double -> Matrix Double

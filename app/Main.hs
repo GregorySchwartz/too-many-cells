@@ -181,7 +181,7 @@ loadSSM opts matrixPath' = do
 
     let matrixFile' =
             case (fileExist, directoryExist) of
-                (False, False) -> error "Matrix path does not exist."
+                (False, False) -> error "\nMatrix path does not exist."
                 (True, False)  -> Left $ MatrixFile matrixPath'
                 (False, True)  ->
                     Right . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
@@ -208,7 +208,7 @@ loadSSM opts matrixPath' = do
 loadAllSSM :: Options -> IO SingleCells
 loadAllSSM opts = do
     let matrixPaths'       =
-            (\xs -> bool (error "Need a matrix path.") xs . not . null $ xs)
+            (\xs -> bool (error "\nNeed a matrix path.") xs . not . null $ xs)
                 . unHelpful
                 . matrixPath
                 $ opts
@@ -450,10 +450,17 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     case labelMap of
         Nothing   -> return ()
         (Just lm) ->
-            B.writeFile
-                (unOutputDirectory output' FP.</> "cluster_diversity.csv")
-                . printClusterDiversity order' lm
-                $ clusterResults
+            case clusterDiversity order' lm clusterResults of
+                (Left err) -> hPutStrLn stderr
+                            $ err
+                           <> "\nError in diversity, skipping cluster_diversity.csv output."
+                (Right result) ->
+                    B.writeFile
+                        ( unOutputDirectory output'
+                   FP.</> "cluster_diversity.csv"
+                        )
+                        . printClusterDiversity
+                        $ result
 
     -- Increment  progress bar.
     Progress.autoProgressBar
@@ -487,31 +494,28 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
     H.runRegion $ do
-        -- Calculations with the label map (clumpiness and cluster diversity).
+        -- Calculations with plotting the label map (clumpiness).
         case labelMap of
             Nothing ->
-                H.io $ hPutStrLn stderr "Clumpiness requires labels for cells, skipping..."
+                H.io $ hPutStrLn stderr "\nClumpiness requires labels for cells, skipping..."
             (Just lm) -> do
                 -- Get clumpiness.
-                let clumpList = dendToClumpList clumpinessMethod' lm
-                              . _clusterDend
-                              $ clusterResults
+                case dendToClumpList clumpinessMethod' lm . _clusterDend $ clusterResults of
+                    (Left err) -> H.io
+                                . hPutStrLn stderr
+                                $ err
+                               <> "\nError in clumpiness, skipping clumpiness.* output."
+                    (Right clumpList) -> do
+                        -- Plot clumpiness.
+                        plotClumpinessHeatmapR
+                            (unOutputDirectory output' FP.</> "clumpiness.pdf")
+                            clumpList
 
-                -- Plot clumpiness.
-                plotClumpinessHeatmapR
-                    (unOutputDirectory output' FP.</> "clumpiness.pdf")
-                    clumpList
-
-                -- Save clumpiness to a file.
-                H.io
-                    . B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
-                    . clumpToCsv
-                    $ clumpList
-
-                H.io
-                    . B.writeFile (unOutputDirectory output' FP.</> "cluster_diversity.csv")
-                    . printClusterDiversity order' lm
-                    $ clusterResults
+                        -- Save clumpiness to a file.
+                        H.io
+                            . B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
+                            . clumpToCsv
+                            $ clumpList
 
         -- Increment  progress bar.
         H.io $ Progress.autoProgressBar
@@ -575,7 +579,7 @@ interactiveMain :: Options -> IO ()
 interactiveMain opts = H.withEmbeddedR defaultConfig $ do
     let labelsFile'    =
             fmap LabelFile . unHelpful . labelsFile $ opts
-        prior'         = maybe (error "Requires --prior") PriorPath
+        prior'         = maybe (error "\nRequires --prior") PriorPath
                        . unHelpful
                        . prior
                        $ opts
@@ -612,7 +616,7 @@ differentialMain :: Options -> IO ()
 differentialMain opts = do
     let nodes'    = DiffNodes . read . unHelpful . nodes $ opts
         prior'    = PriorPath
-                  . fromMaybe (error "Requires a previous run to get the graph.")
+                  . fromMaybe (error "\nRequires a previous run to get the graph.")
                   . unHelpful
                   . prior
                   $ opts
@@ -705,12 +709,12 @@ diversityMain opts = do
 pathsMain :: Options -> IO ()
 pathsMain opts = do
     let labelsFile'   =
-            maybe (error "Need a label file.") LabelFile
+            maybe (error "\nNeed a label file.") LabelFile
                 . unHelpful
                 . labelsFile
                 $ opts
         prior'        =
-            maybe (error "Need a prior path containing tree.") PriorPath
+            maybe (error "\nNeed a prior path containing tree.") PriorPath
                 . unHelpful
                 . prior
                 $ opts

@@ -166,7 +166,7 @@ loadSparseMatrixDataStream :: Delimiter
 loadSparseMatrixDataStream (Delimiter delim) pf mf = do
     let csvOpts = S.defaultDecodeOptions
                     { S.decDelimiter = fromIntegral (ord delim) }
-        cS = fmap (S.first (fmap Cell . drop 1 . fromMaybe (error "No header.")))
+        cS = fmap (S.first (fmap Cell . drop 1 . fromMaybe (error "\nNo header.")))
            . S.head
         gS = S.toList . S.map (Gene . head) . S.drop 1
         mS = S.toList
@@ -215,7 +215,7 @@ loadProjectionFile =
                               , Y . either error fst . T.double $ y
                               )
     getProjection xs        =
-        error $ "Unrecognized projection row: " <> show xs
+        error $ "\nUnrecognized projection row: " <> show xs
 
 -- | Decide to use first two values as the projection.
 toPoint :: HS.SpVector Double -> (X, Y)

@@ -35,14 +35,13 @@ import TooManyCells.MakeTree.Types
 import TooManyCells.MakeTree.Cluster
 
 -- | Print the diversity of each leaf cluster.
-printClusterDiversity :: Order -> LabelMap -> ClusterResults -> B.ByteString
-printClusterDiversity order lm =
+printClusterDiversity :: [(Cluster, Diversity, Size)] -> B.ByteString
+printClusterDiversity =
     (<>) "cluster,diversity,size\n" . CSV.encode
         . fmap ( L.over L._3 unSize
                . L.over L._2 unDiversity
                . L.over L._1 unCluster
                )
-        . clusterDiversity order lm
 
 -- | Get the size and modularity path of each leaf cluster path. Modularity
 -- starts from the parent of the cluster to the root for modularity.
