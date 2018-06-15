@@ -119,14 +119,17 @@ plotDiversityR pops = do
     let labels = fmap getPopLabel pops
         values = fmap (unDiversity . popDiversity) pops
 
-    [r| library(ggplot2)
-        library(cowplot)
+    [r| suppressMessages(library(ggplot2))
+        suppressMessages(library(cowplot))
 
         df = data.frame(x = labels_hs, y = values_hs)
 
-        ggplot(df, aes(x = x, y = y, fill = x)) +
+        ggplot(df, aes(x = reorder(x, -y), y = y, fill = x)) +
             geom_col() +
-            theme(axis.text.x = element_text(angle = 315, hjust = 0))
+            xlab("") +
+            ylab("Diversity") +
+            guides(fill = "none") +
+            theme(aspect.ratio = 1, axis.text.x = element_text(angle = 315, hjust = 0))
     |]
 
 -- | Plot the Chao1 of a group of populations.
@@ -135,15 +138,17 @@ plotChao1R pops = do
     let labels = fmap getPopLabel pops
         values = fmap (unChao1 . popChao1) pops
 
-    [r| library(ggplot2)
-        library(cowplot)
+    [r| suppressMessages(library(ggplot2))
+        suppressMessages(library(cowplot))
 
         df = data.frame(x = labels_hs, y = values_hs)
 
-        ggplot(df, aes(x = x, y = y, fill = x)) +
+        ggplot(df, aes(x = reorder(x, -y), y = y, fill = x)) +
             geom_col() +
-            coord_fixed() +
-            theme(axis.text.x = element_text(angle = 315, hjust = 0))
+            xlab("") +
+            ylab("Chao1") +
+            guides(fill = "none") +
+            theme(aspect.ratio = 1, axis.text.x = element_text(angle = 315, hjust = 0))
     |]
 
 -- | Plot the rarefaction curves of a group of populations.
@@ -162,12 +167,15 @@ plotRarefactionR pops = do
         valuesY =
             fmap (unY . snd) . concatMap (unRarefaction . popRarefaction) $ pops
 
-    [r| library(ggplot2)
-        library(cowplot)
+    [r| suppressMessages(library(ggplot2))
+        suppressMessages(library(cowplot))
 
         df = data.frame(x = valuesX_hs, y = valuesY_hs, labels = labels_hs)
 
         ggplot(df, aes(x = x, y = y, color = labels)) +
             geom_line() +
-            coord_fixed()
+            xlab("Subsample") +
+            ylab("Estimated richness") +
+            guides(color = guide_legend(title = "")) +
+            theme(aspect.ratio = 0.5)
     |]

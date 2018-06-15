@@ -96,7 +96,7 @@ data Options
                  drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
-               , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels. Will repeat if more labels than provided colors. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
+               , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, white]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
@@ -687,15 +687,15 @@ diversityMain opts = do
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         let divFile = unOutputDirectory output' FP.</> "diversity.pdf"
         divPlot <- plotDiversityR popDiversities
-        [r| ggsave(divPlot_hs, file = divFile_hs) |]
+        [r| suppressMessages(ggsave(divPlot_hs, file = divFile_hs)) |]
 
         -- let chao1File = unOutputDirectory output' FP.</> "chao_r.pdf"
         -- chao1Plot <- plotChao1R popDiversities
-        -- [r| ggsave(chao1Plot_hs, file = chao1File_hs) |]
+        -- [r| suppressMessages(ggsave(chao1Plot_hs, file = chao1File_hs)) |]
 
         let rarefactionFile = unOutputDirectory output' FP.</> "rarefaction.pdf"
         rarefactionPlot <- plotRarefactionR popDiversities
-        [r| ggsave(rarefactionPlot_hs, file = rarefactionFile_hs) |]
+        [r| suppressMessages(ggsave(rarefactionPlot_hs, file = rarefactionFile_hs)) |]
 
         return ()
 
