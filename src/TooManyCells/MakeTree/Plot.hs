@@ -218,7 +218,7 @@ plotClumpinessHeatmapR outputPlot cs = do
         if (length(unique(df$x)) <= 2) {
             ord = c(1:length(unique(df$x)))
         } else {
-            ord = suppressMessages(hclust(dist(dfWide, method = "euclidean"))$order)
+            ord = suppressWarnings(hclust(dist(dfWide, method = "euclidean"))$order)
         }
         levels = colnames(dfWide)[-1][ord]
 
