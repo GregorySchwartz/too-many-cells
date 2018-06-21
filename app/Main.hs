@@ -81,7 +81,7 @@ data Options
                , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-               , normalization :: Maybe String <?> "([B1Norm] | WishboneNorm | BothNorm | NoneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
+               , normalization :: Maybe String <?> "([B1Norm] | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. B1Norm normalizes based on the prevalence of each feature. MaxMedNorm normalized first each observation by total count then by median across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally B1Norm during clustering). NoneNorm does not normalize. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
                , eigenGroup :: Maybe String <?> "([SignGroup] | KMeansGroup) Whether to group the eigenvector using the sign or kmeans while clustering. While the default is sign, kmeans may be more accurate (but starting points are arbitrary)."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
@@ -108,7 +108,7 @@ data Options
                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                   , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-               , normalization :: Maybe String <?> "([B1Norm] | WishboneNorm | BothNorm | NoneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
+                  , normalization :: Maybe String <?> "([B1Norm] | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. B1Norm normalizes based on the prevalence of each feature. MaxMedNorm normalized first each observation by total count then by median across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally B1Norm during clustering). NoneNorm does not normalize. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
                   , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                   , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
@@ -118,7 +118,7 @@ data Options
                    , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                    , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-                   , normalization :: Maybe String <?> "([B1Norm] | WishboneNorm | BothNorm | NoneNorm) Type of normalization before clustering. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
+                   , normalization :: Maybe String <?> "([B1Norm] | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. B1Norm normalizes based on the prevalence of each feature. MaxMedNorm normalized first each observation by total count then by median across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally B1Norm during clustering). NoneNorm does not normalize. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                    , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."}
@@ -234,7 +234,7 @@ loadAllSSM opts = do
                 . whiteListFilter cellWhitelist
                 $ unFilteredSc
         normMat B1Norm       = id -- Normalize during clustering.
-        normMat WishboneNorm = scaleSparseMat
+        normMat MaxMedNorm = scaleSparseMat
         normMat BothNorm     = scaleSparseMat
         normMat NoneNorm     = id
         processMat  = (\m -> maybe m (flip pcaDenseMat m) pca')
