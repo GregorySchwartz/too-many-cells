@@ -114,7 +114,7 @@ loadHMatrixData (Delimiter delim) pf mf = do
           . V.toList
           $ all
 
-    p <- maybe (return . projectMatrix $ m) loadProjectionFile $ pf
+    p <- maybe (return . projectMatrix $ m) loadProjectionFile pf
 
     return $
         SingleCells { _matrix   = m

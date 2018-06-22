@@ -550,20 +550,20 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         -- Plot clustering if the projection file was supplied.
         case projectionFile' of
             Nothing -> return ()
-            (Just _) ->
+            (Just _) -> do
                 plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
                     . _clusterList
                     $ clusterResults
 
-        -- Plot clustering with labels.
-        case (labelMap, itemColorMap) of
-            (Just lm, Just icm) ->
-                plotLabelClustersR
-                    (unOutputDirectory output' FP.</> "label_projection.pdf")
-                    lm
-                    icm
-                    (_clusterList clusterResults)
-            _ -> return ()
+                -- Plot clustering with labels.
+                case (labelMap, itemColorMap) of
+                    (Just lm, Just icm) ->
+                        plotLabelClustersR
+                            (unOutputDirectory output' FP.</> "label_projection.pdf")
+                            lm
+                            icm
+                            (_clusterList clusterResults)
+                    _ -> return ()
 
         -- Increment  progress bar.
         H.io $ Progress.autoProgressBar
