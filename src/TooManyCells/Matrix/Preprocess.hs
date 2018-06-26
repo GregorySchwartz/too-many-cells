@@ -138,8 +138,8 @@ filterDenseMat sc =
       $ sc
 
 -- | Filter a matrix to remove low count cells and genes.
-filterNumSparseMat :: SingleCells -> SingleCells
-filterNumSparseMat sc =
+filterNumSparseMat :: FilterThresholds -> SingleCells -> SingleCells
+filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     SingleCells { _matrix   = m
                 , _rowNames = r
                 , _colNames = c
@@ -147,8 +147,8 @@ filterNumSparseMat sc =
                 }
   where
     m = MatObsRow colFilteredMat
-    rowFilter = (>= 250) . sum
-    colFilter = (> 0) . sum
+    rowFilter = (>= rowThresh) . sum
+    colFilter = (>= colThresh) . sum
     mat            = unMatObsRow . _matrix $ sc
     mat'           = S.transposeSM mat
     rowFilteredMat = S.transposeSM

@@ -99,6 +99,7 @@ data Options
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, white]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
+               , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINROW, MINCOLUMN) when filtering cells and features by low read counts. See also --no-filter."
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                , clumpinessMethod :: Maybe String <?> "([Majority] | Exclusive | AllExclusive) The method used when calculating clumpiness: Majority labels leaves according to the most abundant label, Exclusive only looks at leaves consisting of cells solely from one label, and AllExclusive treats the leaf as containing both labels."
@@ -111,12 +112,14 @@ data Options
                   , normalization :: Maybe String <?> "([B1Norm] | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. B1Norm normalizes based on the prevalence of each feature. MaxMedNorm normalized first each observation by total count then by median across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally B1Norm during clustering). NoneNorm does not normalize. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
                   , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                   , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
+                  , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINROW, MINCOLUMN) when filtering cells and features by low read counts. See also --no-filter."
                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
     | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                    , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, there will be no projection plot. Requires generation of a new tree."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                    , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
+                   , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINROW, MINCOLUMN) when filtering cells and features by low read counts. See also --no-filter."
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                    , normalization :: Maybe String <?> "([B1Norm] | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. B1Norm normalizes based on the prevalence of each feature. MaxMedNorm normalized first each observation by total count then by median across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally B1Norm during clustering). NoneNorm does not normalize. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
@@ -160,6 +163,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
     short "noFilter"             = Just 'F'
+    short "filterThresholds"     = Just 'H'
     short "clumpinessMethod"     = Just 'u'
     short "eigenGroup"           = Just 'B'
     short x                      = firstLetter x
@@ -218,6 +222,11 @@ loadAllSSM opts = do
             maybe B1Norm read . unHelpful . normalization $ opts
         pca'               = fmap PCAVar . unHelpful . pca $ opts
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
+        filterThresholds'  = FilterThresholds
+                           . maybe (250, 1) read
+                           . unHelpful
+                           . filterThresholds
+                           $ opts
 
     cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
 
@@ -229,7 +238,7 @@ loadAllSSM opts = do
         sc           =
             (\ x -> if unNoFilterFlag noFilterFlag'
                         then x
-                        else filterNumSparseMat x
+                        else filterNumSparseMat filterThresholds' x
             )
                 . whiteListFilter cellWhitelist
                 $ unFilteredSc
