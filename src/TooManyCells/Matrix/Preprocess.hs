@@ -11,6 +11,7 @@ module TooManyCells.Matrix.Preprocess
     ( scaleRMat
     , scaleDenseMat
     , scaleSparseMat
+    , uqScaleSparseMat
     , filterRMat
     , filterDenseMat
     , filterNumSparseMat
@@ -78,6 +79,16 @@ scaleSparseMat (MatObsRow mat) = MatObsRow
                                . S.toRowsL
                                $ mat
 
+-- | Scale a matrix based on the library size.
+uqScaleSparseMat :: MatObsRow -> MatObsRow
+uqScaleSparseMat (MatObsRow mat) = MatObsRow
+                                 . S.sparsifySM
+                                 . S.transposeSM
+                                 . S.fromColsL
+                                 . fmap uqScaleSparseCell
+                                 . S.toRowsL
+                                 $ mat
+
 -- | Scale a cell by the library size.
 scaleDenseCell :: H.Vector H.R -> H.Vector H.R
 scaleDenseCell xs = H.cmap (/ total) xs
@@ -90,6 +101,16 @@ scaleSparseCell xs = fmap (/ total) xs
   where
     total = sum xs
 
+-- | Upper quartile scale cells.
+uqScaleSparseCell :: S.SpVector Double -> S.SpVector Double
+uqScaleSparseCell xs = fmap (/ uq) xs
+  where
+    uq = continuousBy s 3 4
+       . VS.fromList
+       . fmap snd
+       . S.toListSV
+       $ xs
+
 -- | Median scale molecules across cells.
 scaleDenseMol :: H.Vector H.R -> H.Vector H.R
 scaleDenseMol xs = H.cmap (/ med) xs
@@ -101,9 +122,9 @@ scaleSparseMol :: S.SpVector Double -> S.SpVector Double
 scaleSparseMol xs = fmap (/ med) xs
   where
     med = continuousBy s 2 4
-        . VS.filter (> 0)
         . VS.fromList
-        . S.toDenseListSV
+        . fmap snd
+        . S.toListSV
         $ xs
 
 -- | Filter a matrix to remove low count cells and genes.
