@@ -107,6 +107,7 @@ uqScaleSparseCell xs = fmap (/ uq) xs
   where
     uq = continuousBy s 3 4
        . VS.fromList
+       . filter (/= 0)
        . fmap snd
        . S.toListSV
        $ xs
@@ -115,7 +116,7 @@ uqScaleSparseCell xs = fmap (/ uq) xs
 scaleDenseMol :: H.Vector H.R -> H.Vector H.R
 scaleDenseMol xs = H.cmap (/ med) xs
   where
-    med = continuousBy s 2 4 . VS.filter (> 0) $ xs
+    med = continuousBy s 2 4 . VS.filter (/= 0) $ xs
 
 -- | Median scale molecules across cells.
 scaleSparseMol :: S.SpVector Double -> S.SpVector Double
@@ -123,6 +124,7 @@ scaleSparseMol xs = fmap (/ med) xs
   where
     med = continuousBy s 2 4
         . VS.fromList
+        . filter (/= 0)
         . fmap snd
         . S.toListSV
         $ xs
