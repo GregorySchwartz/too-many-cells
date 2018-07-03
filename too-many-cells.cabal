@@ -83,6 +83,7 @@ library
                      , text
                      , text-show
                      , vector
+                     , vector-algorithms
   ghc-options:         -O2
   default-language:    Haskell2010
 
@@ -111,6 +112,7 @@ executable too-many-cells
                      , matplotlib
                      , matrix-market-attoparsec
                      , optparse-generic
+                     , palette
                      , plots
                      , spectral-clustering
                      , streaming

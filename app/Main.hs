@@ -30,8 +30,8 @@ import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
 import Language.R as R
 import Language.R.QQ (r)
-import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
+import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import TextShow (showt)
@@ -39,6 +39,8 @@ import qualified "find-clumpiness" Types as Clump
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.Colour.Palette.BrewerSet as D
+import qualified Data.Colour.Palette.Harmony as D
 import qualified Data.Csv as CSV
 import qualified Data.GraphViz as G
 import qualified Data.Text as T
@@ -125,7 +127,9 @@ data Options
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                    , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."}
-    | Diversity { priors :: [String] <?> "(PATH) Either input folders containing the output from a run of too-many-cells or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case."
+    | Diversity { priors :: [String] <?> "(PATH) Either input folders containing the output from a run of too-many-cells or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case. If --labels-file is specified, those labels designate entity type, otherwise the assigned cluster is the entity type."
+                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                 , start :: Maybe Integer <?> "([0] | INT) For the rarefaction curve, start the curve at this subsampling."
                 , interval :: Maybe Integer <?> "([1] | INT) For the rarefaction curve, the amount to increase each subsampling. For instance, starting at 0 with an interval of 4, we would sampling 0, 4, 8, 12, ..."
                 , end :: Maybe Integer <?> "([N] | INT) For the rarefaction curve, which subsample to stop at. By default, the curve stops at the observed number of species for each population."
@@ -657,6 +661,10 @@ diversityMain :: Options -> IO ()
 diversityMain opts = do
     let priors'         =
             fmap PriorPath . unHelpful . priors $ opts
+        delimiter'     =
+            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        labelsFile'       =
+            fmap LabelFile . unHelpful . labelsFile $ opts
         output'         =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
         order'       = Order . fromMaybe 1 . unHelpful . order $ opts
@@ -667,10 +675,16 @@ diversityMain opts = do
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
 
-    pops <- sequence
-          . fmap (\x -> do
-                            pop <- fmap (L.view L._1) . loadPopulation $ x
-                            return (Label . T.pack . unPriorPath $ x , pop)
+    labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
+
+    pops <- fmap ( either
+                    (\err -> error $ err <> "\nEncountered error in population loading, aborting process.")
+                    id
+                 . sequence
+                 )
+          . mapM (\x -> (fmap . fmap) (Label . T.pack . unPriorPath $ x,)
+                      . loadPopulation labelMap
+                      $ x
                  )
           $ priors'
 
@@ -698,17 +712,19 @@ diversityMain opts = do
     --     . plotRarefaction
     --     $ popDiversities
 
+    let colors = D.colorRamp (length pops) . D.brewerSet D.Set1 $ 9
+
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         let divFile = unOutputDirectory output' FP.</> "diversity.pdf"
-        divPlot <- plotDiversityR popDiversities
+        divPlot <- plotDiversityR colors popDiversities
         [r| suppressMessages(ggsave(divPlot_hs, file = divFile_hs)) |]
 
         -- let chao1File = unOutputDirectory output' FP.</> "chao_r.pdf"
-        -- chao1Plot <- plotChao1R popDiversities
+        -- chao1Plot <- plotChao1R colors popDiversities
         -- [r| suppressMessages(ggsave(chao1Plot_hs, file = chao1File_hs)) |]
 
         let rarefactionFile = unOutputDirectory output' FP.</> "rarefaction.pdf"
-        rarefactionPlot <- plotRarefactionR popDiversities
+        rarefactionPlot <- plotRarefactionR colors popDiversities
         [r| suppressMessages(ggsave(rarefactionPlot_hs, file = rarefactionFile_hs)) |]
 
         return ()

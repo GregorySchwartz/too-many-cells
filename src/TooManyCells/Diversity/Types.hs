@@ -25,6 +25,7 @@ newtype Size        = Size { unSize :: Integer } deriving (Eq, Ord, Read, Show)
 newtype Start       = Start { unStart :: Integer } deriving (Eq, Ord, Read, Show)
 newtype Interval    = Interval { unInterval :: Integer } deriving (Eq, Ord, Read, Show)
 newtype End         = End { unEnd :: Integer } deriving (Eq, Ord, Read, Show)
+newtype Species     = Species { unSpecies :: T.Text } deriving (Eq, Ord, Read, Show)
 newtype Diversity   = Diversity
     { unDiversity :: Double
     } deriving (Eq,Ord,Read,Show)
@@ -35,7 +36,7 @@ newtype Rarefaction = Rarefaction
     { unRarefaction :: [(X, Y)]
     } deriving (Eq,Ord,Read,Show)
 newtype Population = Population
-    { unPopulation :: Map.Map Cluster (Seq.Seq Cell)
+    { unPopulation :: Map.Map Species (Seq.Seq Cell)
     } deriving (Eq, Ord, Read, Show)
 
 -- Advanced

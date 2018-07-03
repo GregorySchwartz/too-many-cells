@@ -23,6 +23,7 @@ module TooManyCells.Diversity.Plot
 import BirchBeer.Types
 import Diagrams.Prelude
 import Diagrams.Backend.Cairo
+import Data.Char (toUpper)
 import Data.Colour.Palette.BrewerSet (ColorCat (..), brewerSet)
 import qualified Data.Colour.Palette.BrewerSet as Brewer
 import Control.Lens
@@ -114,10 +115,11 @@ plotRarefactionPy pops =
             . popRarefaction
 
 -- | Plot the diversity of a group of populations.
-plotDiversityR :: [PopulationDiversity] -> R s (R.SomeSEXP s)
-plotDiversityR pops = do
+plotDiversityR :: [Colour Double] -> [PopulationDiversity] -> R s (R.SomeSEXP s)
+plotDiversityR colors pops = do
     let labels = fmap getPopLabel pops
         values = fmap (unDiversity . popDiversity) pops
+        colorsR = fmap (fmap toUpper . sRGB24show) colors
 
     [r| suppressMessages(library(ggplot2))
         suppressMessages(library(cowplot))
@@ -128,15 +130,17 @@ plotDiversityR pops = do
             geom_col() +
             xlab("") +
             ylab("Diversity") +
+            scale_fill_manual(values = as.character(colorsR_hs)) +
             guides(fill = "none") +
             theme(aspect.ratio = 1, axis.text.x = element_text(angle = 315, hjust = 0))
     |]
 
 -- | Plot the Chao1 of a group of populations.
-plotChao1R :: [PopulationDiversity] -> R s (R.SomeSEXP s)
-plotChao1R pops = do
+plotChao1R :: [Colour Double] -> [PopulationDiversity] -> R s (R.SomeSEXP s)
+plotChao1R colors pops = do
     let labels = fmap getPopLabel pops
         values = fmap (unChao1 . popChao1) pops
+        colorsR = fmap (fmap toUpper . sRGB24show) colors
 
     [r| suppressMessages(library(ggplot2))
         suppressMessages(library(cowplot))
@@ -147,13 +151,15 @@ plotChao1R pops = do
             geom_col() +
             xlab("") +
             ylab("Chao1") +
+            scale_fill_manual(values = as.character(colorsR_hs)) +
             guides(fill = "none") +
             theme(aspect.ratio = 1, axis.text.x = element_text(angle = 315, hjust = 0))
     |]
 
 -- | Plot the rarefaction curves of a group of populations.
-plotRarefactionR :: [PopulationDiversity] -> R s (R.SomeSEXP s)
-plotRarefactionR pops = do
+plotRarefactionR ::
+     [Colour Double] -> [PopulationDiversity] -> R s (R.SomeSEXP s)
+plotRarefactionR colors pops = do
     let labels =
             concatMap
                 (\pop ->
@@ -166,6 +172,7 @@ plotRarefactionR pops = do
             fmap (unX . fst) . concatMap (unRarefaction . popRarefaction) $ pops
         valuesY =
             fmap (unY . snd) . concatMap (unRarefaction . popRarefaction) $ pops
+        colorsR = fmap (fmap toUpper . sRGB24show) colors
 
     [r| suppressMessages(library(ggplot2))
         suppressMessages(library(cowplot))
@@ -176,6 +183,7 @@ plotRarefactionR pops = do
             geom_line() +
             xlab("Subsample") +
             ylab("Estimated richness") +
+            scale_color_manual(values = as.character(colorsR_hs)) +
             guides(color = guide_legend(title = "")) +
             theme(aspect.ratio = 0.5)
     |]

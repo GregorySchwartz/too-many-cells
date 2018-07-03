@@ -6,6 +6,8 @@ Collects the functions pertaining to the loading of data.
 
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE BangPatterns #-}
 
 module TooManyCells.Diversity.Load
     ( loadPopulation
@@ -13,17 +15,20 @@ module TooManyCells.Diversity.Load
 
 -- Remote
 import BirchBeer.Types
-import Data.Maybe (fromMaybe)
-import Data.Tuple (swap)
 import Control.Monad.Except (runExceptT, ExceptT (..))
 import Control.Monad.Managed (with, liftIO, Managed (..))
 import Data.Matrix.MatrixMarket (readMatrix)
+import Data.Maybe (fromMaybe)
+import Data.Monoid ((<>))
+import Data.Tuple (swap)
 import Math.Clustering.Hierarchical.Spectral.Sparse (B (..))
 import Safe (headMay)
+import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
+import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
@@ -43,59 +48,92 @@ import TooManyCells.Matrix.Utility
 import TooManyCells.Matrix.Types
 
 -- | Load a population representation from a cluster file
-loadPopulationCsv :: PriorPath -> IO Population
+loadPopulationCsv :: PriorPath -> IO (Either String Population)
 loadPopulationCsv file = do
-    let getCols :: Map.Map T.Text T.Text -> (Cluster, Seq.Seq Cell)
-        getCols m =
-            ( maybe
-                (error "\nNo cluster column.")
-                (either error (Cluster . fst) . T.decimal)
-            . Map.lookup "cluster"
-            $ m
-            , maybe (error "\nNo cell column.") (Seq.singleton . Cell)
-            . Map.lookup "cell"
-            $ m
-            )
+    let getCols :: Map.Map T.Text T.Text -> Either String (Species, Seq.Seq Cell)
+        getCols m = do
+            x <- do
+                    maybe (Left "\nNo cluster column.") (Right . Species)
+                    . Map.lookup "cluster"
+                    $ m
+            y <- do
+                    maybe
+                        (Left "\nNo cell column.")
+                        (Right . Seq.singleton . Cell)
+                    . Map.lookup "cell"
+                    $ m
 
-    res <- flip with return $ do
+            return (x, y)
+
+    flip with return $ do
         contents   <- SW.withBinaryFileContents . unPriorPath $ file
-        population <- fmap (either (error . show) (Map.fromListWith (Seq.><)))
+        population <- fmap (\x -> do
+                                x' <- either (Left . show) Right x
+                                fmap (Population . Map.fromListWith (Seq.><))
+                                    . sequence
+                                    $ x'
+                           )
                     . runExceptT
                     . S.toList_
                     . S.map getCols
                     . S.decodeByName
                     $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
 
-        return $ Population population
-
-    return res
+        return population
 
 -- | Convert previous cluster results to a population representation.
-priorToPopulation :: ClusterResults -> Population
-priorToPopulation = Population
-                  . Map.fromListWith (Seq.><)
-                  . fmap ( L.over L._1 (fromMaybe (error "\nNo cluster for cell.") . headMay)
-                         . L.over L._2 (Seq.singleton . _barcode)
-                         . swap
-                         )
-                  . _clusterList
+priorToPopulation :: ClusterResults -> Either String Population
+priorToPopulation =
+    fmap (Population . Map.fromListWith (Seq.><))
+        . mapM (\(!x, !y) -> do
+                    let x' = Seq.singleton . _barcode $ x
+                    y' <- maybe
+                            (Left "\nNo cluster for cell.")
+                            (Right . Species . showt . unCluster)
+                        . headMay
+                        $ y
+                    return (y', x')
+               )
+        . _clusterList
 
-loadPopulation :: PriorPath
-               -> IO (Population, Maybe ClusterResults)
-loadPopulation (PriorPath path) = do
+-- | Convert a Population to a custom population with a label map.
+popToLabelPop :: LabelMap -> Population -> Either String Population
+popToLabelPop (LabelMap lm) = fmap (Population . Map.fromListWith (Seq.><))
+                            . mapM getPopEntry
+                            . F.toList
+                            . mconcat
+                            . Map.elems
+                            . unPopulation
+  where
+    getPopEntry (Cell x) =
+      ( maybe
+            (Left $ "\nMissing label for " <> (show x))
+            (Right . Species . unLabel)
+            (Map.lookup (Id x) lm)
+      )
+        >>= Right . (, Seq.singleton . Cell $ x)
+
+-- | Load the populations from a list of files. If a label map is provided, the
+-- species are the labels, otherwise they are the clusters.
+loadPopulation :: Maybe LabelMap
+               -> PriorPath
+               -> IO (Either String Population)
+loadPopulation lm (PriorPath path) = do
     dirExist <- FP.doesDirectoryExist path
     fileExist <- FP.doesFileExist path
-    case (dirExist, fileExist) of
-        (False, False) -> error "\nInput does not exist."
-        (_, True)      -> do
-            pop <- loadPopulationCsv . PriorPath $ path
-            return (pop, Nothing)
-        otherwise      -> do
+    res <- case (dirExist, fileExist) of
+        (False, False) -> return $ Left "\nInput does not exist."
+        (_, True)      -> runExceptT $ do
+            pop <- ExceptT . loadPopulationCsv . PriorPath $ path
+            return pop
+        otherwise      -> runExceptT $ do
             let crInput = path FP.</> "cluster_results.json"
 
-            cr  <-
-                fmap (either error id . A.eitherDecode) . B.readFile $ crInput
+            pop <- ExceptT 
+                 . fmap ((=<<) priorToPopulation . A.eitherDecode)
+                 . B.readFile
+                 $ crInput
 
-            let pop = priorToPopulation cr
+            return pop
 
-            return (pop, Just cr)
+    return . maybe res (\x -> res >>= popToLabelPop x) $ lm

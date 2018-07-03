@@ -52,7 +52,7 @@ getPopulationDiversity
 
         rarefaction <- fmap (Rarefaction . fmap getRarefactionPoint)
                      . rarefactionCurve False 0 start interval end
-                     . Map.mapKeys (\ (Cluster !x) -> (show x, show x))
+                     . Map.mapKeys (\ (Species !x) -> (show x, show x))
                      $ popCount
 
         return $ PopulationDiversity label diversity chao rarefaction

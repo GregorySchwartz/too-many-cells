@@ -73,6 +73,7 @@ extra-deps:
   - inline-r-0.9.0.2
   - mfsolve-0.3.2.0
   - mmorph-1.0.9
+  - palette-0.3.0.1
   - plots-0.1.0.2
   - streaming-0.1.4.5
   - streaming-bytestring-0.1.4.6

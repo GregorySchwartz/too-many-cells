@@ -25,6 +25,7 @@ module TooManyCells.Matrix.Preprocess
 
 -- Remote
 import Data.List (sort)
+import Data.Monoid ((<>))
 import Data.Maybe (fromMaybe)
 import H.Prelude (io)
 import Language.R as R
@@ -37,6 +38,7 @@ import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Vector as V
+import qualified Data.Vector.Algorithms.Radix as V
 import qualified Data.Vector.Storable as VS
 import qualified Numeric.LinearAlgebra as H
 
@@ -206,26 +208,26 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
   where
     m = MatObsRow rowFilteredMat
     mat            = unMatObsRow . _matrix $ sc
-    validIdx       = sort
-                   . fmap fst
-                   . filter (\(_, !c) -> Set.member c wl)
-                   . zip [0..]
-                   . V.toList
+    validIdx       = V.modify V.sort
+                   . V.map fst
+                   . V.filter (\(_, !c) -> Set.member c wl)
+                   . V.imap (\i v -> (i, v))
                    . _rowNames
                    $ sc
     rowFilteredMat = S.transposeSM
                    . S.fromColsL
                    . fmap (S.extractRow mat)
+                   . V.toList
                    $ validIdx
-    r = V.fromList
-      . fmap ( fromMaybe (error "\nWhitelist row index out of bounds (do the whitelist barcodes match the data?).")
-             . (V.!?) (_rowNames sc)
-             )
+    r = V.map (\x -> fromMaybe (error $ "\nWhitelist row index out of bounds (do the whitelist barcodes match the data?): " <> show x <> " out of " <> (show . length . _rowNames $ sc))
+                   . (V.!?) (_rowNames sc)
+                   $ x
+              )
       $ validIdx
-    p = V.fromList
-      . fmap ( (error "\nWhitelist projection index out of bounds (do the whitelist barcodes match the data?).")
-             . (V.!?) (_projections sc)
-             )
+    p = V.map (\x -> fromMaybe (error $ "\nWhitelist projection index out of bounds (do the whitelist barcodes match the data?): " <> show x <> " out of " <> (show . length . _projections $ sc))
+                   . (V.!?) (_projections sc)
+                   $ x
+              )
       $ validIdx
 
 -- | Get a cell white list from a file.
