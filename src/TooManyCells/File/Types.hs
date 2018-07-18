@@ -35,6 +35,7 @@ import qualified Numeric.LinearAlgebra as H
 
 -- Basic
 newtype Delimiter       = Delimiter { unDelimiter :: Char }
+newtype DendrogramFile  = DendrogramFile { unDendrogramFile :: FilePath }
 newtype CellFile        = CellFile { unCellFile :: FilePath }
 newtype GeneFile        = GeneFile { unGeneFile :: FilePath }
 newtype MatrixFile = MatrixFile

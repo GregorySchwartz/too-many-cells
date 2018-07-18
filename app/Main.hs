@@ -90,12 +90,11 @@ data Options
                , maxProportion :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE proportion split. So a node N with L and R children will stop with this criteria at 0.5 if |L| / |R| < 0.5 or > 2 (absolute log2 transformed), that is, if one child has over twice as many items as the other child. Includes L and R in the final result."
                , minDistance :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE distance. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Includes L and R in the final result."
                , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, and --min-distance based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
+               , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous FEATURE), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)], where each item is colored by the binary high / low expression of FEATURE based on DOUBLE and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
                , drawCollection :: Maybe String <?> "([PieRing] | PieChart | PieNone | CollectionGraph MAXWEIGHT THRESHOLD [NODE]) How to draw item leaves in the dendrogram. PieRing draws a pie chart ring around the items. PieChart only draws a pie chart instead of items. PieNone only draws items, no pie rings or charts. (CollectionGraph MAXWEIGHT THRESHOLD [NODE]) draws the nodes and edges within leaves that are descendents of NODE (empty list [] indicates draw all leaf networks) based on the input matrix, normalizes edges based on the MAXWEIGHT, and removes edges for display less than THRESHOLD (after normalization, so for CollectionGraph 2 0.5 [26], draw the leaf graphs for all leaves under node 26, then a edge of 0.7 would be removed because (0.7 / 2) < 0.5)."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
-               ,
-                 -- Disable for now. , drawDendrogram :: Bool <?> "Draw a dendrogram instead of a graph."
-                 drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
+               , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, white]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
@@ -151,6 +150,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "maxStep"              = Just 'S'
     short "maxProportion"        = Just 'X'
     short "maxDistance"          = Just 'T'
+    short "dendrogramOutput"     = Just 'U'
     short "drawLeaf"             = Just 'L'
     short "drawCollection"       = Just 'E'
     short "drawDendrogram"       = Just 'D'
@@ -163,7 +163,6 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "priors"               = Just 'P'
     short "clusterNormalization" = Just 'C'
     short "normalization"        = Just 'z'
-    -- short "drawDendrogram"       = Just 'D'
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
     short "noFilter"             = Just 'F'
@@ -275,6 +274,11 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             fmap MaxProportion . unHelpful . maxProportion $ opts
         minDistance'      = fmap MinDistance . unHelpful . minDistance $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
+        dendrogramOutput' = DendrogramFile
+                          . fromMaybe "dendrogram.svg"
+                          . unHelpful
+                          . dendrogramOutput
+                          $ opts
         drawLeaf'         =
             maybe (maybe DrawText (const (DrawItem DrawLabel)) labelsFile') read
                 . unHelpful
@@ -283,7 +287,6 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         drawCollection'   =
             maybe PieRing read . unHelpful . drawCollection $ opts
         drawMark'         = maybe MarkNone read . unHelpful . drawMark $ opts
-        -- drawDendrogram'   = unHelpful . drawDendrogram $ opts
         drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
         drawMaxNodeSize'  =
             DrawMaxNodeSize . fromMaybe 72 . unHelpful . drawMaxNodeSize $ opts
@@ -550,7 +553,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             --             plotGraph legend drawConfig cm markColorMap gr
 
             D.renderCairo
-                    (unOutputDirectory output' FP.</> "dendrogram.svg")
+                    ( unOutputDirectory output'
+               FP.</> unDendrogramFile dendrogramOutput'
+                    )
                     (D.mkHeight 1000)
                     plot
 
