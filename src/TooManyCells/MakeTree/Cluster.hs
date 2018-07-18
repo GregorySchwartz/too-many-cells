@@ -161,11 +161,11 @@ hSpecClust eigenGroup norm sc =
                     (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
                     (_projections sc)
     hSpecCommand B1Norm   =
-        hierarchicalSpectralCluster eigenGroup True Nothing items
+        hierarchicalSpectralCluster eigenGroup True Nothing Nothing items
     hSpecCommand BothNorm =
-        hierarchicalSpectralCluster eigenGroup True Nothing items
+        hierarchicalSpectralCluster eigenGroup True Nothing Nothing items
     hSpecCommand _        =
-        hierarchicalSpectralCluster eigenGroup False Nothing items
+        hierarchicalSpectralCluster eigenGroup False Nothing Nothing items
 
 dendrogramToClusterList :: HC.Dendrogram (V.Vector CellInfo)
                         -> [(CellInfo, [Cluster])]
