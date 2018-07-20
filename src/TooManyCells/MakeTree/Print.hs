@@ -17,7 +17,8 @@ module TooManyCells.MakeTree.Print
 -- Remote
 import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents)
-import Data.Maybe (fromMaybe, mapMaybe)
+import Data.List (genericLength)
+import Data.Maybe (fromMaybe, mapMaybe, catMaybes)
 import Data.Monoid ((<>))
 import Safe (headMay)
 import TextShow (showt)
@@ -26,6 +27,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.Graph.Inductive as G
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Text as T
 
@@ -72,11 +74,34 @@ printClusterInfo =
                )
         . clusterInfo
 
--- | Get various properties about the nodes in the ClusterGraph.
-nodeInfo :: (TreeItem a) => ClusterGraph a -> [NodeInfo]
-nodeInfo (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
+-- | Get the counts and frequencies of all cell labels in a node.
+getComposition ::
+     (TreeItem a) => LabelMap -> ClusterGraph a -> G.Node -> LabelCompositions
+getComposition (LabelMap lm) (ClusterGraph gr) n =
+    LabelCompositions
+        . Map.elems
+        . Map.mapWithKey
+            (\ !k !v -> LabelComposition k v (fromIntegral v / total))
+        $ counts
   where
-    getNodeInfo x = NodeInfo x (getSize x) (getProportion x) (getQ x)
+    counts = Map.fromListWith (+) . flip zip [1,1..] $ labels
+    total  = genericLength labels
+    labels = catMaybes
+           . fmap (flip Map.lookup lm . getId)
+           . concatMap (maybe [] F.toList . snd)
+           . F.toList
+           $ getGraphLeaves gr n
+
+-- | Get various properties about the nodes in the ClusterGraph.
+nodeInfo :: (TreeItem a) => Maybe LabelMap -> ClusterGraph a -> [NodeInfo]
+nodeInfo lm (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
+  where
+    getNodeInfo x = NodeInfo
+                        x
+                        (getSize x)
+                        (getProportion x)
+                        (getQ x)
+                        (fmap (\a -> getComposition a (ClusterGraph gr) x) lm)
     getSize :: G.Node -> Int
     getSize = sum . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
     getQ :: G.Node -> Maybe Double
@@ -88,9 +113,10 @@ nodeInfo (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
             []     -> Nothing
 
 -- | Print the node information to a string.
-printNodeInfo :: (TreeItem a) => ClusterGraph a -> B.ByteString
-printNodeInfo =
-    (<>) "node,size,proportion,modularity\n"
+printNodeInfo ::
+     (TreeItem a) => Maybe LabelMap -> ClusterGraph a -> B.ByteString
+printNodeInfo lm =
+    (<>) "node,size,proportion,modularity,composition\n"
         . CSV.encode
-        . fmap (\(NodeInfo n s p m) -> (n, s, maybe "" show p, maybe "" show m))
-        . nodeInfo
+        . fmap (\(NodeInfo n s p m c) -> (n, s, maybe "" show p, maybe "" show m, maybe "" show c))
+        . nodeInfo lm

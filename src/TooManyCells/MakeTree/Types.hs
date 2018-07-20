@@ -4,11 +4,12 @@ Gregory W. Schwartz
 Collects the types used in the program
 -}
 
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module TooManyCells.MakeTree.Types where
@@ -18,7 +19,9 @@ import BirchBeer.Types
 import Data.Colour (AlphaColour)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
+import Data.List (intercalate)
 import Data.Map.Strict (Map)
+import Data.Monoid ((<>))
 import Data.Text (Text)
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
@@ -27,6 +30,7 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
 import Math.Modularity.Types (Q (..))
+import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.Aeson.TH as A
@@ -35,6 +39,7 @@ import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
+import qualified Data.Text as T
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
@@ -48,6 +53,9 @@ newtype IsLeaf = IsLeaf {unIsLeaf :: Bool} deriving (Eq, Ord, Read, Show)
 newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)
+newtype LabelCompositions = LabelCompositions
+  { unLabelCompositions :: [LabelComposition]
+  }
 newtype L = L Double
 newtype C = C Double
 newtype H = H Double
@@ -71,7 +79,21 @@ data NodeInfo = NodeInfo
     , _nodeSize :: Int
     , _nodeSplitProportion :: Maybe Double
     , _nodeModularity :: Maybe Double
+    , _nodeLabelComposition :: Maybe LabelCompositions
     }
+
+data LabelComposition = LabelComposition
+    { _label :: Label
+    , _count :: Int
+    , _frequency :: Double
+    }
+
+instance Show LabelComposition where
+    show (LabelComposition l c f) =
+        (T.unpack . unLabel $ l) <> ": " <> show f <> "(" <> show c <> ")"
+
+instance Show LabelCompositions where
+    show = intercalate "/" . fmap show . unLabelCompositions
 
 instance TreeItem CellInfo where
     getId = Id . unCell . _barcode
