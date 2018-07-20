@@ -377,7 +377,6 @@ states") the cell labels in that group are. Note that the inner nodes are
 colored relative to themselves, while the leaves are colored relative to all
 leaves, so there are two different scales.
 
-
 ** =interactive=
 
 The =interactive= entry point has a basic GUI interface for quick plotting with
@@ -390,7 +389,6 @@ too-many-cells interactive \
     --prior out \
     --labels-file labels.csv
 #+END_SRC
-
 
 ** =differential=
 

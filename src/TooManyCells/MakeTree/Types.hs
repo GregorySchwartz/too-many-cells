@@ -90,7 +90,7 @@ data LabelComposition = LabelComposition
 
 instance Show LabelComposition where
     show (LabelComposition l c f) =
-        (T.unpack . unLabel $ l) <> ": " <> show f <> "(" <> show c <> ")"
+        (T.unpack . unLabel $ l) <> ": " <> show f <> " (" <> show c <> ")"
 
 instance Show LabelCompositions where
     show = intercalate "/" . fmap show . unLabelCompositions
