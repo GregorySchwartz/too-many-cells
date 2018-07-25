@@ -130,9 +130,10 @@ clustersToClusterList sc clustering = do
 -- | Hierarchical spectral clustering.
 hSpecClust :: EigenGroup
            -> NormType
+           -> Maybe NumEigen
            -> SingleCells
            -> (ClusterResults, ClusterGraph CellInfo)
-hSpecClust eigenGroup norm sc =
+hSpecClust eigenGroup norm numEigen sc =
     ( ClusterResults { _clusterList = clustering
                      , _clusterDend = dend
                      }
@@ -161,11 +162,29 @@ hSpecClust eigenGroup norm sc =
                     (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
                     (_projections sc)
     hSpecCommand B1Norm   =
-        hierarchicalSpectralCluster eigenGroup True Nothing Nothing items
+        hierarchicalSpectralCluster
+          eigenGroup
+          True
+          (fmap unNumEigen numEigen)
+          Nothing
+          Nothing
+          items
     hSpecCommand BothNorm =
-        hierarchicalSpectralCluster eigenGroup True Nothing Nothing items
+        hierarchicalSpectralCluster
+          eigenGroup
+          True
+          (fmap unNumEigen numEigen)
+          Nothing
+          Nothing
+          items
     hSpecCommand _        =
-        hierarchicalSpectralCluster eigenGroup False Nothing Nothing items
+        hierarchicalSpectralCluster
+          eigenGroup
+          False
+          (fmap unNumEigen numEigen)
+          Nothing
+          Nothing
+          items
 
 dendrogramToClusterList :: HC.Dendrogram (V.Vector CellInfo)
                         -> [(CellInfo, [Cluster])]

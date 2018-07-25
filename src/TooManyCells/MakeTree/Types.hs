@@ -56,6 +56,9 @@ newtype AdjacencyMat = AdjacencyMat
 newtype LabelCompositions = LabelCompositions
   { unLabelCompositions :: [LabelComposition]
   }
+newtype NumEigen = NumEigen
+  { unNumEigen :: Int
+  } deriving (Read, Show)
 newtype L = L Double
 newtype C = C Double
 newtype H = H Double

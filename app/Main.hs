@@ -85,6 +85,7 @@ data Options
                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
                , normalization :: Maybe String <?> "([B1Norm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. B1Norm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first UQNorm for all analysis then additionally B1Norm during clustering). NoneNorm does not normalize. Default is B1Norm for clustering and None for differential (edgeR). Cannot use B1Norm for any other process as NoneNorm will become the default."
                , eigenGroup :: Maybe String <?> "([SignGroup] | KMeansGroup) Whether to group the eigenvector using the sign or kmeans while clustering. While the default is sign, kmeans may be more accurate (but starting points are arbitrary)."
+               , numEigen :: Maybe Int <?> "([1] | INT) Number of eigenvectors to use while clustering with kmeans. Takes from the second to last eigenvector. Recommended to start at 1 and work up from there if needed. May help offset the possible instability and inaccuracy of SVDLIBC."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
                , maxProportion :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE proportion split. So a node N with L and R children will stop with this criteria at 0.5 if |L| / |R| < 0.5 or > 2 (absolute log2 transformed), that is, if one child has over twice as many items as the other child. Includes L and R in the final result."
@@ -146,29 +147,30 @@ data Options
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
-    short "minSize"              = Just 'M'
-    short "maxStep"              = Just 'S'
-    short "maxProportion"        = Just 'X'
-    short "maxDistance"          = Just 'T'
-    short "dendrogramOutput"     = Just 'U'
-    short "drawLeaf"             = Just 'L'
-    short "drawCollection"       = Just 'E'
-    short "drawDendrogram"       = Just 'D'
-    short "drawNodeNumber"       = Just 'N'
-    short "drawMark"             = Just 'K'
-    short "drawColors"           = Just 'R'
-    short "drawNoScaleNodes"     = Just 'W'
-    short "drawMaxNodeSize"      = Just 'A'
-    short "projectionFile"       = Just 'j'
-    short "priors"               = Just 'P'
+    short "clumpinessMethod"     = Just 'u'
     short "clusterNormalization" = Just 'C'
+    short "dendrogramOutput"     = Just 'U'
+    short "drawCollection"       = Just 'E'
+    short "drawColors"           = Just 'R'
+    short "drawDendrogram"       = Just 'D'
+    short "drawLeaf"             = Just 'L'
+    short "drawMark"             = Just 'K'
+    short "drawMaxNodeSize"      = Just 'A'
+    short "drawNoScaleNodes"     = Just 'W'
+    short "drawNodeNumber"       = Just 'N'
+    short "eigenGroup"           = Just 'B'
+    short "filterThresholds"     = Just 'H'
+    short "maxDistance"          = Just 'T'
+    short "maxProportion"        = Just 'X'
+    short "maxStep"              = Just 'S'
+    short "minSize"              = Just 'M'
+    short "noFilter"             = Just 'F'
     short "normalization"        = Just 'z'
+    short "numEigen"             = Just 'G'
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
-    short "noFilter"             = Just 'F'
-    short "filterThresholds"     = Just 'H'
-    short "clumpinessMethod"     = Just 'u'
-    short "eigenGroup"           = Just 'B'
+    short "priors"               = Just 'P'
+    short "projectionFile"       = Just 'j'
     short x                      = firstLetter x
 
 instance ParseRecord Options where
@@ -268,6 +270,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         eigenGroup'       = maybe SignGroup read . unHelpful . eigenGroup $ opts
         normalization' =
             maybe B1Norm read . unHelpful . normalization $ opts
+        numEigen'         = fmap NumEigen . unHelpful . numEigen $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
         maxProportion'    =
@@ -360,7 +363,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     originalClusterResults <- case prior' of
         Nothing -> do
             (fullCr, _) <-
-                fmap (hSpecClust eigenGroup' normalization') processedSc
+                fmap (hSpecClust eigenGroup' normalization' numEigen') processedSc
 
             return fullCr :: IO ClusterResults
         (Just x) -> do
