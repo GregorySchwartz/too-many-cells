@@ -48,7 +48,6 @@ import qualified Data.Text.Lazy.IO as T
 import qualified Data.Vector as V
 import qualified Diagrams.Backend.Cairo as D
 import qualified Diagrams.Prelude as D
-import qualified Graphics.Matplotlib as P
 import qualified H.Prelude as H
 import qualified Plots as D
 import qualified System.Directory as FP

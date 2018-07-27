@@ -11,9 +11,6 @@ module TooManyCells.Diversity.Plot
     ( plotDiversity
     , plotChao1
     , plotRarefaction
-    , plotDiversityPy
-    , plotChao1Py
-    , plotRarefactionPy
     , plotDiversityR
     , plotChao1R
     , plotRarefactionR
@@ -32,7 +29,6 @@ import Language.R as R
 import Language.R.QQ (r)
 import Plots
 import Plots.Axis.Line
-import qualified Graphics.Matplotlib as P
 import qualified Data.Text as T
 
 -- Local
@@ -81,38 +77,6 @@ plotRarefaction xs = renderAxis $ r2Axis &~ do
     axisColourMap .= (colourMap . zip [1..] . brewerSet Brewer.Set1 $ 9)
     xLabel .= "Subsample (# cells)"
     yLabel .= "Estimated clusters (# clusters)"
-
--- | Plot the diversity of a group of populations.
-plotDiversityPy :: [PopulationDiversity] -> P.Matplotlib
-plotDiversityPy pops =
-    mconcat
-        $ fmap
-            (\pop -> P.bar (getPopLabel pop) (unDiversity . popDiversity $ pop))
-            pops
-
--- | Plot the Chao1 of a group of populations.
-plotChao1Py :: [PopulationDiversity] -> P.Matplotlib
-plotChao1Py pops =
-    mconcat
-        $ fmap
-            (\pop -> P.bar (getPopLabel pop) (unChao1 . popChao1 $ pop))
-            pops
-
--- | Plot the rarefaction curves of a group of populations.
-plotRarefactionPy :: [PopulationDiversity] -> P.Matplotlib
-plotRarefactionPy pops =
-    (P.% P.legend)
-        . mconcat
-        $ fmap
-            (\ pop -> uncurry P.line (getVals pop)
-                P.@@ [P.o2 "label" $ getPopLabel pop]
-            )
-            pops
-  where
-    getVals = unzip
-            . fmap (over _2 unY . over _1 unX)
-            . unRarefaction
-            . popRarefaction
 
 -- | Plot the diversity of a group of populations.
 plotDiversityR :: [Colour Double] -> [PopulationDiversity] -> R s (R.SomeSEXP s)

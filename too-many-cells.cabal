@@ -63,7 +63,6 @@ library
                      , inline-r
                      , lens
                      , managed
-                     , matplotlib
                      , matrix-market-attoparsec
                      , mltool
                      , modularity
@@ -109,7 +108,6 @@ executable too-many-cells
                      , hierarchical-spectral-clustering
                      , inline-r
                      , lens
-                     , matplotlib
                      , matrix-market-attoparsec
                      , optparse-generic
                      , palette

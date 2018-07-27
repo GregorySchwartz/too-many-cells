@@ -14,7 +14,7 @@ Collects the types used in the program concerning the matrix.
 module TooManyCells.Matrix.Types where
 
 -- Remote
-import Data.Monoid (Monoid (..), mempty, mappend)
+import Data.Monoid (Monoid (..), mempty)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
 import Data.Map.Strict (Map)
@@ -95,9 +95,19 @@ data NormType = B1Norm | UQNorm | MaxMedNorm | BothNorm | NoneNorm deriving (Rea
 
 instance (Generic a) => Generic (Vector a)
 
+instance Semigroup MatObsRow where
+    (<>) (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
+
 instance Monoid MatObsRow where
     mempty  = MatObsRow $ S.zeroSM 0 0
-    mappend (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
+
+instance Semigroup SingleCells where
+    (<>) x y =
+        SingleCells { _matrix      = mappend (_matrix x) (_matrix y)
+                    , _rowNames    = (V.++) (_rowNames x) (_rowNames y)
+                    , _colNames    = _colNames x
+                    , _projections = (V.++) (_projections x) (_projections y)
+                    }
 
 instance Monoid SingleCells where
     mempty  = SingleCells { _matrix = mempty
@@ -105,9 +115,3 @@ instance Monoid SingleCells where
                           , _colNames = V.empty
                           , _projections = V.empty
                           }
-    mappend x y =
-        SingleCells { _matrix      = mappend (_matrix x) (_matrix y)
-                    , _rowNames    = (V.++) (_rowNames x) (_rowNames y)
-                    , _colNames    = _colNames x
-                    , _projections = (V.++) (_projections x) (_projections y)
-                    }
