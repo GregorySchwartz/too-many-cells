@@ -182,7 +182,7 @@ too-many-cells make-tree \
     --output out
 #+END_SRC
 
-[[file:img/complete_default_tree.svg]]
+[[file:img/complete_default_tree.png]]
 
 **** Pruning tree
 
@@ -214,7 +214,7 @@ too-many-cells make-tree \
     --output out_pruned
 #+END_SRC
 
-[[file:img/pruned_tree.svg]]
+[[file:img/pruned_tree.png]]
 
 **** Pie charts
 
@@ -230,7 +230,7 @@ too-many-cells make-tree \
     --output out_pruned
 #+END_SRC
 
-[[file:img/piechart_pruned_tree.svg]]
+[[file:img/piechart_pruned_tree.png]]
 
 **** Node numbering
 
@@ -249,7 +249,7 @@ too-many-cells make-tree \
     --output out_pruned
 #+END_SRC
 
-[[file:img/numbered_pruned_tree.svg]]
+[[file:img/numbered_pruned_tree.png]]
 
 **** Branch width
 
@@ -267,7 +267,7 @@ too-many-cells make-tree \
     --output out_pruned
 #+END_SRC
 
-[[file:img/thin_pruned_tree.svg]]
+[[file:img/thin_pruned_tree.png]]
 
 **** No scaling
 
@@ -285,7 +285,7 @@ too-many-cells make-tree \
     --output out_pruned
 #+END_SRC
 
-[[file:img/no_scaling_pruned_tree.svg]]
+[[file:img/no_scaling_pruned_tree.png]]
 
 How strong is each split? We can tell by drawing the modularity of the children
 on top of each node:
@@ -301,7 +301,7 @@ too-many-cells make-tree \
     --output out_pruned
 #+END_SRC
 
-[[file:img/modularity_pruned_tree.svg]]
+[[file:img/modularity_pruned_tree.png]]
 
 **** Gene expression
 
@@ -321,7 +321,7 @@ too-many-cells make-tree \
     --output out_gene_expression
 #+END_SRC
 
-[[file:img/cd4_pruned_tree.svg]]
+[[file:img/cd4_pruned_tree.png]]
 
 While this representation shows the expression of /Cd4/ in each cell and blends
 those levels together, due to the sparsity of single cell data these cells and
@@ -341,7 +341,7 @@ too-many-cells make-tree \
     --output out_gene_expression
 #+END_SRC
 
-[[file:img/cd4_large_pruned_tree.svg]]
+[[file:img/cd4_large_pruned_tree.png]]
 
 While this tree makes the expression a bit more visible, there is another tactic
 we can use. Instead of the continuous color spectrum of expression values, we
@@ -363,7 +363,7 @@ too-many-cells make-tree \
     --output out_gene_expression
 #+END_SRC
 
-[[file:img/pruned_tree_cd4_binary.svg]]
+[[file:img/pruned_tree_cd4_binary.png]]
 
 There, much better! Now it's clearly enriched in the subtree containing the
 thymus, where we would expect many T cells to be. If it's still difficult to see
@@ -387,7 +387,7 @@ too-many-cells make-tree \
     --output out_diversity
 #+END_SRC
 
-[[file:img/diversity_pruned_tree.svg]]
+[[file:img/diversity_pruned_tree.png]]
 
 Here, the deeper the red, the more diverse (a larger "effective number of cell
 states") the cell labels in that group are. Note that the inner nodes are
@@ -414,11 +414,11 @@ multiple groups of cells. The =differential= aids in this endeavor by allowing
 comparisons with =edgeR=. Let's find the differential genes between the liver
 group and all other cells. Consider our pruned tree from earlier:
 
-[[file:img/piechart_pruned_tree.svg]]
+[[file:img/piechart_pruned_tree.png]]
 
 We can see the id of each group with =--draw-node-number=.
 
-[[file:img/numbered_pruned_tree.svg]]
+[[file:img/numbered_pruned_tree.png]]
 
 We need to define two groups to compare. Well, it looks like node 98 defines the
 liver cluster. Then, since we don't want 98 to be in the other group, we say
