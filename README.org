@@ -40,6 +40,10 @@ stack setup
 
 *** Online
 
+We only require =stack= (or =cabal=), you do not need to download any source
+code, just run the following command to place =too-many-cells= in your
+=~/.local/bin/=:
+
 #+BEGIN_SRC sh
 stack install too-many-cells
 #+END_SRC
@@ -52,7 +56,7 @@ stack install
 
 * Usage
 
-=too-many-cells= has several entry points depending on the desired analysis. 
+=too-many-cells= has several entry points depending on the desired analysis.
 
 | Argument       | Analysis                                                                                    |
 |----------------+---------------------------------------------------------------------------------------------|
@@ -80,8 +84,8 @@ finest-grain cluster.
 *The most important argument is the =--prior= argument.* Making the tree may
 take some time, so if the tree was already generated and other analysis or
 visualizations need to be run on the tree, point the =--prior= argument to the
-output folder from a previous run of =too-many-cells=. *If you do not use
-=--prior=, the entire tree will be recalculated even if you just wanted to
+output folder from a previous run of =too-many-cells=. If you do not use
+=--prior=, *the entire tree will be recalculated even if you just wanted to
 change the visualization!*
 
 The main input is the =--matrix-path= argument. When a directory is supplied,
@@ -97,24 +101,37 @@ relationships between labels. Here the "item" column contains the name of each
 cell (barcode) and the label is any property of the cell (the tissue of origin,
 hour in a time course, celltype, etc.).
 
-To see the full list of options, use =too-many-cells -h=.
+To see the full list of options, use =too-many-cells -h= and =-h= for each entry
+point (i.e. =too-many-cells make-tree -h=).
 
 *** Output
 
 =too-many-cells make-tree= generates several files in the output folder. Below
 is a short description of each file.
 
-| File                    | Description                                                                                                                                                                                                                          |
-|-------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| =clumpiness.csv=        | When labels are provided, uses the clumpiness measure to determine the level of aggregation between each label within the tree.                                                                                                      |
-| =clumpiness.pdf=        | When labels are provided, a figure of the clumpiness between labels.                                                                                                                                                                 |
-| =cluster_diversity.csv= | When labels are provided, the diversity, or "effective number of labels", of each cluster.                                                                                                                                           |
-| =cluster_info.csv=      | Various bits of information for each cluster and the path leading up to each cluster, from that cluster to the root. For instance, the =size= column has =cluster_size/parent_size/parent_parent_size/.../root_size=                 |
-| =cluster_results.json=  | The =json= file containing a list of clusterings and the output tree in a recursive format.                                                                                                                                          |
-| =dendrogram.svg=        | The visualization of the tree. There are many possible options for this visualization included.                                                                                                                                      |
-| =graph.dot=             | A =dot= file of the tree, with less information than the tree in =cluster_results.json=.                                                                                                                                             |
-| =node_info.csv=         | Various information of each node in the tree.                                                                                                                                                                                        |
+| File                    | Description                                                                                                                                                                                                                           |
+|-------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| =clumpiness.csv=        | When labels are provided, uses the clumpiness measure to determine the level of aggregation between each label within the tree.                                                                                                       |
+| =clumpiness.pdf=        | When labels are provided, a figure of the clumpiness between labels.                                                                                                                                                                  |
+| =cluster_diversity.csv= | When labels are provided, the diversity, or "effective number of labels", of each cluster.                                                                                                                                            |
+| =cluster_info.csv=      | Various bits of information for each cluster and the path leading up to each cluster, from that cluster to the root. For instance, the =size= column has =cluster_size/parent_size/parent_parent_size/.../root_size=                  |
+| =cluster_results.json=  | The =json= file containing a list of clusterings and the output tree in a recursive format.                                                                                                                                           |
+| =dendrogram.svg=        | The visualization of the tree. There are many possible options for this visualization included. Can rename to choose between PNG, PS, PDF, and SVG using =--dendrogram-output=.                                                       |
+| =graph.dot=             | A =dot= file of the tree, with less information than the tree in =cluster_results.json=.                                                                                                                                              |
+| =node_info.csv=         | Various information of each node in the tree.                                                                                                                                                                                         |
 | =projection.pdf=        | When =--projection= is supplied with a file of the format "barcode,x,y", provides a plot of each cell at the specified x and y coordinates (for instance, when looking at tSNE plots with the same labelings as the dendrogram here). |
+
+*** Outline with options
+
+The basic outline of the *default* pre-processing pipeline with some relevant
+options is as follows (there are many additional options including cell
+whitelists and PCA that can be seen using =too-many-cells make-tree -h=):
+
+1. Read matrix.
+2. Remove cells with less than 250 counts (=--filter-thresholds, =--no-filter=).
+3. Remove genes with less than 1 count (=--filter-thresholds, =--no-filter=).
+4. Term frequency-inverse document frequency normalization (=--normalization=).
+5. Finish.
 
 *** Example
 
