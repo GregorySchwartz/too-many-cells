@@ -98,7 +98,7 @@ data Options
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , drawLegendSep :: Maybe Double <?> "([1] | DOUBLE) The amount of space between the legend and the tree."
-               , drawLegendSubset :: Bool <?> "Whether to only show the labels present in the tree in the legend. Generates colors from all labels in the label file first in order to keep consistent colors. Subsets after --draw-colors, so when using with that argument make sure to account for all labels."
+               , drawLegendAllLabels :: Bool <?> "Whether to show all the labels in the label file instead of only showing labels within the current tree. The program generates colors from all labels in the label file first in order to keep consistent colors. By default, this value is false, meaning that only the labels present in the tree are shown (even though the colors are the same). The subset process occurs after --draw-colors, so when using that argument make sure to account for all labels."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, white]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
@@ -160,7 +160,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawNoScaleNodes"     = Just 'W'
     short "drawNodeNumber"       = Just 'N'
     short "drawLegendSep"        = Just 'Q'
-    short "drawLegendSubset"     = Just 'J'
+    short "drawLegendAllLabels"     = Just 'J'
     short "eigenGroup"           = Just 'B'
     short "filterThresholds"     = Just 'H'
     short "maxDistance"          = Just 'T'
@@ -303,8 +303,8 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . drawLegendSep
                           $ opts
-        drawLegendSubset' =
-            DrawLegendSubset . unHelpful . drawLegendSubset $ opts
+        drawLegendAllLabels' =
+            DrawLegendAllLabels . unHelpful . drawLegendAllLabels $ opts
         drawColors'       = fmap ( CustomColors
                                  . fmap sRGB24read
                                  . (\x -> read x :: [String])
@@ -423,7 +423,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawMaxNodeSize = drawMaxNodeSize'
                     , _birchDrawNoScaleNodes = drawNoScaleNodes'
                     , _birchDrawLegendSep    = drawLegendSep'
-                    , _birchDrawLegendSubset = drawLegendSubset'
+                    , _birchDrawLegendAllLabels = drawLegendAllLabels'
                     , _birchDrawColors = drawColors'
                     , _birchDend = _clusterDend originalClusterResults
                     , _birchMat = birchMat
