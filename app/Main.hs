@@ -100,6 +100,7 @@ data Options
                , drawLegendSep :: Maybe Double <?> "([1] | DOUBLE) The amount of space between the legend and the tree."
                , drawLegendAllLabels :: Bool <?> "Whether to show all the labels in the label file instead of only showing labels within the current tree. The program generates colors from all labels in the label file first in order to keep consistent colors. By default, this value is false, meaning that only the labels present in the tree are shown (even though the colors are the same). The subset process occurs after --draw-colors, so when using that argument make sure to account for all labels."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, white]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
+               , drawScaleSaturation :: Maybe Double <?> "([Nothing] | DOUBLE) Multiply the saturation value all nodes by this number in the HSV model. Useful for seeing more visibly the continuous colors by making the colors deeper against a gray scale."
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
@@ -160,7 +161,8 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawNoScaleNodes"     = Just 'W'
     short "drawNodeNumber"       = Just 'N'
     short "drawLegendSep"        = Just 'Q'
-    short "drawLegendAllLabels"     = Just 'J'
+    short "drawLegendAllLabels"  = Just 'J'
+    short "drawScaleSaturation"  = Just 'V'
     short "eigenGroup"           = Just 'B'
     short "filterThresholds"     = Just 'H'
     short "maxDistance"          = Just 'T'
@@ -312,6 +314,8 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . drawColors
                           $ opts
+        drawScaleSaturation' =
+            fmap DrawScaleSaturation . unHelpful . drawScaleSaturation $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
         clumpinessMethod' =
             maybe Clump.Majority read . unHelpful . clumpinessMethod $ opts
@@ -425,6 +429,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawLegendSep    = drawLegendSep'
                     , _birchDrawLegendAllLabels = drawLegendAllLabels'
                     , _birchDrawColors = drawColors'
+                    , _birchDrawScaleSaturation = drawScaleSaturation'
                     , _birchDend = _clusterDend originalClusterResults
                     , _birchMat = birchMat
                     , _birchSimMat = birchSimMat

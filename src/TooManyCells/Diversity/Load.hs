@@ -129,7 +129,7 @@ loadPopulation lm (PriorPath path) = do
         otherwise      -> runExceptT $ do
             let crInput = path FP.</> "cluster_results.json"
 
-            pop <- ExceptT 
+            pop <- ExceptT
                  . fmap ((=<<) priorToPopulation . A.eitherDecode)
                  . B.readFile
                  $ crInput
