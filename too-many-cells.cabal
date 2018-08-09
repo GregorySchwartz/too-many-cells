@@ -109,6 +109,7 @@ executable too-many-cells
                      , inline-r
                      , lens
                      , matrix-market-attoparsec
+                     , mtl
                      , optparse-generic
                      , palette
                      , plots
@@ -119,6 +120,7 @@ executable too-many-cells
                      , terminal-progress-bar
                      , text
                      , text-show
+                     , transformers
                      , vector
   default-language:    Haskell2010
 

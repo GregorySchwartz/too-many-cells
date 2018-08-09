@@ -16,6 +16,8 @@ module TooManyCells.Matrix.Utility
     , matToHMat
     , matToSpMat
     , spMatToMat
+    , loadMatrixMarket
+    , extractSc
     ) where
 
 -- Remote
@@ -34,10 +36,14 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.IO as TL
+import qualified Data.Text.Lazy.Read as TL
 import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
+import TooManyCells.File.Types
 import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Types
 
@@ -109,3 +115,30 @@ spMatToMat :: S.SpMatrix Double -> Matrix Double
 spMatToMat mat = RMatrix (S.dimSM mat) (S.nzSM mat) General
                . fmap (\(!x, !y, !z) -> (x + 1, y + 1, z)) . S.toListSM
                $ mat
+
+-- | Load a matrix market format.
+loadMatrixMarket :: MatrixFile -> IO (S.SpMatrix Double)
+loadMatrixMarket (MatrixFile file) = do
+    let toDouble [r, c, v] =
+            ( either error fst . TL.decimal $ r
+            , either error fst . TL.decimal $ c
+            , either error fst . TL.double $ v
+            )
+        toDouble _ = error "Matrix market contains non-standard coordinate."
+
+    (rows, cols, _):cs <- fmap
+                            ( fmap (toDouble . TL.words)
+                            . dropWhile ((== '%') . TL.head)
+                            . TL.lines
+                            )
+                        . TL.readFile
+                        $ file
+
+    return
+        . S.fromListSM (rows, cols)
+        . fmap (\(!r, !c, !v) -> (r - 1, c - 1, v))
+        $ cs 
+
+-- | Determine presence of matrix.
+extractSc :: Maybe SingleCells -> SingleCells
+extractSc = fromMaybe (error "Need to provide matrix in --matrix-path for this functionality.")

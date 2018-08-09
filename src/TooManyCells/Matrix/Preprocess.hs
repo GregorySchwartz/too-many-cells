@@ -132,33 +132,41 @@ scaleSparseMol xs = fmap (/ med) xs
         $ xs
 
 -- | Filter a matrix to remove low count cells and genes.
-filterDenseMat :: SingleCells -> SingleCells
-filterDenseMat sc =
+filterDenseMat :: FilterThresholds -> SingleCells -> SingleCells
+filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
     SingleCells { _matrix   = m
                 , _rowNames = r
                 , _colNames = c
                 , _projections = p
                 }
   where
-    m = MatObsRow . hToSparseMat $ colFilteredMat
-    rowFilter = (>= 250) . H.sumElements
-    colFilter = (> 0) . H.sumElements
+    m = MatObsRow . hToSparseMat $ filteredMat
+    rowFilter = (>= rowThresh) . H.sumElements
+    colFilter = (>= colThresh) . H.sumElements
     mat            = sparseToHMat . unMatObsRow . _matrix $ sc
-    rowFilteredMat = H.fromRows
-                   . filter rowFilter
-                   . H.toRows
-                   $ mat
-    colFilteredMat = H.fromColumns
-                   . filter colFilter
-                   . H.toColumns
-                   $ rowFilteredMat
-    r = V.ifilter (\i _ -> rowFilter . (H.!) mat $ i)
+    validRows = Set.fromList
+              . fmap fst
+              . filter (rowFilter . snd)
+              . zip [0..]
+              . H.toRows
+              $ mat
+    validCols = Set.fromList
+              . fmap fst
+              . filter (colFilter . snd)
+              . zip [0..]
+              . H.toColumns
+              $ mat
+    filteredMat = mat
+             H.?? ( H.Pos (H.idxs (Set.toAscList validRows))
+                  , H.Pos (H.idxs (Set.toAscList validCols))
+                  )
+    r = V.ifilter (\i _ -> Set.member i validRows)
       . _rowNames
       $ sc
-    c = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
+    c = V.ifilter (\i _ -> Set.member i validCols)
       . _colNames
       $ sc
-    p = V.ifilter (\i _ -> colFilter . H.flatten . (H.¿) mat $ [i])
+    p = V.ifilter (\i _ -> Set.member i validRows)
       . _projections
       $ sc
 
@@ -176,23 +184,40 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     colFilter = (>= colThresh) . sum
     mat            = unMatObsRow . _matrix $ sc
     mat'           = S.transposeSM mat
+    validRows = Set.fromList
+              . fmap fst
+              . filter (rowFilter . snd)
+              . zip [0..]
+              . S.toRowsL
+              $ mat
+    validCols = Set.fromList
+              . fmap fst
+              . filter (colFilter . snd)
+              . zip [0..]
+              . S.toRowsL
+              . S.transposeSM -- toRowsL is much faster.
+              $ mat
     rowFilteredMat = S.transposeSM
-                   . S.fromColsL
-                   . filter rowFilter
+                   . S.fromColsL -- fromRowsL still broken.
+                   . fmap snd
+                   . filter (flip Set.member validRows . fst)
+                   . zip [0..]
                    . S.toRowsL
                    $ mat
     colFilteredMat = S.fromColsL
-                   . filter colFilter
+                   . fmap snd
+                   . filter (flip Set.member validCols . fst)
+                   . zip [0..]
                    . S.toRowsL -- Rows of transpose are faster.
                    . S.transposeSM
                    $ rowFilteredMat
-    r = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
+    r = V.ifilter (\i _ -> Set.member i validRows)
       . _rowNames
       $ sc
-    c = V.ifilter (\i _ -> colFilter . S.extractRow mat' $ i) -- Rows of transpose are faster.
+    c = V.ifilter (\i _ -> Set.member i validCols)
       . _colNames
       $ sc
-    p = V.ifilter (\i _ -> rowFilter . S.extractRow mat $ i)
+    p = V.ifilter (\i _ -> Set.member i validRows)
       . _projections
       $ sc
 
@@ -215,7 +240,7 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
                    . _rowNames
                    $ sc
     rowFilteredMat = S.transposeSM
-                   . S.fromColsL
+                   . S.fromColsL -- fromRowsL still broken.
                    . fmap (S.extractRow mat)
                    . V.toList
                    $ validIdx

@@ -63,6 +63,7 @@ loadCellrangerData pf gf cf mf = do
        . readMatrix
        . unMatrixFile
        $ mf
+    -- m <- fmap (MatObsRow . HS.transposeSM) . loadMatrixMarket $ mf -- We want observations as rows
     g <- fmap (\ x -> either error (fmap (Gene . fst)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
                                        :: Either String (Vector (T.Text, T.Text))
                                         )

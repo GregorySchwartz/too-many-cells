@@ -23,6 +23,8 @@ import BirchBeer.Plot
 import BirchBeer.Types hiding (Delimiter, LabelFile)
 import BirchBeer.Utility
 import Control.Monad (when, unless, join)
+import Control.Monad.Trans (liftIO)
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
 import Data.Colour.SRGB (sRGB24read)
 import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
@@ -71,6 +73,7 @@ import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Load
 import TooManyCells.Matrix.Preprocess
 import TooManyCells.Matrix.Types
+import TooManyCells.Matrix.Utility
 import TooManyCells.Paths.Distance
 import TooManyCells.Paths.Plot
 import TooManyCells.Paths.Types
@@ -219,13 +222,9 @@ loadSSM opts matrixPath' = do
     unFilteredSc
 
 -- | Load all single cell matrices.
-loadAllSSM :: Options -> IO SingleCells
-loadAllSSM opts = do
-    let matrixPaths'       =
-            (\xs -> bool (error "\nNeed a matrix path.") xs . not . null $ xs)
-                . unHelpful
-                . matrixPath
-                $ opts
+loadAllSSM :: Options -> IO (Maybe SingleCells)
+loadAllSSM opts = runMaybeT $ do
+    let matrixPaths'       = unHelpful . matrixPath $ opts
         cellWhitelistFile' =
             fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
         normalization'     =
@@ -238,9 +237,11 @@ loadAllSSM opts = do
                            . filterThresholds
                            $ opts
 
-    cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
-
-    mats <- mapM (loadSSM opts) matrixPaths'
+    mats <- MaybeT
+          $ if null matrixPaths'
+              then return Nothing
+              else fmap Just . mapM (loadSSM opts) $ matrixPaths'
+    cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
 
     let whiteListFilter Nothing = id
         whiteListFilter (Just wl) = filterWhitelistSparseMat wl
@@ -266,7 +267,8 @@ loadAllSSM opts = do
 
 makeTreeMain :: Options -> IO ()
 makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
-    let labelsFile'       =
+    let matrixPaths'      = unHelpful . matrixPath $ opts
+        labelsFile'       =
             fmap LabelFile . unHelpful . labelsFile $ opts
         prior'            =
             fmap PriorPath . unHelpful . prior $ opts
@@ -323,7 +325,16 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             fmap ProjectionFile . unHelpful . projectionFile $ opts
         output'           =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
-        processedSc       = loadAllSSM opts
+
+    -- Increment  progress bar.
+    Progress.autoProgressBar
+        (Progress.msg "Loading matrix.")
+        Progress.percentage
+        80
+        $ Progress.Progress 0 10
+
+    -- Load matrix once.
+    processedSc <- loadAllSSM opts
 
     -- Notify user of limitations.
     limitationWarningsErrors opts
@@ -333,7 +344,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (Progress.msg "Planning leaf colors")
         Progress.percentage
         80
-        $ Progress.Progress 0 9
+        $ Progress.Progress 1 10
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
@@ -341,20 +352,20 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Get the label map from either a file or from expression thresholds.
     labelMap <- case drawLeaf' of
                     (DrawItem (DrawThresholdContinuous gs)) ->
-                        fmap
-                            ( Just
+                        return
+                            . Just
                             . getLabelMapThresholdContinuous
                                 (fmap (L.over L._1 Feature) gs)
-                            )
-                            processedSc
-                    _ -> sequence . fmap (loadLabelData delimiter') $ labelsFile'
+                            . extractSc
+                            $ processedSc
+                    _ -> mapM (loadLabelData delimiter') $ labelsFile'
 
     -- Increment  progress bar.
     Progress.autoProgressBar
         (Progress.msg "Planting tree")
         Progress.percentage
         80
-        $ Progress.Progress 1 9
+        $ Progress.Progress 2 10
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -368,8 +379,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Load previous results or calculate results if first run.
     originalClusterResults <- case prior' of
         Nothing -> do
-            (fullCr, _) <-
-                fmap (hSpecClust eigenGroup' normalization' numEigen') processedSc
+            let (fullCr, _) = hSpecClust eigenGroup' normalization' numEigen'
+                            . extractSc
+                            $ processedSc
 
             return fullCr :: IO ClusterResults
         (Just x) -> do
@@ -387,29 +399,25 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (Progress.msg "Measuring roots")
         Progress.percentage
         80
-        $ Progress.Progress 2 9
+        $ Progress.Progress 3 10
 
-    birchMat <- case unHelpful . matrixPath $ opts of
-                    [] -> return Nothing
-                    _  -> fmap Just processedSc
-
-    birchSimMat <-
-        case (not . null . unHelpful . matrixPath $ opts, drawCollection') of
-            (True, CollectionGraph{} )  ->
-                fmap
-                    ( Just
-                    . B2Matrix
-                    . L.over matrix (MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow)
-                    )
-                    processedSc
-            _ -> return Nothing
+    let birchMat = processedSc
+        birchSimMat =
+            case (not . null . unHelpful . matrixPath $ opts, drawCollection') of
+                (True, CollectionGraph{} )  ->
+                    Just
+                        . B2Matrix
+                        . L.over matrix (MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow)
+                        . extractSc
+                        $ processedSc
+                _ -> Nothing
 
     -- Increment  progress bar.
     Progress.autoProgressBar
         (Progress.msg "Sketching tree")
         Progress.percentage
         80
-        $ Progress.Progress 3 9
+        $ Progress.Progress 4 10
 
     let config :: BirchBeer.Types.Config CellInfo SingleCells
         config = BirchBeer.Types.Config
@@ -442,7 +450,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (Progress.msg "Recording tree measurements")
         Progress.percentage
         80
-        $ Progress.Progress 4 9
+        $ Progress.Progress 5 10
 
     -- Write results.
     clusterResults <- case prior' of
@@ -496,7 +504,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (Progress.msg "Counting leaves")
         Progress.percentage
         80
-        $ Progress.Progress 5 9
+        $ Progress.Progress 6 10
 
     -- Header
     B.putStrLn $ "cell,cluster,path"
@@ -518,7 +526,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (Progress.msg "Painting sketches")
         Progress.percentage
         80
-        $ Progress.Progress 6 9
+        $ Progress.Progress 7 10
 
     -- Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
@@ -551,7 +559,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             (Progress.msg "Painting tree")
             Progress.percentage
             80
-            $ Progress.Progress 7 9
+            $ Progress.Progress 8 10
 
         -- Plot.
         H.io $ do
@@ -576,7 +584,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             (Progress.msg "Squishing tree")
             Progress.percentage
             80
-            $ Progress.Progress 8 9
+            $ Progress.Progress 9 10
 
         -- Plot clustering if the projection file was supplied.
         case projectionFile' of
@@ -601,7 +609,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             (Progress.msg "Packing up")
             Progress.percentage
             80
-            $ Progress.Progress 9 9
+            $ Progress.Progress 10 10
 
         return ()
 
@@ -619,8 +627,7 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
         normalization' =
             maybe B1Norm read . unHelpful . normalization $ opts
 
-        processedSc = loadAllSSM opts
-
+    mat <- loadAllSSM opts
     labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
 
     let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
@@ -629,15 +636,13 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
 
     let dend = _clusterDend fullCr
 
-    mat <- processedSc
-
     interactiveDiagram
         dend
         labelMap
-        (Just mat)
-        . Just
-        . B2Matrix
-        . L.over matrix (MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow)
+        mat
+        . fmap ( B2Matrix
+               . L.over matrix (MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow)
+               )
         $ mat
 
     return ()
@@ -666,7 +671,7 @@ differentialMain opts = do
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         res <- getDEGraph
                 topN'
-                processedSc
+                (extractSc processedSc)
                 (fst . unDiffNodes $ nodes')
                 (snd . unDiffNodes $ nodes')
                 gr
