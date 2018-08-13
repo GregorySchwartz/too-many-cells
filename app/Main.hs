@@ -36,6 +36,7 @@ import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGr
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
+import Text.Read (readMaybe)
 import TextShow (showt)
 import qualified "find-clumpiness" Types as Clump
 import qualified Control.Lens as L
@@ -102,6 +103,7 @@ data Options
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , drawLegendSep :: Maybe Double <?> "([1] | DOUBLE) The amount of space between the legend and the tree."
                , drawLegendAllLabels :: Bool <?> "Whether to show all the labels in the label file instead of only showing labels within the current tree. The program generates colors from all labels in the label file first in order to keep consistent colors. By default, this value is false, meaning that only the labels present in the tree are shown (even though the colors are the same). The subset process occurs after --draw-colors, so when using that argument make sure to account for all labels."
+               , drawPalette :: Maybe String <?> "([Set1] | Hsv | Ryb) Palette to use for legend colors. With high saturation in --draw-scale-saturation, consider using Hsv to better differentiate colors."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, white]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , drawScaleSaturation :: Maybe Double <?> "([Nothing] | DOUBLE) Multiply the saturation value all nodes by this number in the HSV model. Useful for seeing more visibly the continuous colors by making the colors deeper against a gray scale."
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
@@ -165,6 +167,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawNodeNumber"       = Just 'N'
     short "drawLegendSep"        = Just 'Q'
     short "drawLegendAllLabels"  = Just 'J'
+    short "drawPalette"          = Just 'Y'
     short "drawScaleSaturation"  = Just 'V'
     short "eigenGroup"           = Just 'B'
     short "filterThresholds"     = Just 'H'
@@ -267,16 +270,24 @@ loadAllSSM opts = runMaybeT $ do
 
 makeTreeMain :: Options -> IO ()
 makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
-    let matrixPaths'      = unHelpful . matrixPath $ opts
+    let readOrErr err = fromMaybe (error err) . readMaybe
+        matrixPaths'      = unHelpful . matrixPath $ opts
         labelsFile'       =
             fmap LabelFile . unHelpful . labelsFile $ opts
         prior'            =
             fmap PriorPath . unHelpful . prior $ opts
         delimiter'        =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        eigenGroup'       = maybe SignGroup read . unHelpful . eigenGroup $ opts
+        eigenGroup'       =
+            maybe SignGroup (readOrErr "Cannot read eigen-group.")
+              . unHelpful
+              . eigenGroup
+              $ opts
         normalization' =
-            maybe B1Norm read . unHelpful . normalization $ opts
+            maybe B1Norm (readOrErr "Cannot read normalization.")
+              . unHelpful
+              . normalization
+              $ opts
         numEigen'         = fmap NumEigen . unHelpful . numEigen $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
@@ -290,13 +301,21 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . dendrogramOutput
                           $ opts
         drawLeaf'         =
-            maybe (maybe DrawText (const (DrawItem DrawLabel)) labelsFile') read
+            maybe
+              (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
+              (readOrErr "Cannot read draw-leaf.")
                 . unHelpful
                 . drawLeaf
                 $ opts
         drawCollection'   =
-            maybe PieChart read . unHelpful . drawCollection $ opts
-        drawMark'         = maybe MarkNone read . unHelpful . drawMark $ opts
+            maybe PieChart (readOrErr "Cannot read draw-collection.")
+              . unHelpful
+              . drawCollection
+              $ opts
+        drawMark'         = maybe MarkNone (readOrErr "Cannot read draw-mark.")
+                          . unHelpful
+                          . drawMark
+                          $ opts
         drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
         drawMaxNodeSize'  =
             DrawMaxNodeSize . fromMaybe 72 . unHelpful . drawMaxNodeSize $ opts
@@ -309,9 +328,15 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           $ opts
         drawLegendAllLabels' =
             DrawLegendAllLabels . unHelpful . drawLegendAllLabels $ opts
+        drawPalette' = maybe
+                        Set1
+                        (fromMaybe (error "Cannot read palette.") . readMaybe)
+                     . unHelpful
+                     . drawPalette
+                     $ opts
         drawColors'       = fmap ( CustomColors
                                  . fmap sRGB24read
-                                 . (\x -> read x :: [String])
+                                 . (\x -> readOrErr "Cannot read draw-colors." x :: [String])
                                  )
                           . unHelpful
                           . drawColors
@@ -320,7 +345,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             fmap DrawScaleSaturation . unHelpful . drawScaleSaturation $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
         clumpinessMethod' =
-            maybe Clump.Majority read . unHelpful . clumpinessMethod $ opts
+            maybe Clump.Majority (readOrErr "Cannot read clumpiness-method.")
+              . unHelpful
+              . clumpinessMethod
+              $ opts
         projectionFile' =
             fmap ProjectionFile . unHelpful . projectionFile $ opts
         output'           =
@@ -436,6 +464,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawNoScaleNodes = drawNoScaleNodes'
                     , _birchDrawLegendSep    = drawLegendSep'
                     , _birchDrawLegendAllLabels = drawLegendAllLabels'
+                    , _birchDrawPalette = drawPalette'
                     , _birchDrawColors = drawColors'
                     , _birchDrawScaleSaturation = drawScaleSaturation'
                     , _birchDend = _clusterDend originalClusterResults
