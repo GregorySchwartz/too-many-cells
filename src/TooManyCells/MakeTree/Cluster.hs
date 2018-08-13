@@ -161,7 +161,7 @@ hSpecClust eigenGroup norm numEigen sc =
                     (_rowNames sc)
                     (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
                     (_projections sc)
-    hSpecCommand B1Norm   =
+    hSpecCommand TfIdfNorm   =
         hierarchicalSpectralCluster
           eigenGroup
           True

@@ -91,7 +91,7 @@ data CellInfo = CellInfo
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 L.makeLenses ''CellInfo
 
-data NormType = B1Norm | UQNorm | MaxMedNorm | BothNorm | NoneNorm deriving (Read, Show)
+data NormType = TfIdfNorm | UQNorm | MaxMedNorm | BothNorm | NoneNorm deriving (Read, Show)
 
 instance (Generic a) => Generic (Vector a)
 

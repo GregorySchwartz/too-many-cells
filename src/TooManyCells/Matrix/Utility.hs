@@ -18,17 +18,20 @@ module TooManyCells.Matrix.Utility
     , spMatToMat
     , loadMatrixMarket
     , extractSc
+    , writeMatrixLike
     ) where
 
 -- Remote
+import BirchBeer.Types
 import Control.Monad.State (MonadState (..), State (..), evalState, execState, modify)
 import Data.Function (on)
 import Data.List (maximumBy)
 import Data.Maybe (fromMaybe)
-import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..))
+import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix)
 import Data.Scientific (toRealFloat, Scientific)
 import Language.R as R
 import Language.R.QQ (r)
+import System.FilePath ((</>))
 import qualified Control.Lens as L
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
@@ -36,6 +39,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Read as TL
@@ -142,3 +146,20 @@ loadMatrixMarket (MatrixFile file) = do
 -- | Determine presence of matrix.
 extractSc :: Maybe SingleCells -> SingleCells
 extractSc = fromMaybe (error "Need to provide matrix in --matrix-path for this functionality.")
+
+-- | Write a matrix to a file.
+writeMatrixLike :: MatrixLike (a) => MatrixFile -> a -> IO ()
+writeMatrixLike (MatrixFile folder) mat = do
+  writeMatrix (folder </> "matrix.mtx") . spMatToMat . getMatrix $ mat
+  T.writeFile (folder </> "genes.tsv")
+    . T.unlines
+    .  V.toList
+    . getColNames
+    $ mat
+  T.writeFile (folder </> "barcodes.tsv")
+    . T.unlines
+    . V.toList
+    . getRowNames
+    $ mat
+
+  return ()
