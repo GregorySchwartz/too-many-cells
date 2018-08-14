@@ -45,6 +45,7 @@ import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Read as TL
 import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
+import qualified System.Directory as FP
 
 -- Local
 import TooManyCells.File.Types
@@ -141,7 +142,7 @@ loadMatrixMarket (MatrixFile file) = do
     return
         . S.fromListSM (rows, cols)
         . fmap (\(!r, !c, !v) -> (r - 1, c - 1, v))
-        $ cs 
+        $ cs
 
 -- | Determine presence of matrix.
 extractSc :: Maybe SingleCells -> SingleCells
@@ -150,6 +151,9 @@ extractSc = fromMaybe (error "Need to provide matrix in --matrix-path for this f
 -- | Write a matrix to a file.
 writeMatrixLike :: MatrixLike (a) => MatrixFile -> a -> IO ()
 writeMatrixLike (MatrixFile folder) mat = do
+  -- Where to place output files.
+  FP.createDirectoryIfMissing True folder
+
   writeMatrix (folder </> "matrix.mtx") . spMatToMat . getMatrix $ mat
   T.writeFile (folder </> "genes.tsv")
     . T.unlines

@@ -301,7 +301,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . dendrogramOutput
                           $ opts
-        matrixOutput'     = fmap MatrixFile
+        matrixOutput'     = fmap (MatrixFile . (unOutputDirectory output' FP.</>))
                           . unHelpful
                           . matrixOutput
                           $ opts
