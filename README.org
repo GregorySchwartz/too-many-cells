@@ -211,6 +211,7 @@ too-many-cells make-tree \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
+    --draw-collection "PieRing" \
     --output out_pruned
 #+END_SRC
 
@@ -321,12 +322,13 @@ too-many-cells make-tree \
     --output out_gene_expression
 #+END_SRC
 
-[[file:img/cd4_pruned_tree.png]]
+[[file:img/cd4_dendrogram.png]]
 
 While this representation shows the expression of /Cd4/ in each cell and blends
 those levels together, due to the sparsity of single cell data these cells and
 their respective subtrees may be hard to see without additional processing.
-Let's make the branches thicker to see the colors a bit better.
+Let's scale the saturation to more clearly see sections of the tree with our
+desired expression.
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
@@ -341,15 +343,17 @@ too-many-cells make-tree \
     --output out_gene_expression
 #+END_SRC
 
-[[file:img/cd4_large_pruned_tree.png]]
+[[file:img/cd4_saturated_10_dendrogram.png]]
 
-While this tree makes the expression a bit more visible, there is another tactic
-we can use. Instead of the continuous color spectrum of expression values, we
-can have a binary "high" and "low" expression. Here, we'll continue to have the
-red and white colors represent high and low expressions respectively using the
-=--draw-colors= argument. Note that this binary expression technique can be used
-for multiple features, hence it's a list of features with cutoffs (so you can be
-high in a gene and low in another gene, etc. for all possible combinations).
+There, much better! Now it's clearly enriched in the subtree containing the
+thymus, where we would expect many T cells to be. While this tree makes the
+expression a bit more visible, there is another tactic we can use. Instead of
+the continuous color spectrum of expression values, we can have a binary "high"
+and "low" expression. Here, we'll continue to have the red and white colors
+represent high and low expressions respectively using the =--draw-colors=
+argument. Note that this binary expression technique can be used for multiple
+features, hence it's a list of features with cutoffs so you can be high in a
+gene and low in another gene, etc. for all possible combinations.
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
@@ -358,18 +362,15 @@ too-many-cells make-tree \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
-    --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", 0)])" \
-    --draw-colors "[\"#e41a1c\", \"#ffffff\"]" \
+    --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", 0), (\"Cd8a\", 0)])" \
+    --draw-colors "[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]"
+    --draw-scale-saturation 10
     --output out_gene_expression
 #+END_SRC
 
-[[file:img/pruned_tree_cd4_binary.png]]
+[[file:img/cd4_cd8_sat_10_dendrogram.png]]
 
-There, much better! Now it's clearly enriched in the subtree containing the
-thymus, where we would expect many T cells to be. If it's still difficult to see
-expression, consider using a program like =inkscape= to change the color channel
-to a binary, such that instead of displaying blends we can show just the color.
-This process has the drawback of losing the fraction of expressing cells, however.
+Now we can see the expression of both Cd4 and Cd8a at the same time!
 
 **** Diversity
 
