@@ -370,7 +370,7 @@ too-many-cells make-tree \
 
 [[file:img/cd4_cd8_sat_10_dendrogram.png]]
 
-Now we can see the expression of both Cd4 and Cd8a at the same time!
+Now we can see the expression of both /Cd4/ and /Cd8a/ at the same time!
 
 **** Diversity
 
