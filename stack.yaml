@@ -50,7 +50,7 @@ extra-deps:
   - /home/gw/code/utility/modularity/
   - /home/gw/code/utility/spectral-clustering/
   - SVGFonts-1.6.0.3
-  - aeson-1.1.2.0
+  - aeson-1.4.0.0
   - attoparsec-0.13.1.0
   - cubicbezier-0.6.0.5
   - diagrams-1.4

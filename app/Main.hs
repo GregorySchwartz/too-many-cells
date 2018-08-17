@@ -85,8 +85,8 @@ data Options
                , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, there will be no projection plot. Requires generation of a new tree."
                , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
-               , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-               , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and None for differential (edgeR). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
+               , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
+               , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and NoneNorm for differential (which instead uses the recommended edgeR single cell preprocessing including normalization and filtering, any normalization provided here will result in edgeR preprocessing on top). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
                , eigenGroup :: Maybe String <?> "([SignGroup] | KMeansGroup) Whether to group the eigenvector using the sign or kmeans while clustering. While the default is sign, kmeans may be more accurate (but starting points are arbitrary)."
                , numEigen :: Maybe Int <?> "([1] | INT) Number of eigenvectors to use while clustering with kmeans. Takes from the second to last eigenvector. Recommended to start at 1 and work up from there if needed. May help offset the possible instability and inaccuracy of SVDLIBC."
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
@@ -96,7 +96,7 @@ data Options
                , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, and --min-distance based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
                , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
                , matrixOutput :: Maybe String <?> "([Nothing] | FOLDER) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder."
-               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous FEATURE), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)], where each item is colored by the binary high / low expression of FEATURE based on DOUBLE and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default."
+               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous FEATURE), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)], where each item is colored by the binary high / low expression of FEATURE based on DOUBLE and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default. If the label or feature cannot be found, the default color will be black (check your spelling!)."
                , drawCollection :: Maybe String <?> "([PieChart] | PieRing | PieNone | CollectionGraph MAXWEIGHT THRESHOLD [NODE]) How to draw item leaves in the dendrogram. PieRing draws a pie chart ring around the items. PieChart only draws a pie chart instead of items. PieNone only draws items, no pie rings or charts. (CollectionGraph MAXWEIGHT THRESHOLD [NODE]) draws the nodes and edges within leaves that are descendents of NODE (empty list [] indicates draw all leaf networks) based on the input matrix, normalizes edges based on the MAXWEIGHT, and removes edges for display less than THRESHOLD (after normalization, so for CollectionGraph 2 0.5 [26], draw the leaf graphs for all leaves under node 26, then a edge of 0.7 would be removed because (0.7 / 2) < 0.5)."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
@@ -118,8 +118,8 @@ data Options
                   , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, there will be no projection plot. Requires generation of a new tree."
                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                   , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
-                  , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-                  , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and None for differential (edgeR). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
+                  , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
+                  , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and NoneNorm for differential (which instead uses the recommended edgeR single cell preprocessing including normalization and filtering, any normalization provided here will result in edgeR preprocessing on top). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
                   , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                   , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                   , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
@@ -127,16 +127,20 @@ data Options
     | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                    , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, there will be no projection plot. Requires generation of a new tree."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
+                   , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                    , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                    , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                    , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
-                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
-                   , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and None for differential (edgeR). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
+                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
+                   , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and NoneNorm for differential (which instead uses the recommended edgeR single cell preprocessing including normalization and filtering, any normalization provided here will result in edgeR preprocessing on top). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                    , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes."
-                   , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."}
+                   , labels :: Maybe String <?> "([Nothing] | ([LABEL], [LABEL])) Use --labels-file to restrict the differential analysis to cells with these labels. Same format as --nodes, so the first list in --nodes and --labels gets the cells within that list of nodes with this list of labels. The same for the second list. For instance, --nodes \"([1], [2])\" --labels \"([\\\"A\\\"], [\\\"B\\\"]) will compare cells from node 1 of label \"A\" only with cells from node 2 of label \"B\" only. Requires both --labels and --labels-file, otherwise will include all labels."
+                   , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."
+                   , genes :: [T.Text] <?> "([Nothing] | GENE) List of genes to plot for all cells within selected nodes. Invoked by --genes CD4 --genes CD8 etc. When this argument is supplied, only the plot is outputted and edgeR differential expression is ignored. Outputs to --output."
+                   , plotOutput :: Maybe String <?> "([out.pdf] | STRING) The file containing the output plot."}
     | Diversity { priors :: [String] <?> "(PATH) Either input folders containing the output from a run of too-many-cells or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case. If --labels-file is specified, those labels designate entity type, otherwise the assigned cluster is the entity type."
-                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
                 , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                 , start :: Maybe Integer <?> "([0] | INT) For the rarefaction curve, start the curve at this subsampling."
                 , interval :: Maybe Integer <?> "([1] | INT) For the rarefaction curve, the amount to increase each subsampling. For instance, starting at 0 with an interval of 4, we would sampling 0, 4, 8, 12, ..."
@@ -148,7 +152,7 @@ data Options
             , flipDirection :: Bool <?> "Flip the starting node when calculating the distances."
             , pathDistance :: Maybe String <?> "([PathModularity] | PathStep) How to measure the distance from the starting leaf. PathModularity weighs the steps by the modularity, while PathStep counts the number of steps."
             , bandwidth :: Maybe Double <?> "([1] | DOUBLE) Bandwidth of the density plot."
-            , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output."
+            , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
             , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
     deriving (Generic)
 
@@ -172,6 +176,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawScaleSaturation"  = Just 'V'
     short "eigenGroup"           = Just 'B'
     short "filterThresholds"     = Just 'H'
+    short "labels"               = Nothing
     short "maxDistance"          = Just 'T'
     short "maxProportion"        = Just 'X'
     short "maxStep"              = Just 'S'
@@ -181,6 +186,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "numEigen"             = Just 'G'
     short "order"                = Just 'O'
     short "pca"                  = Just 'a'
+    short "plotOutput"           = Nothing
     short "priors"               = Just 'P'
     short "projectionFile"       = Just 'j'
     short x                      = firstLetter x
@@ -687,15 +693,33 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
 -- | Differential path.
 differentialMain :: Options -> IO ()
 differentialMain opts = do
-    let nodes'    = DiffNodes . read . unHelpful . nodes $ opts
+    let readOrErr err = fromMaybe (error err) . readMaybe
+        delimiter'     =
+            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        labelsFile' =
+            fmap LabelFile . unHelpful . labelsFile $ opts
+        nodes'    =
+          DiffNodes . readOrErr "Cannot read --nodes." . unHelpful . nodes $ opts
         prior'    = PriorPath
                   . fromMaybe (error "\nRequires a previous run to get the graph.")
                   . unHelpful
                   . prior
                   $ opts
         topN'     = TopN . fromMaybe 100 . unHelpful . topN $ opts
+        genes'    = fmap Gene . unHelpful . genes $ opts
+        labels'   = fmap ( DiffLabels
+                         . L.over L.both (fmap Label)
+                         . readOrErr "Cannot read --labels."
+                         )
+                  . unHelpful
+                  . labels
+                  $ opts
+        (combined1, combined2) = combineNodesLabels nodes' labels'
+        plotOutputR = fromMaybe "out.pdf" . unHelpful . plotOutput $ opts
 
     processedSc <- loadAllSSM opts
+
+    labelMap <- mapM (loadLabelData delimiter') $ labelsFile'
 
     let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
         cr :: IO ClusterResults
@@ -706,14 +730,27 @@ differentialMain opts = do
     gr <- fmap (dendrogramToGraph . _clusterDend) cr
 
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
-        res <- getDEGraph
-                topN'
-                (extractSc processedSc)
-                (fst . unDiffNodes $ nodes')
-                (snd . unDiffNodes $ nodes')
-                gr
+      case genes' of
+        [] -> do
+          res <- getDEGraph
+                  topN'
+                  labelMap
+                  (extractSc processedSc)
+                  combined1
+                  combined2
+                  gr
 
-        H.io . putStrLn . getDEString $ res
+          H.io . putStrLn . getDEString $ res
+        _ -> do
+          diffPlot <- getSingleDiff
+                       labelMap
+                       (extractSc processedSc)
+                       combined1
+                       combined2
+                       genes'
+                       gr
+          [r| suppressMessages(ggsave(diffPlot_hs, file = plotOutputR_hs)) |]
+          return ()
 
 -- | Diversity path.
 diversityMain :: Options -> IO ()

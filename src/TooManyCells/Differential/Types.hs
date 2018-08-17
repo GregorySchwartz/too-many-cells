@@ -9,6 +9,7 @@ Collects the differental types used in the program.
 module TooManyCells.Differential.Types where
 
 -- Remote
+import BirchBeer.Types
 import qualified Data.Graph.Inductive as G
 
 -- Local
@@ -16,3 +17,4 @@ import qualified Data.Graph.Inductive as G
 -- Basic
 newtype TopN = TopN { unTopN :: Int }
 newtype DiffNodes = DiffNodes {unDiffNodes :: ([G.Node], [G.Node])}
+newtype DiffLabels = DiffLabels {unDiffLabels :: ([Label], [Label])}
