@@ -11,10 +11,12 @@ module TooManyCells.Differential.Types where
 -- Remote
 import BirchBeer.Types
 import qualified Data.Graph.Inductive as G
+import qualified Data.Set as Set
 
 -- Local
 
 -- Basic
 newtype TopN = TopN { unTopN :: Int }
 newtype DiffNodes = DiffNodes {unDiffNodes :: ([G.Node], [G.Node])}
-newtype DiffLabels = DiffLabels {unDiffLabels :: ([Label], [Label])}
+newtype DiffLabels =
+  DiffLabels { unDiffLabels :: (Maybe (Set.Set Label), Maybe (Set.Set Label)) }

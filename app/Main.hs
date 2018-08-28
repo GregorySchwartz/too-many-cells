@@ -46,6 +46,7 @@ import qualified Data.Colour.Palette.BrewerSet as D
 import qualified Data.Colour.Palette.Harmony as D
 import qualified Data.Csv as CSV
 import qualified Data.GraphViz as G
+import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.IO as T
 import qualified Data.Vector as V
@@ -134,7 +135,7 @@ data Options
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
                    , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and NoneNorm for differential (which instead uses the recommended edgeR single cell preprocessing including normalization and filtering, any normalization provided here will result in edgeR preprocessing on top). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
-                   , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes."
+                   , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes. \"([], [])\" switches the process to instead find the log2 average division between all nodes with all other nodes (node / other nodes) using the Mann-Whitney U Test (--genes does not work for this and UQNorm for the normalization is recommended)."
                    , labels :: Maybe String <?> "([Nothing] | ([LABEL], [LABEL])) Use --labels-file to restrict the differential analysis to cells with these labels. Same format as --nodes, so the first list in --nodes and --labels gets the cells within that list of nodes with this list of labels. The same for the second list. For instance, --nodes \"([1], [2])\" --labels \"([\\\"A\\\"], [\\\"B\\\"]) will compare cells from node 1 of label \"A\" only with cells from node 2 of label \"B\" only. Requires both --labels and --labels-file, otherwise will include all labels."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."
                    , genes :: [T.Text] <?> "([Nothing] | GENE) List of genes to plot for all cells within selected nodes. Invoked by --genes CD4 --genes CD8 etc. When this argument is supplied, only the plot is outputted and edgeR differential expression is ignored. Outputs to --output."
@@ -199,6 +200,33 @@ instance ParseRecord Options where
 limitationWarningsErrors :: Options -> IO ()
 limitationWarningsErrors opts = do
     return ()
+    
+-- | Read or return an error.
+readOrErr err = fromMaybe (error err) . readMaybe
+
+-- | Normalization defaults.
+getNormalization :: Options -> NormType
+getNormalization opts@(MakeTree{}) =
+  maybe
+    TfIdfNorm
+    (readOrErr "Cannot read --normalization.")
+    . unHelpful
+    . normalization
+    $ opts
+getNormalization opts@(Interactive{}) =
+  maybe
+    TfIdfNorm
+    (readOrErr "Cannot read --normalization.")
+    . unHelpful
+    . normalization
+    $ opts
+getNormalization opts@(Differential{}) =
+  maybe
+    NoneNorm
+    (readOrErr "Cannot read --normalization.")
+    . unHelpful
+    . normalization
+    $ opts
 
 -- | Load the single cell matrix.
 loadSSM :: Options -> FilePath -> IO SingleCells
@@ -237,8 +265,7 @@ loadAllSSM opts = runMaybeT $ do
     let matrixPaths'       = unHelpful . matrixPath $ opts
         cellWhitelistFile' =
             fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
-        normalization'     =
-            maybe TfIdfNorm read . unHelpful . normalization $ opts
+        normalization'     = getNormalization opts
         pca'               = fmap PCAVar . unHelpful . pca $ opts
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
         filterThresholds'  = FilterThresholds
@@ -263,7 +290,7 @@ loadAllSSM opts = runMaybeT $ do
             )
                 . whiteListFilter cellWhitelist
                 $ unFilteredSc
-        normMat TfIdfNorm       = id -- Normalize during clustering.
+        normMat TfIdfNorm    = id -- Normalize during clustering.
         normMat UQNorm       = uqScaleSparseMat
         normMat MaxMedNorm   = scaleSparseMat
         normMat BothNorm     = scaleSparseMat
@@ -290,11 +317,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
               . unHelpful
               . eigenGroup
               $ opts
-        normalization' =
-            maybe TfIdfNorm (readOrErr "Cannot read normalization.")
-              . unHelpful
-              . normalization
-              $ opts
+        normalization'    = getNormalization opts
         numEigen'         = fmap NumEigen . unHelpful . numEigen $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
@@ -667,8 +690,7 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
                        $ opts
         delimiter'     =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        normalization' =
-            maybe TfIdfNorm read . unHelpful . normalization $ opts
+        normalization'    = getNormalization opts
 
     mat <- loadAllSSM opts
     labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
@@ -708,7 +730,7 @@ differentialMain opts = do
         topN'     = TopN . fromMaybe 100 . unHelpful . topN $ opts
         genes'    = fmap Gene . unHelpful . genes $ opts
         labels'   = fmap ( DiffLabels
-                         . L.over L.both (fmap Label)
+                         . L.over L.both (Just . Set.fromList . fmap Label)
                          . readOrErr "Cannot read --labels."
                          )
                   . unHelpful
@@ -732,15 +754,28 @@ differentialMain opts = do
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
       case genes' of
         [] -> do
-          res <- getDEGraph
-                  topN'
-                  labelMap
-                  (extractSc processedSc)
-                  combined1
-                  combined2
-                  gr
+          case nodes' of
+            (DiffNodes ([], [])) -> do
+              let res = getAllDEGraphKruskalWallis
+                          topN'
+                          labelMap
+                          (maybe (DiffLabels (Nothing, Nothing)) id labels')
+                          (extractSc processedSc)
+                      $ gr
 
-          H.io . putStrLn . getDEString $ res
+              H.io . B.putStrLn . getAllDEStringKruskalWallis $ res
+            (DiffNodes ([], _)) -> error "Need other nodes to compare with. If every node should be compared to all other nodes using Mann-Whitney U, use \"([], [])\"."
+            (DiffNodes (_, [])) -> error "Need other nodes to compare with. If every node should be compared to all other nodes using Mann-Whitney U, use \"([], [])\"."
+            _ -> do
+              res <- getDEGraph
+                      topN'
+                      labelMap
+                      (extractSc processedSc)
+                      combined1
+                      combined2
+                      gr
+
+              H.io . B.putStrLn . getDEString $ res
         _ -> do
           diffPlot <- getSingleDiff
                        labelMap

@@ -15,18 +15,22 @@ module TooManyCells.Differential.Differential
     , getDEString
     , getSingleDiff
     , combineNodesLabels
+    , getAllDEGraphKruskalWallis
+    , getAllDEStringKruskalWallis
     ) where
 
 -- Remote
 import BirchBeer.Types
-import BirchBeer.Utility (getGraphLeaves)
+import BirchBeer.Utility (getGraphLeaves, getGraphLeafItems)
 import Control.Monad (join, mfilter)
-import Data.List (sort)
+import Data.Function (on)
+import Data.List (sort, sortBy)
 import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Language.R as R
 import Language.R.QQ (r)
 import TextShow (showt)
+import Control.Parallel.Strategies (parMap, withStrategy, parBuffer, rdeepseq)
 import qualified "differential" Differential as Diff
 import qualified "differential" Plot as Diff
 import qualified "differential" Types as Diff
@@ -74,23 +78,32 @@ getStatuses lm (v1, l1) (v2, l2) (ClusterGraph gr) =
   where
     collapseStatus s vs ls =
         fmap (\ !x -> (unRow . _cellRow $ x, _barcode x, (s, Diff.Status . showt $ vs)))
-            . mfilter (validCell lm ls)
+            . mfilter (validCellInfo lm ls)
             . join
             . mconcat
             . fmap (fmap (fromMaybe mempty . snd) . getGraphLeaves gr)
             $ vs
 
 -- | Filter barcodes by labels.
-validCell :: Maybe LabelMap -> Maybe (Set.Set Label) -> CellInfo -> Bool
-validCell Nothing _ _ = True
-validCell _ Nothing _ = True
-validCell (Just (LabelMap lm)) (Just ls) cell =
+validCellInfo :: Maybe LabelMap -> Maybe (Set.Set Label) -> CellInfo -> Bool
+validCellInfo Nothing _ = const True
+validCellInfo _ Nothing = const True
+validCellInfo (Just (LabelMap lm)) (Just ls) =
   maybe False (flip Set.member ls)
     . flip Map.lookup lm
     . Id
     . unCell
     . L.view barcode
-    $ cell
+
+-- | Filter barcodes by labels.
+validCell :: Maybe LabelMap -> Maybe (Set.Set Label) -> Cell -> Bool
+validCell Nothing _ = const True
+validCell _ Nothing = const True
+validCell (Just (LabelMap lm)) (Just ls) =
+  maybe False (flip Set.member ls)
+    . flip Map.lookup lm
+    . Id
+    . unCell
 
 -- | Get the differential expression of two sets of cells, filtered by labels.
 getDEGraph :: TopN
@@ -106,17 +119,87 @@ getDEGraph (TopN topN) lm sc v1 v2 gr = do
 
     Diff.edgeR topN mat
 
+-- | Get the differential expression of each cluster to each other cluster using
+-- KruskalWallis.
+getAllDEGraphKruskalWallis :: TopN
+                    -> Maybe LabelMap
+                    -> DiffLabels
+                    -> SingleCells
+                    -> ClusterGraph CellInfo
+                    -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue)]
+                    -- -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
+getAllDEGraphKruskalWallis topN lm ls sc gr = 
+  mconcat
+    -- . withStrategy (parBuffer 1 rdeepseq)
+    . parMap rdeepseq (\n -> compareClusterToOthersKruskalWallis n topN lm ls sc mat gr)
+    $ nodes
+  where
+    nodes = filter (/= 0) . G.nodes . unClusterGraph $ gr -- Don't want to look at root.
+    mat = S.transpose . unMatObsRow . L.view matrix $ sc
+
+
+-- | Get the differential expression of a cluster (n) to all other clusters (ns)
+-- using KruskalWallis such that n / ns.
+compareClusterToOthersKruskalWallis
+  :: G.Node
+  -> TopN
+  -> Maybe LabelMap
+  -> DiffLabels
+  -> SingleCells
+  -> S.SpMatrix Double
+  -> ClusterGraph CellInfo
+  -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue)]
+  -- -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
+compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr =
+    take topN . sortBy (compare `on` (L.view L._4)) $ res
+  where
+    nCells' = F.toList $ getGraphLeafItems gr n
+    nCellsSet = Set.fromList . fmap (L.view barcode) $ nCells'
+    nCells = fmap (unRow . L.view cellRow)
+           . filter (validCellInfo lm ls1)
+           $ nCells' -- All cells from node and labels
+    nsCells =
+      fmap fst
+        . filter (\ (_, !x) -> validCell lm ls2 x && not (Set.member x nCellsSet)) -- All cells outside of node and from labels
+        . zip [0..]
+        . V.toList
+        . L.view rowNames
+        $ sc
+    res = ( zipWith
+              -- (\name (!x, !y, !z) -> (n, name, x, y, z))
+              (\name (!x, !y) -> (n, name, x, y))
+              (V.toList . L.view colNames $ sc)
+          )
+        $ Diff.differentialMatrixFeatRow nsCells nCells mat -- Here the matrix rows are features
+
 -- | Get the differential expression of two sets of cells.
 getDEString :: [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
-            -> String
+            -> B.ByteString
 getDEString xs = header <> "\n" <> body
   where
     header = "gene,logFC,pVal,FDR"
-    body   = B.unpack
-           . CSV.encode
+    body   = CSV.encode
            . fmap ( L.over L._1 Diff.unName
                   . L.over L._3 Diff.unPValue
                   . L.over L._4 Diff.unFDR
+                  )
+           $ xs
+
+-- | Get the differential expression of each node to all other nodes using
+-- KruskalWallis.
+getAllDEStringKruskalWallis
+  :: [(G.Node, Gene, Diff.Log2Diff, Diff.PValue)] -> B.ByteString
+  -- :: [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)] -> B.ByteString
+getAllDEStringKruskalWallis xs = header <> "\n" <> body
+  where
+    -- header = "node,gene,log2FC,pVal,FDR"
+    header = "node,gene,log2FC,pVal"
+    body   = CSV.encode
+           -- . fmap ( L.over L._5 Diff.unFDR
+                  -- . L.over L._4 Diff.unPValue
+           . fmap ( L.over L._4 Diff.unPValue
+                  . L.over L._3 Diff.unLog2Diff
+                  . L.over L._2 unGene
                   )
            $ xs
 
@@ -155,9 +238,10 @@ getSingleDiff lm sc v1 v2 genes gr = do
   Diff.plotSingleDiff entities
 
 -- | Combine nodes and labels.
-combineNodesLabels :: DiffNodes
-                   -> Maybe DiffLabels
-                   -> (([G.Node], Maybe (Set.Set Label)), ([G.Node], Maybe (Set.Set Label)))
+combineNodesLabels
+    :: DiffNodes
+    -> Maybe DiffLabels
+    -> (([G.Node], Maybe (Set.Set Label)), ([G.Node], Maybe (Set.Set Label)))
 combineNodesLabels (DiffNodes (v1, v2)) Nothing = ((v1, Nothing), (v2, Nothing))
 combineNodesLabels (DiffNodes (v1, v2)) (Just (DiffLabels (l1, l2))) =
-  ((v1, Just . Set.fromList $ l1), (v2, Just . Set.fromList $ l2))
+  ((v1, l1), (v2, l2))

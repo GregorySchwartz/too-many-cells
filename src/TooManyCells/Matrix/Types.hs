@@ -14,6 +14,7 @@ Collects the types used in the program concerning the matrix.
 module TooManyCells.Matrix.Types where
 
 -- Remote
+import Control.DeepSeq (NFData (..))
 import Data.Monoid (Monoid (..), mempty)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
@@ -43,7 +44,8 @@ newtype Cell = Cell
     { unCell :: Text
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON, A.FromJSON)
 newtype Cols            = Cols { unCols :: [Double] }
-newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show)
+newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show, Generic)
+instance NFData Gene
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: Set.Set Cell
     } deriving (Eq,Ord,Read,Show)
