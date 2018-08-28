@@ -126,8 +126,7 @@ getAllDEGraphKruskalWallis :: TopN
                     -> DiffLabels
                     -> SingleCells
                     -> ClusterGraph CellInfo
-                    -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue)]
-                    -- -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
+                    -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
 getAllDEGraphKruskalWallis topN lm ls sc gr = 
   mconcat
     -- . withStrategy (parBuffer 1 rdeepseq)
@@ -148,8 +147,7 @@ compareClusterToOthersKruskalWallis
   -> SingleCells
   -> S.SpMatrix Double
   -> ClusterGraph CellInfo
-  -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue)]
-  -- -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
+  -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
 compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr =
     take topN . sortBy (compare `on` (L.view L._4)) $ res
   where
@@ -166,8 +164,7 @@ compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc 
         . L.view rowNames
         $ sc
     res = ( zipWith
-              -- (\name (!x, !y, !z) -> (n, name, x, y, z))
-              (\name (!x, !y) -> (n, name, x, y))
+              (\name (!x, !y, !z) -> (n, name, x, y, z))
               (V.toList . L.view colNames $ sc)
           )
         $ Diff.differentialMatrixFeatRow nsCells nCells mat -- Here the matrix rows are features
@@ -188,16 +185,13 @@ getDEString xs = header <> "\n" <> body
 -- | Get the differential expression of each node to all other nodes using
 -- KruskalWallis.
 getAllDEStringKruskalWallis
-  :: [(G.Node, Gene, Diff.Log2Diff, Diff.PValue)] -> B.ByteString
-  -- :: [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)] -> B.ByteString
+  :: [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)] -> B.ByteString
 getAllDEStringKruskalWallis xs = header <> "\n" <> body
   where
-    -- header = "node,gene,log2FC,pVal,FDR"
-    header = "node,gene,log2FC,pVal"
+    header = "node,gene,log2FC,pVal,FDR"
     body   = CSV.encode
-           -- . fmap ( L.over L._5 Diff.unFDR
-                  -- . L.over L._4 Diff.unPValue
-           . fmap ( L.over L._4 Diff.unPValue
+           . fmap ( L.over L._5 Diff.unFDR
+                  . L.over L._4 Diff.unPValue
                   . L.over L._3 Diff.unLog2Diff
                   . L.over L._2 unGene
                   )
