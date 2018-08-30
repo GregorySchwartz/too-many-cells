@@ -135,7 +135,7 @@ data Options
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
                    , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MaxMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalized each observation by the upper quartile non-zero counts of that observation. MaxMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first MaxMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and NoneNorm for differential (which instead uses the recommended edgeR single cell preprocessing including normalization and filtering, any normalization provided here will result in edgeR preprocessing on top). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
-                   , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes. \"([], [])\" switches the process to instead find the log2 average division between all nodes with all other nodes (node / other nodes) using the Mann-Whitney U Test (--genes does not work for this and UQNorm for the normalization is recommended)."
+                   , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes. \"([], [])\" switches the process to instead find the log2 average division between all nodes with all other nodes (node / other nodes) using the Kruskal-Wallis Test (--genes does not work for this and UQNorm for the normalization is recommended)."
                    , labels :: Maybe String <?> "([Nothing] | ([LABEL], [LABEL])) Use --labels-file to restrict the differential analysis to cells with these labels. Same format as --nodes, so the first list in --nodes and --labels gets the cells within that list of nodes with this list of labels. The same for the second list. For instance, --nodes \"([1], [2])\" --labels \"([\\\"A\\\"], [\\\"B\\\"]) will compare cells from node 1 of label \"A\" only with cells from node 2 of label \"B\" only. Requires both --labels and --labels-file, otherwise will include all labels."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."
                    , genes :: [T.Text] <?> "([Nothing] | GENE) List of genes to plot for all cells within selected nodes. Invoked by --genes CD4 --genes CD8 etc. When this argument is supplied, only the plot is outputted and edgeR differential expression is ignored. Outputs to --output."
@@ -200,7 +200,7 @@ instance ParseRecord Options where
 limitationWarningsErrors :: Options -> IO ()
 limitationWarningsErrors opts = do
     return ()
-    
+
 -- | Read or return an error.
 readOrErr err = fromMaybe (error err) . readMaybe
 
@@ -778,6 +778,7 @@ differentialMain opts = do
               H.io . B.putStrLn . getDEString $ res
         _ -> do
           diffPlot <- getSingleDiff
+                       False
                        labelMap
                        (extractSc processedSc)
                        combined1
@@ -785,6 +786,21 @@ differentialMain opts = do
                        genes'
                        gr
           [r| suppressMessages(ggsave(diffPlot_hs, file = plotOutputR_hs)) |]
+
+          let normOutputR = FP.replaceBaseName
+                              plotOutputR
+                             (FP.takeBaseName plotOutputR <> "_scaled")
+
+          diffNormPlot <- getSingleDiff
+                            True
+                            labelMap
+                            (extractSc processedSc)
+                            combined1
+                            combined2
+                            genes'
+                            gr
+          [r| suppressMessages(ggsave(diffNormPlot_hs, file = normOutputR_hs)) |]
+
           return ()
 
 -- | Diversity path.

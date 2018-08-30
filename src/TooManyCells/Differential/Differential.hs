@@ -127,7 +127,7 @@ getAllDEGraphKruskalWallis :: TopN
                     -> SingleCells
                     -> ClusterGraph CellInfo
                     -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
-getAllDEGraphKruskalWallis topN lm ls sc gr = 
+getAllDEGraphKruskalWallis topN lm ls sc gr =
   mconcat
     -- . withStrategy (parBuffer 1 rdeepseq)
     . parMap rdeepseq (\n -> compareClusterToOthersKruskalWallis n topN lm ls sc mat gr)
@@ -218,18 +218,19 @@ scToEntities genes cellGroups sc =
     err x = error $ "Feature " <> show x <> " not found for differential."
 
 -- | Get the differential expression plot of features over statuses, filtered by labels.
-getSingleDiff :: Maybe LabelMap
+getSingleDiff :: Bool
+              -> Maybe LabelMap
               -> SingleCells
               -> ([G.Node], Maybe (Set.Set Label))
               -> ([G.Node], Maybe (Set.Set Label))
               -> [Gene]
               -> ClusterGraph CellInfo
               -> R.R s (R.SomeSEXP s)
-getSingleDiff lm sc v1 v2 genes gr = do
+getSingleDiff normalize lm sc v1 v2 genes gr = do
   let cellGroups = getStatuses lm v1 v2 gr
       entities = scToEntities genes cellGroups sc
 
-  Diff.plotSingleDiff entities
+  Diff.plotSingleDiff normalize entities
 
 -- | Combine nodes and labels.
 combineNodesLabels
