@@ -12,6 +12,7 @@ module TooManyCells.Matrix.Preprocess
     , scaleDenseMat
     , scaleSparseMat
     , uqScaleSparseMat
+    , medScaleSparseMat
     , filterRMat
     , filterDenseMat
     , filterNumSparseMat
@@ -81,13 +82,23 @@ scaleSparseMat (MatObsRow mat) = MatObsRow
                                . S.toRowsL
                                $ mat
 
--- | Scale a matrix based on the library size.
+-- | Scale a matrix based on the upper quartile.
 uqScaleSparseMat :: MatObsRow -> MatObsRow
 uqScaleSparseMat (MatObsRow mat) = MatObsRow
                                  . S.sparsifySM
                                  . S.transposeSM
                                  . S.fromColsL
                                  . fmap uqScaleSparseCell
+                                 . S.toRowsL
+                                 $ mat
+
+-- | Scale a matrix based on the median.
+medScaleSparseMat :: MatObsRow -> MatObsRow
+medScaleSparseMat (MatObsRow mat) = MatObsRow
+                                 . S.sparsifySM
+                                 . S.transposeSM
+                                 . S.fromColsL
+                                 . fmap medScaleSparseCell
                                  . S.toRowsL
                                  $ mat
 
@@ -113,6 +124,17 @@ uqScaleSparseCell xs = fmap (/ uq) xs
        . fmap snd
        . S.toListSV
        $ xs
+
+-- | Median scale cells.
+medScaleSparseCell :: S.SpVector Double -> S.SpVector Double
+medScaleSparseCell xs = fmap (/ med) xs
+  where
+    med = continuousBy s 2 4
+        . VS.fromList
+        . filter (/= 0)
+        . fmap snd
+        . S.toListSV
+        $ xs
 
 -- | Median scale molecules across cells.
 scaleDenseMol :: H.Vector H.R -> H.Vector H.R
