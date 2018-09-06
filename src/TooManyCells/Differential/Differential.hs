@@ -154,11 +154,11 @@ compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc 
     nCells' = F.toList $ getGraphLeafItems gr n
     nCellsSet = Set.fromList . fmap (L.view barcode) $ nCells'
     nCells = fmap (unRow . L.view cellRow)
-           . filter (validCellInfo lm ls1)
+           . filter (validCellInfo lm ls2)
            $ nCells' -- All cells from node and labels
     nsCells =
       fmap fst
-        . filter (\ (_, !x) -> validCell lm ls2 x && not (Set.member x nCellsSet)) -- All cells outside of node and from labels
+        . filter (\ (_, !x) -> validCell lm ls1 x && not (Set.member x nCellsSet)) -- All cells outside of node and from labels
         . zip [0..]
         . V.toList
         . L.view rowNames
