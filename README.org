@@ -433,6 +433,34 @@ too-many-cells make-tree \
     -n "([89, 1], [98])"
 #+END_SRC
 
+If we wanted to make the same comparison, but compare the liver subtree with
+liver cells from all other subtrees, we can use the =--labels= argument:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --matrix-path input \
+    --labels-file labels.csv \
+    -n "([89, 1], [98])" \
+    --labels "([\"Liver\"], [\"Liver\"])"
+#+END_SRC
+
+We can also look at the distribution of abundance for individual genes using the
+=--genes= and =--plot-output= arguments.
+
+Furthermore, we can compare each node to all other cells by specifying no nodes
+at all. The output file will contain the top =--top-n= genes for each node. We
+recommend using multiple OS threads here to speed up the process using =+RTS
+-N${NUMOSTHREADS}= (no number to use all cores). The following example will
+compare all nodes to all other cells using 8 OS threads:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree \
+    --matrix-path input \
+    -n "([], [])" \
+    --normalization "UQNorm" \
+    +RTS -N8
+#+END_SRC
+
 ** =diversity=
 
 Diversity is the measure of the "effective number of entities within a system",
