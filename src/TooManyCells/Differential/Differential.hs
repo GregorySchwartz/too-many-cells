@@ -25,7 +25,7 @@ import BirchBeer.Utility (getGraphLeaves, getGraphLeafItems)
 import Control.Monad (join, mfilter)
 import Data.Function (on)
 import Data.List (sort, sortBy)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Monoid ((<>))
 import Language.R as R
 import Language.R.QQ (r)
@@ -129,13 +129,12 @@ getAllDEGraphKruskalWallis :: TopN
                     -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
 getAllDEGraphKruskalWallis topN lm ls sc gr =
   mconcat
-    -- . withStrategy (parBuffer 1 rdeepseq)
+    . catMaybes
     . parMap rdeepseq (\n -> compareClusterToOthersKruskalWallis n topN lm ls sc mat gr)
     $ nodes
   where
     nodes = filter (/= 0) . G.nodes . unClusterGraph $ gr -- Don't want to look at root.
     mat = S.transpose . unMatObsRow . L.view matrix $ sc
-
 
 -- | Get the differential expression of a cluster (n) to all other clusters (ns)
 -- using KruskalWallis such that n / ns.
@@ -147,9 +146,9 @@ compareClusterToOthersKruskalWallis
   -> SingleCells
   -> S.SpMatrix Double
   -> ClusterGraph CellInfo
-  -> [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
+  -> Maybe [(G.Node, Gene, Diff.Log2Diff, Diff.PValue, Diff.FDR)]
 compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr =
-    take topN . sortBy (compare `on` (L.view L._4)) $ res
+    fmap (take topN . sortBy (compare `on` (L.view L._4))) $ res
   where
     nCells' = F.toList $ getGraphLeafItems gr n
     nCellsSet = Set.fromList . fmap (L.view barcode) $ nCells'
@@ -163,11 +162,14 @@ compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc 
         . V.toList
         . L.view rowNames
         $ sc
-    res = ( zipWith
-              (\name (!x, !y, !z) -> (n, name, x, y, z))
-              (V.toList . L.view colNames $ sc)
-          )
-        $ Diff.differentialMatrixFeatRow nsCells nCells mat -- Here the matrix rows are features
+    res | null nsCells || null nCells = Nothing
+        | otherwise =
+            Just
+            . ( zipWith
+                  (\name (!x, !y, !z) -> (n, name, x, y, z))
+                  (V.toList . L.view colNames $ sc)
+              )
+            $ Diff.differentialMatrixFeatRow nsCells nCells mat -- Here the matrix rows are features
 
 -- | Get the differential expression of two sets of cells.
 getDEString :: [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
