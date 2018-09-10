@@ -13,8 +13,7 @@ Collects the functions pertaining to plotting the clusterings.
 {-# LANGUAGE GADTs #-}
 
 module TooManyCells.MakeTree.Plot
-    ( plotClusters
-    , plotClustersR
+    ( plotClustersR
     , plotLabelClustersR
     , plotClumpinessHeatmapR
     ) where
@@ -26,11 +25,10 @@ import Control.Monad.State (State (..))
 import Data.Colour (AffineSpace (..), withOpacity)
 import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..), Kolor)
-import qualified Data.Colour.Palette.BrewerSet as Brewer
 import Data.Colour.SRGB (RGB (..), toSRGB, sRGB24show)
 import Data.Function (on)
-import Data.List (nub, sort, sortBy, foldl1', transpose)
-import Data.Maybe (fromMaybe)
+import Data.List (nub, sort, sortBy, foldl1', transpose, unzip3, unzip4)
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Tuple (swap)
 import Diagrams.Backend.Cairo
 import Diagrams.Dendrogram (dendrogramCustom, Width(..))
@@ -45,6 +43,7 @@ import Plots.Legend
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.Clustering.Hierarchical as HC
+import qualified Data.Colour.Palette.BrewerSet as Brewer
 import qualified Data.Foldable as F
 import qualified Data.Graph.Inductive as G
 import qualified Data.GraphViz as G
@@ -63,33 +62,60 @@ import qualified Numeric.LinearAlgebra as H
 import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Types
 
--- | Plot clusters on a 2D axis.
-plotClusters :: [(CellInfo, Cluster)] -> Axis B V2 Double
-plotClusters vs = r2Axis &~ do
+-- | Get the projections and label for a cell.
+getProjections :: ProjectionMap
+               -> (CellInfo, Cluster)
+               -> Maybe (Double, Double, String)
+getProjections (ProjectionMap pm) (CellInfo { _barcode = !b }, Cluster !c) = do
+    p <- Map.lookup b pm
+    return $ (unX . fst $ p, unY . snd $ p, show c)
+    
+-- | Get the projections and label with colors for a cell.
+getProjectionsColor :: LabelMap
+                    -> ItemColorMap
+                    -> ProjectionMap
+                    -> (CellInfo, Cluster)
+                    -> Maybe (Double, Double, String, String)
+getProjectionsColor
+  (LabelMap lm)
+  (ItemColorMap icm)
+  (ProjectionMap pm)
+  (cell@(CellInfo { _barcode = !b }), Cluster !c) = do
+  p <- Map.lookup b pm
 
-    forM vs $ \(CellInfo { _projection = (X !x, Y !y)}, Cluster c) ->
-        scatterPlot [(x, y)] $ do
-            let color = (cycle colours2) !! c
-            plotMarker .= circle 1 # fc color # lwO 1 # lc color
+  let barcodeToColor x = sRGB24show $ Map.findWithDefault black x icm
+      barcodeToLabel x = Map.findWithDefault (Label "") x lm
+      l = T.unpack . unLabel . barcodeToLabel . getId $ cell
+      c = barcodeToColor . getId $ cell
 
-    hideGridLines
+  return $ (unX . fst $ p, unY . snd $ p, l, c)
+
+-- -- | Plot clusters on a 2D axis.
+-- plotClusters :: [(CellInfo, Cluster)] -> Axis B V2 Double
+-- plotClusters vs = r2Axis &~ do
+
+--     forM vs $ \(CellInfo { _projection = (X !x, Y !y)}, Cluster c) ->
+--         scatterPlot [(x, y)] $ do
+--             let color = (cycle colours2) !! c
+--             plotMarker .= circle 1 # fc color # lwO 1 # lc color
+
+--     hideGridLines
 
 -- | Plot clusters.
-plotClustersR :: String -> [(CellInfo, [Cluster])] -> R s ()
-plotClustersR outputPlot clusterList = do
+plotClustersR :: String -> ProjectionMap -> [(CellInfo, [Cluster])] -> R s ()
+plotClustersR outputPlot pm clusterList = do
     let clusterListOrdered =
             sortBy (compare `on` snd) . fmap (L.over L._2 head) $ clusterList -- The first element in the list is the main cluster.
-        xs = fmap (unX . fst . _projection . fst) clusterListOrdered
-        ys = fmap (unY . snd . _projection . fst) clusterListOrdered
-        cs = fmap (show . unCluster . snd) clusterListOrdered
+        (xs, ys, cs) =
+          unzip3 . catMaybes . fmap (getProjections pm) $ clusterListOrdered
     [r| suppressMessages(library(ggplot2))
         suppressMessages(library(cowplot))
         df = data.frame(x = xs_hs, y = ys_hs, c = cs_hs)
         df$c = factor(df$c, unique(df$c))
         p = ggplot(df, aes(x = x, y = y, color = factor(c))) +
                 geom_point() +
-                xlab("TNSE 1") +
-                ylab("TNSE 2") +
+                xlab("Projection 1") +
+                ylab("Projection 2") +
                 scale_color_discrete(guide = guide_legend(title = "Cluster")) +
                 theme(aspect.ratio = 1)
 
@@ -100,21 +126,18 @@ plotClustersR outputPlot clusterList = do
 
 -- | Plot clusters.
 plotLabelClustersR :: String
+                   -> ProjectionMap
                    -> LabelMap
                    -> ItemColorMap 
                    -> [(CellInfo, [Cluster])]
                    -> R s ()
-plotLabelClustersR outputPlot (LabelMap lm) (ItemColorMap icm) clusterList = do
+plotLabelClustersR outputPlot pm lm icm clusterList = do
     let clusterListOrdered =
             sortBy (compare `on` snd) . fmap (L.over L._2 head) $ clusterList -- The first element in the list is the main cluster.
-        barcodeToColor x = sRGB24show $ Map.findWithDefault black x icm
-        barcodeToLabel x = Map.findWithDefault (Label "") x lm
-        xs = fmap (unX . fst . _projection . fst) clusterListOrdered
-        ys = fmap (unY . snd . _projection . fst) clusterListOrdered
-        ls = fmap
-                (T.unpack . unLabel . barcodeToLabel . getId . fst)
-                clusterListOrdered
-        cs = fmap (barcodeToColor . getId . fst) clusterListOrdered
+        (xs, ys, ls, cs) = unzip4
+                         . catMaybes
+                         . fmap (getProjectionsColor lm icm pm)
+                         $ clusterListOrdered
     [r| suppressMessages(library(ggplot2))
         suppressMessages(library(cowplot))
         df = data.frame(x = xs_hs, y = ys_hs, l = ls_hs, c = cs_hs)
@@ -123,8 +146,8 @@ plotLabelClustersR outputPlot (LabelMap lm) (ItemColorMap icm) clusterList = do
         # colorMap = colorMap[!duplicated(colorMap)]
         p = ggplot(df, aes(x = x, y = y, color = l)) +
                 geom_point() +
-                xlab("TNSE 1") +
-                ylab("TNSE 2") +
+                xlab("Projection 1") +
+                ylab("Projection 2") +
                 scale_color_manual( guide = guide_legend(title = "Label")
                                   , values = colorMap
                                   ) +

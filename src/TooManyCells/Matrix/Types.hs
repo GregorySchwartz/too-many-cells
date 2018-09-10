@@ -31,6 +31,7 @@ import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
+import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
@@ -64,6 +65,9 @@ newtype X = X
 newtype Y = Y
     { unY :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
+newtype ProjectionMap = ProjectionMap
+  { unProjectionMap :: Map.Map Cell (X, Y)
+  }
 newtype RMat s          = RMat { unRMat :: R.SomeSEXP s }
 newtype RMatObsRow s    = RMatObsRow { unRMatObsRow :: R.SomeSEXP s }
 newtype RMatFeatRow s   = RMatFeatRow { unRMatFeatRow :: R.SomeSEXP s }
@@ -81,7 +85,6 @@ newtype MatObsRow = MatObsRow
 data SingleCells = SingleCells { _matrix :: MatObsRow
                                , _rowNames :: Vector Cell
                                , _colNames :: Vector Gene
-                               , _projections :: Vector (X, Y)
                                }
                      deriving (Show)
 L.makeLenses ''SingleCells
@@ -89,7 +92,6 @@ L.makeLenses ''SingleCells
 data CellInfo = CellInfo
     { _barcode :: Cell
     , _cellRow :: Row
-    , _projection :: (X, Y)
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 L.makeLenses ''CellInfo
 
@@ -108,12 +110,10 @@ instance Semigroup SingleCells where
         SingleCells { _matrix      = mappend (_matrix x) (_matrix y)
                     , _rowNames    = (V.++) (_rowNames x) (_rowNames y)
                     , _colNames    = _colNames x
-                    , _projections = (V.++) (_projections x) (_projections y)
                     }
 
 instance Monoid SingleCells where
     mempty  = SingleCells { _matrix = mempty
                           , _rowNames = V.empty
                           , _colNames = V.empty
-                          , _projections = V.empty
                           }

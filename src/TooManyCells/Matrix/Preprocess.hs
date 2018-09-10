@@ -159,7 +159,6 @@ filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
     SingleCells { _matrix   = m
                 , _rowNames = r
                 , _colNames = c
-                , _projections = p
                 }
   where
     m = MatObsRow . hToSparseMat $ filteredMat
@@ -188,9 +187,6 @@ filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
     c = V.ifilter (\i _ -> Set.member i validCols)
       . _colNames
       $ sc
-    p = V.ifilter (\i _ -> Set.member i validRows)
-      . _projections
-      $ sc
 
 -- | Filter a matrix to remove low count cells and genes.
 filterNumSparseMat :: FilterThresholds -> SingleCells -> SingleCells
@@ -198,7 +194,6 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     SingleCells { _matrix   = m
                 , _rowNames = r
                 , _colNames = c
-                , _projections = p
                 }
   where
     m = MatObsRow colFilteredMat
@@ -239,9 +234,6 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     c = V.ifilter (\i _ -> Set.member i validCols)
       . _colNames
       $ sc
-    p = V.ifilter (\i _ -> Set.member i validRows)
-      . _projections
-      $ sc
 
 -- | Filter a matrix to keep whitelist cells.
 filterWhitelistSparseMat :: CellWhitelist
@@ -250,7 +242,6 @@ filterWhitelistSparseMat :: CellWhitelist
 filterWhitelistSparseMat (CellWhitelist wl) sc =
     sc { _matrix   = m
        , _rowNames = r
-       , _projections = p
        }
   where
     m = MatObsRow rowFilteredMat
@@ -268,11 +259,6 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
                    $ validIdx
     r = V.map (\x -> fromMaybe (error $ "\nWhitelist row index out of bounds (do the whitelist barcodes match the data?): " <> show x <> " out of " <> (show . length . _rowNames $ sc))
                    . (V.!?) (_rowNames sc)
-                   $ x
-              )
-      $ validIdx
-    p = V.map (\x -> fromMaybe (error $ "\nWhitelist projection index out of bounds (do the whitelist barcodes match the data?): " <> show x <> " out of " <> (show . length . _projections $ sc))
-                   . (V.!?) (_projections sc)
                    $ x
               )
       $ validIdx

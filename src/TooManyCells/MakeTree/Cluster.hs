@@ -75,13 +75,13 @@ hClust sc =
                    }
   where
     cDend = fmap ( V.singleton
-                 . (\ (!w, _, !y, !z)
-                   -> CellInfo { _barcode = w, _cellRow = y, _projection = z }
+                 . (\ (!w, _, !y)
+                   -> CellInfo { _barcode = w, _cellRow = y }
                    )
                  )
             dend
     clustering = assignClusters
-               . fmap ( fmap ((\(!w, _, !y, !z) -> CellInfo w y z))
+               . fmap ( fmap ((\(!w, _, !y) -> CellInfo w y))
                       . HC.elements
                       )
                . flip HC.cutAt (findCut dend)
@@ -90,11 +90,10 @@ hClust sc =
     euclDist x y =
         sqrt . sum . fmap (** 2) $ S.liftU2 (-) (L.view L._2 y) (L.view L._2 x)
     items = (\ fs
-            -> zip4
+            -> zip3
                    (V.toList $ _rowNames sc)
                    fs
                    (fmap Row . take (V.length . _rowNames $ sc) . iterate (+ 1) $ 0)
-                   (V.toList $ _projections sc)
             )
           . S.toRowsL
           . unMatObsRow
@@ -156,11 +155,10 @@ hSpecClust eigenGroup norm numEigen sc =
                . unMatObsRow
                . _matrix
                $ sc
-    items      = V.zipWith3
-                    (\x y z -> CellInfo x y z)
+    items      = V.zipWith
+                    (\x y -> CellInfo x y)
                     (_rowNames sc)
                     (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
-                    (_projections sc)
     hSpecCommand TfIdfNorm   =
         hierarchicalSpectralCluster
           eigenGroup

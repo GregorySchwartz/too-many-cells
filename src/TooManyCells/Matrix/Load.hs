@@ -15,6 +15,7 @@ module TooManyCells.Matrix.Load
     , loadHMatrixData
     , loadSparseMatrixData
     , loadSparseMatrixDataStream
+    , loadProjectionMap
     ) where
 
 -- Remote
@@ -51,12 +52,11 @@ import TooManyCells.Matrix.Utility
 
 -- | Load output of cellranger.
 loadCellrangerData
-    :: Maybe ProjectionFile
-    -> GeneFile
+    :: GeneFile
     -> CellFile
     -> MatrixFile
     -> IO SingleCells
-loadCellrangerData pf gf cf mf = do
+loadCellrangerData gf cf mf = do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
@@ -78,22 +78,19 @@ loadCellrangerData pf gf cf mf = do
        . B.readFile
        . unCellFile
        $ cf
-    p <- maybe (return . projectMatrix $ m) loadProjectionFile $ pf
 
     return $
         SingleCells { _matrix   = m -- We want observations as rows.
                     , _rowNames = c
                     , _colNames = g
-                    , _projections = p
                     }
 
 -- | Load an H Matrix in CSV format (rows were features) with row names and
 -- column names.
 loadHMatrixData :: Delimiter
-                -> Maybe ProjectionFile
                 -> MatrixFile
                 -> IO SingleCells
-loadHMatrixData (Delimiter delim) pf mf = do
+loadHMatrixData (Delimiter delim) mf = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
     all <- fmap (\ x -> either error id ( CSV.decodeWith csvOpts CSV.NoHeader x
@@ -115,22 +112,18 @@ loadHMatrixData (Delimiter delim) pf mf = do
           . V.toList
           $ all
 
-    p <- maybe (return . projectMatrix $ m) loadProjectionFile pf
-
     return $
         SingleCells { _matrix   = m
                     , _rowNames = c
                     , _colNames = g
-                    , _projections = p
                     }
 
 -- | Load a sparse matrix in CSV format (rows were features) with row names and
 -- column names.
 loadSparseMatrixData :: Delimiter
-                     -> Maybe ProjectionFile
                      -> MatrixFile
                      -> IO SingleCells
-loadSparseMatrixData (Delimiter delim) pf mf = do
+loadSparseMatrixData (Delimiter delim) mf = do
     let csvOpts = CSV.defaultDecodeOptions
                     { CSV.decDelimiter = fromIntegral (ord delim) }
         strictRead path = (evaluate . force) =<< B.readFile path
@@ -149,22 +142,18 @@ loadSparseMatrixData (Delimiter delim) pf mf = do
           . V.drop 1
           $ all
 
-    p <- maybe (return . projectMatrix $ m) loadProjectionFile pf
-
     return $
         SingleCells { _matrix   = m
                     , _rowNames = c
                     , _colNames = g
-                    , _projections = p
                     }
 
 -- | Load a sparse matrix streaming in CSV format (rows were features) with row
 -- names and column names.
 loadSparseMatrixDataStream :: Delimiter
-                           -> Maybe ProjectionFile
                            -> MatrixFile
                            -> IO SingleCells
-loadSparseMatrixDataStream (Delimiter delim) pf mf = do
+loadSparseMatrixDataStream (Delimiter delim) mf = do
     let csvOpts = S.defaultDecodeOptions
                     { S.decDelimiter = fromIntegral (ord delim) }
         cS = fmap (S.first (fmap Cell . drop 1 . fromMaybe (error "\nNo header.")))
@@ -189,14 +178,10 @@ loadSparseMatrixDataStream (Delimiter delim) pf mf = do
 
         let finalMat = MatObsRow . HS.sparsifySM . HS.fromColsL $ m -- We want observations as rows
 
-        p <- liftIO
-           $ maybe (return . projectMatrix $ finalMat) loadProjectionFile pf
-
         return $
             SingleCells { _matrix   = finalMat
                         , _rowNames = V.fromList c
                         , _colNames = V.fromList g
-                        , _projections = p
                         }
 
     return res
@@ -214,6 +199,28 @@ loadProjectionFile =
   where
     getProjection [_, x, y] = ( X . either error fst . T.double $ x
                               , Y . either error fst . T.double $ y
+                              )
+    getProjection xs        =
+        error $ "\nUnrecognized projection row: " <> show xs
+
+-- | Load a projection file as a map.
+loadProjectionMap :: ProjectionFile -> IO ProjectionMap
+loadProjectionMap =
+    fmap (\ x -> ProjectionMap
+               . Map.fromList
+               . V.toList
+               . either
+                  error
+                  (fmap getProjection . V.drop 1)
+               $ (CSV.decode CSV.NoHeader x :: Either String (Vector [T.Text]))
+         )
+        . B.readFile
+        . unProjectionFile
+  where
+    getProjection [b, x, y] = ( Cell b
+                              , ( X . either error fst . T.double $ x
+                                , Y . either error fst . T.double $ y
+                                )
                               )
     getProjection xs        =
         error $ "\nUnrecognized projection row: " <> show xs

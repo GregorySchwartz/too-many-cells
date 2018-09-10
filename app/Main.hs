@@ -83,7 +83,7 @@ import TooManyCells.Paths.Types
 -- | Command line arguments
 data Options
     = MakeTree { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
-               , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, there will be no projection plot. Requires generation of a new tree."
+               , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". Cells without projections will not be plotted. If not supplied, no plot will be made."
                , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
@@ -116,7 +116,6 @@ data Options
                , clumpinessMethod :: Maybe String <?> "([Majority] | Exclusive | AllExclusive) The method used when calculating clumpiness: Majority labels leaves according to the most abundant label, Exclusive only looks at leaves consisting of cells solely from one label, and AllExclusive treats the leaf as containing both labels."
                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
     | Interactive { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
-                  , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, there will be no projection plot. Requires generation of a new tree."
                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                   , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
@@ -126,7 +125,6 @@ data Options
                   , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
     | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or, if genes-file and cells-file are not specified, or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
-                   , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". If not supplied, there will be no projection plot. Requires generation of a new tree."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                    , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
@@ -135,7 +133,7 @@ data Options
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
                    , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MedNorm | TotalMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalizes each observation by the upper quartile non-zero counts of that observation. MedNorm normalizes each observation by the median non-zero counts of that observation. TotalMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first TotalMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and NoneNorm for differential (which instead uses the recommended edgeR single cell preprocessing including normalization and filtering, any normalization provided here will result in edgeR preprocessing on top). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
                    , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
-                   , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes. \"([], [])\" switches the process to instead find the log2 average division between all nodes with all other cells (node / other cells) using the Kruskal-Wallis Test (--genes does not work for this, --labels works, and UQNorm for the normalization is recommended)."
+                   , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes. \"([], [])\" switches the process to instead find the log2 average division between all nodes with all other cells (node / other cells) using the Kruskal-Wallis Test (--genes does not work for this, --labels works, and UQNorm for the normalization is recommended. Only returns nodes where the comparison had both groups containing at least five cells.)."
                    , labels :: Maybe String <?> "([Nothing] | ([LABEL], [LABEL])) Use --labels-file to restrict the differential analysis to cells with these labels. Same format as --nodes, so the first list in --nodes and --labels gets the cells within that list of nodes with this list of labels. The same for the second list. For instance, --nodes \"([1], [2])\" --labels \"([\\\"A\\\"], [\\\"B\\\"])\" will compare cells from node 1 of label \"A\" only with cells from node 2 of label \"B\" only. To use all cells for that set of nodes, use an empty list, i.e. --labels \"([], [\\\"A\\\"])\". When comparing all nodes with all other cells, remember that the notation would be ([Other Cells], [Node]), so to compare cells of label X in Node with cells of label Y in Other Cells, use --labels \"([\\\"Y\\\", \\\"X\\\"])\". Requires both --labels and --labels-file, otherwise will include all labels."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."
                    , genes :: [T.Text] <?> "([Nothing] | GENE) List of genes to plot for all cells within selected nodes. Invoked by --genes CD4 --genes CD8 etc. When this argument is supplied, only the plot is outputted and edgeR differential expression is ignored. Outputs to --output."
@@ -242,18 +240,14 @@ loadSSM opts matrixPath' = do
                     Right . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
         genesFile'  = GeneFile $ matrixPath' FP.</> "genes.tsv"
         cellsFile'  = CellFile $ matrixPath' FP.</> "barcodes.tsv"
-        projectionFile' =
-            fmap ProjectionFile . unHelpful . projectionFile $ opts
         delimiter'      =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         unFilteredSc   =
             case matrixFile' of
                 (Left file) -> loadSparseMatrixDataStream
                                 delimiter'
-                                projectionFile'
                                 file
                 (Right file) -> loadCellrangerData
-                                    projectionFile'
                                     genesFile'
                                     cellsFile'
                                     file
@@ -653,23 +647,29 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             80
             $ Progress.Progress 9 10
 
-        -- Plot clustering if the projection file was supplied.
+        -- Plot clustering of the projections.
         case projectionFile' of
-            Nothing -> return ()
-            (Just _) -> do
-                plotClustersR (unOutputDirectory output' FP.</> "projection.pdf")
-                    . _clusterList
-                    $ clusterResults
+          Nothing  -> return ()
+          (Just f) -> do
+            -- Load projection map if provided.
+            projectionMap <- H.io $ loadProjectionMap f
 
-                -- Plot clustering with labels.
-                case (labelMap, itemColorMap) of
-                    (Just lm, Just icm) ->
-                        plotLabelClustersR
-                            (unOutputDirectory output' FP.</> "label_projection.pdf")
-                            lm
-                            icm
-                            (_clusterList clusterResults)
-                    _ -> return ()
+            plotClustersR
+              (unOutputDirectory output' FP.</> "projection.pdf")
+              projectionMap
+              . _clusterList
+              $ clusterResults
+
+            -- Plot clustering with labels.
+            case (labelMap, itemColorMap) of
+                (Just lm, Just icm) ->
+                    plotLabelClustersR
+                        (unOutputDirectory output' FP.</> "label_projection.pdf")
+                        projectionMap
+                        lm
+                        icm
+                        (_clusterList clusterResults)
+                _ -> return ()
 
         -- Increment  progress bar.
         H.io $ Progress.autoProgressBar

@@ -25,7 +25,7 @@ import BirchBeer.Utility (getGraphLeaves, getGraphLeafItems)
 import Control.Monad (join, mfilter)
 import Data.Function (on)
 import Data.List (sort, sortBy)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Monoid ((<>))
 import Language.R as R
 import Language.R.QQ (r)
@@ -129,6 +129,7 @@ getAllDEGraphKruskalWallis :: TopN
                     -> [(G.Node, Gene, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
 getAllDEGraphKruskalWallis topN lm ls sc gr =
   mconcat
+    . catMaybes
     . parMap rdeepseq (\n -> compareClusterToOthersKruskalWallis n topN lm ls sc mat gr)
     $ nodes
   where
@@ -145,10 +146,12 @@ compareClusterToOthersKruskalWallis
   -> SingleCells
   -> S.SpMatrix Double
   -> ClusterGraph CellInfo
-  -> [(G.Node, Gene, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
-compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr =
-    take topN . sortBy (compare `on` (L.view L._4)) $ res
+  -> Maybe [(G.Node, Gene, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr
+  | fastFiveCheck nCells || fastFiveCheck nsCells = Nothing
+  | otherwise = Just . take topN . sortBy (compare `on` (L.view L._4)) $ res
   where
+    fastFiveCheck = (< 5) . length . take 5
     nCells' = F.toList $ getGraphLeafItems gr n
     nCellsSet = Set.fromList . fmap (L.view barcode) $ nCells'
     nCells = fmap (unRow . L.view cellRow)
@@ -161,7 +164,8 @@ compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc 
         . V.toList
         . L.view rowNames
         $ sc
-    res = ( zipWith
+    res = filter (isJust . L.view L._4)
+        . ( zipWith
               (\name (!x, !y, !z) -> (n, name, x, y, z))
               (V.toList . L.view colNames $ sc)
           )
