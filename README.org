@@ -27,6 +27,27 @@ additional parameters or runs. See below for a full list of features.
 
 * Installation
 
+** Dependencies
+
+You may require the following dependencies (from Ubuntu 16.04, use the
+appropriate packages from your distribution of choice):
+
+- libgmp-dev
+- libblas-dev
+- liblapack-dev
+- libgsl-dev
+- libgtk2.0-dev
+- libcairo2-dev
+- libpango1.0-dev
+- graphviz
+
+Uses the following packages from R:
+
+- cowplot
+- ggplot2
+- edgeR
+- jsonlite
+
 ** Install =stack=
 
 See [[https://docs.haskellstack.org/en/stable/README/]] for more details.

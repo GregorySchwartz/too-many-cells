@@ -116,7 +116,7 @@ plotClustersR outputPlot pm clusterList = do
                 geom_point() +
                 xlab("Projection 1") +
                 ylab("Projection 2") +
-                scale_color_discrete(guide = guide_legend(title = "Cluster")) +
+                scale_color_discrete(guide = guide_legend(title = "Cluster", ncol = 3)) +
                 theme(aspect.ratio = 1)
 
         suppressMessages(ggsave(p, file = outputPlot_hs))
