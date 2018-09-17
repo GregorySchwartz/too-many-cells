@@ -83,6 +83,7 @@ data NodeInfo = NodeInfo
     , _nodeSplitProportion :: Maybe Double
     , _nodeModularity :: Maybe Double
     , _nodeLabelComposition :: Maybe LabelCompositions
+    , _nodeChildren :: [G.Node]
     }
 
 data LabelComposition = LabelComposition

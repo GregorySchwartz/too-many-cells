@@ -17,7 +17,7 @@ module TooManyCells.MakeTree.Print
 -- Remote
 import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents)
-import Data.List (genericLength)
+import Data.List (genericLength, intercalate)
 import Data.Maybe (fromMaybe, mapMaybe, catMaybes)
 import Data.Monoid ((<>))
 import Safe (headMay)
@@ -29,6 +29,7 @@ import qualified Data.Foldable as F
 import qualified Data.Graph.Inductive as G
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import qualified Data.Text as T
 
 -- Local
@@ -102,6 +103,7 @@ nodeInfo lm (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
                         (getProportion x)
                         (getQ x)
                         (fmap (\a -> getComposition a (ClusterGraph gr) x) lm)
+                        (getNodeChildren gr x)
     getSize :: G.Node -> Int
     getSize = sum . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
     getQ :: G.Node -> Maybe Double
@@ -111,12 +113,25 @@ nodeInfo lm (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
         case fmap fst $ G.lsuc gr n of
             [x, y] -> Just $ fromIntegral (getSize x) / fromIntegral (getSize y)
             []     -> Nothing
+    getNodeChildren gr = Set.toAscList
+                       . Set.fromList
+                       . concatMap fst
+                       . F.toList
+                       . getGraphLeavesWithParents gr
 
 -- | Print the node information to a string.
 printNodeInfo ::
      (TreeItem a) => Maybe LabelMap -> ClusterGraph a -> B.ByteString
 printNodeInfo lm =
-    (<>) "node,size,proportion,modularity,composition\n"
+    (<>) "node,size,proportion,modularity,composition,subtree\n"
         . CSV.encode
-        . fmap (\(NodeInfo n s p m c) -> (n, s, maybe "" show p, maybe "" show m, maybe "" show c))
+        . fmap (\ (NodeInfo n s p m c ch)
+               -> ( n
+                  , s
+                  , maybe "" show p
+                  , maybe "" show m
+                  , maybe "" show c
+                  , intercalate "/" . fmap show $ ch
+                  )
+               )
         . nodeInfo lm
