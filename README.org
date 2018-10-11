@@ -41,6 +41,8 @@ use the appropriate packages from your distribution of choice):
 - libcairo2-dev
 - libpango1.0-dev
 - graphviz
+- r-base
+- r-base-dev
 
 Uses the following packages from R:
 
