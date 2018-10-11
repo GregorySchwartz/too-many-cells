@@ -29,9 +29,10 @@ additional parameters or runs. See below for a full list of features.
 
 ** Dependencies
 
-You may require the following dependencies (from Ubuntu 16.04, use the
-appropriate packages from your distribution of choice):
+You may require the following dependencies to build and run (from Ubuntu 16.04,
+use the appropriate packages from your distribution of choice):
 
+- build-essential
 - libgmp-dev
 - libblas-dev
 - liblapack-dev
