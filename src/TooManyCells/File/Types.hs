@@ -34,7 +34,6 @@ import qualified Numeric.LinearAlgebra as H
 -- Local
 
 -- Basic
-newtype Delimiter       = Delimiter { unDelimiter :: Char }
 newtype DendrogramFile  = DendrogramFile { unDendrogramFile :: FilePath }
 newtype CellFile        = CellFile { unCellFile :: FilePath }
 newtype GeneFile        = GeneFile { unGeneFile :: FilePath }
@@ -45,7 +44,6 @@ newtype ProjectionFile  = ProjectionFile { unProjectionFile :: FilePath }
 newtype CellWhitelistFile = CellWhitelistFile
     { unCellWhitelistFile :: FilePath
     }
-newtype LabelFile       = LabelFile { unLabelFile :: FilePath }
 newtype PriorPath   = PriorPath
     { unPriorPath :: FilePath
     } deriving (Eq,Ord,Read,Show)

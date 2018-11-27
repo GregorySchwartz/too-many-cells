@@ -18,9 +18,10 @@ module Main where
 -- Remote
 import BirchBeer.ColorMap
 import BirchBeer.Interactive
+import BirchBeer.Load
 import BirchBeer.MainDiagram
 import BirchBeer.Plot
-import BirchBeer.Types hiding (Delimiter, LabelFile)
+import BirchBeer.Types
 import BirchBeer.Utility
 import Control.Monad (when, unless, join)
 import Control.Monad.Trans (liftIO)
@@ -30,6 +31,7 @@ import Data.Colour.SRGB (sRGB24read)
 import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
+import Data.Tree (Tree (..))
 import Language.R as R
 import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
@@ -442,14 +444,11 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
             return fullCr :: IO ClusterResults
         (Just x) -> do
-            let crInput = (FP.</> "cluster_results.json") . unPriorPath $ x
+            let clInput = unPriorPath x FP.</> "cluster_list.json"
+                treeInput = unPriorPath x FP.</> "cluster_tree.json"
 
             -- Strict loading in order to avoid locked file.
-            !fullCr <- fmap (either error id . A.eitherDecode)
-                     . B.readFile
-                     $ crInput
-
-            return fullCr
+            loadClusterResultsFiles clInput treeInput
 
     -- Increment  progress bar.
     Progress.autoProgressBar
@@ -496,12 +495,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawPalette = drawPalette'
                     , _birchDrawColors = drawColors'
                     , _birchDrawScaleSaturation = drawScaleSaturation'
-                    , _birchDend = _clusterDend originalClusterResults
+                    , _birchTree = _clusterDend originalClusterResults
                     , _birchMat = birchMat
                     , _birchSimMat = birchSimMat
                     }
 
-    (plot, labelColorMap, itemColorMap, markColorMap, dend', gr') <- mainDiagram config
+    (plot, labelColorMap, itemColorMap, markColorMap, tree', gr') <- mainDiagram config
 
     -- Increment  progress bar.
     Progress.autoProgressBar
@@ -513,20 +512,26 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Write results.
     clusterResults <- case prior' of
         Nothing -> do
-            let clusterList' = dendrogramToClusterList dend'
-                cr' = ClusterResults clusterList' dend'
+            let clusterList' = treeToClusterList tree'
+                cr' = ClusterResults clusterList' tree'
 
             return cr'
 
         (Just x) -> do
-            let clusterList' = dendrogramToClusterList dend'
-                cr' = ClusterResults clusterList' dend'
+            let clusterList' = treeToClusterList tree'
+                cr' = ClusterResults clusterList' tree'
 
             return cr'
 
     B.writeFile
-        (unOutputDirectory output' FP.</> "cluster_results.json")
+        (unOutputDirectory output' FP.</> "cluster_list.json")
         . A.encode
+        . _clusterList
+        $ clusterResults
+    B.writeFile
+        (unOutputDirectory output' FP.</> "cluster_tree.json")
+        . A.encode
+        . _clusterDend
         $ clusterResults
     T.writeFile
         (unOutputDirectory output' FP.</> "graph.dot")
@@ -598,7 +603,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 H.io $ hPutStrLn stderr "\nClumpiness requires labels for cells, skipping..."
             (Just lm) -> do
                 -- Get clumpiness.
-                case dendToClumpList clumpinessMethod' lm . _clusterDend $ clusterResults of
+                case treeToClumpList clumpinessMethod' lm . _clusterDend $ clusterResults of
                     (Left err) -> H.io
                                 . hPutStrLn stderr
                                 $ err
@@ -696,14 +701,14 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
     mat <- loadAllSSM opts
     labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
 
-    let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
-
-    fullCr <- fmap (either error id . A.eitherDecode) . B.readFile $ crInput
-
-    let dend = _clusterDend fullCr
+    tree <- fmap (either error id . A.eitherDecode)
+          . B.readFile
+          . (FP.</> "cluster_tree.json")
+          . unPriorPath
+          $ prior' :: IO (Tree (TreeNode (V.Vector CellInfo)))
 
     interactiveDiagram
-        dend
+        tree
         labelMap
         mat
         . fmap ( B2Matrix
@@ -747,13 +752,13 @@ differentialMain opts = do
 
     labelMap <- mapM (loadLabelData delimiter') $ labelsFile'
 
-    let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
-        cr :: IO ClusterResults
-        cr = fmap (either error id . A.eitherDecode)
-            . B.readFile
-            $ crInput
+    let clInput = (FP.</> "cluster_list.json") . unPriorPath $ prior'
+        treeInput = (FP.</> "cluster_tree.json") . unPriorPath $ prior'
 
-    gr <- fmap (dendrogramToGraph . _clusterDend) cr
+        cr :: IO ClusterResults
+        cr = loadClusterResultsFiles clInput treeInput
+
+    gr <- fmap (treeToGraph . _clusterDend) cr
 
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
       case genes' of
@@ -917,16 +922,13 @@ pathsMain opts = do
     labelMap <- loadLabelData delimiter' labelsFile'
 
     -- Load previous results or calculate results if first run.
-    dend <- do
-        let crInput = (FP.</> "cluster_results.json") . unPriorPath $ prior'
+    tree <- fmap (either error id . A.eitherDecode)
+          . B.readFile
+          . (FP.</> "cluster_tree.json")
+          . unPriorPath
+          $ prior'
 
-        fullCr <- fmap (either error id . A.eitherDecode)
-                . B.readFile
-                $ crInput
-
-        return . _clusterDend $ fullCr
-
-    let gr = dendrogramToGraph dend
+    let gr = treeToGraph tree
         pathDistances :: [(CellInfo, Double)]
         pathDistances = linearItemDistance direction' pathDistance' gr
         labeledPathDistances =

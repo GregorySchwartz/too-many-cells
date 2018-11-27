@@ -23,6 +23,7 @@ import Data.List (intercalate)
 import Data.Map.Strict (Map)
 import Data.Monoid ((<>))
 import Data.Text (Text)
+import Data.Tree (Tree (..))
 import Data.Vector (Vector)
 import GHC.Generics (Generic)
 import Language.R as R
@@ -68,8 +69,13 @@ newtype V = V Double
 -- Advanced
 data ClusterResults = ClusterResults
     { _clusterList :: [(CellInfo, [Cluster])] -- Thanks to hierarchical clustering, we can have multiple clusters per cell.
-    , _clusterDend :: HC.Dendrogram (Vector CellInfo)
-    } deriving (Read,Show,Generic)
+    , _clusterDend :: Tree (TreeNode (Vector CellInfo))
+    } deriving (Read,Show,Generic,A.FromJSON,A.ToJSON)
+
+data ClusterResultsDend = ClusterResultsDend
+    { _clusterList' :: [(CellInfo, [Cluster])] -- Thanks to hierarchical clustering, we can have multiple clusters per cell.
+    , _clusterDend' :: HC.Dendrogram (Vector CellInfo)
+    } deriving (Read,Show,Generic,A.FromJSON,A.ToJSON)
 
 data ClusterInfo = ClusterInfo
     { _clusterId :: Cluster
@@ -116,4 +122,5 @@ instance (A.ToJSON a) => A.ToJSON (ClusteringVertex a) where
 instance (A.FromJSON a) => A.FromJSON (ClusteringVertex a)
 
 L.makeLenses ''ClusterResults
-A.deriveJSON (A.defaultOptions {A.fieldLabelModifier = drop 1}) ''ClusterResults -- So the field does not have an underscore. Unfortunately needed for backwards compatibility.
+L.makeLenses ''ClusterResultsDend
+-- A.deriveJSON (A.defaultOptions {A.fieldLabelModifier = drop 1}) ''ClusterResults -- So the field does not have an underscore. Unfortunately needed for backwards compatibility.

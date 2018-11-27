@@ -19,6 +19,7 @@ module TooManyCells.Matrix.Load
     ) where
 
 -- Remote
+import BirchBeer.Types
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))

@@ -15,18 +15,20 @@ module TooManyCells.MakeTree.Cluster
     , hSpecClust
     , assignClusters
     , dendrogramToClusterList
+    , treeToClusterList
     , clusterDiversity
     ) where
 
 -- Remote
 import BirchBeer.Types
-import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents, dendrogramToGraph)
+import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents, dendrogramToGraph, dendToTree, treeToGraph)
 import Control.Monad (join)
 import Data.Function (on)
 import Data.List (sortBy, groupBy, zip4, genericLength)
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe, catMaybes, mapMaybe)
 import Data.Monoid ((<>))
+import Data.Tree (Tree (..))
 import Data.Tuple (swap)
 import H.Prelude (io)
 import Language.R as R
@@ -71,7 +73,7 @@ hdbscan (RMatObsRow mat) = do
 hClust :: SingleCells -> ClusterResults
 hClust sc =
     ClusterResults { _clusterList = clustering
-                   , _clusterDend = cDend
+                   , _clusterDend = dendToTree cDend
                    }
   where
     cDend = fmap ( V.singleton
@@ -134,7 +136,7 @@ hSpecClust :: EigenGroup
            -> (ClusterResults, ClusterGraph CellInfo)
 hSpecClust eigenGroup norm numEigen sc =
     ( ClusterResults { _clusterList = clustering
-                     , _clusterDend = dend
+                     , _clusterDend = dendToTree dend
                      }
     , gr
     )
@@ -194,6 +196,17 @@ dendrogramToClusterList =
         . flip getGraphLeavesWithParents 0
         . unClusterGraph
         . dendrogramToGraph
+
+treeToClusterList :: Tree (TreeNode (V.Vector CellInfo))
+                        -> [(CellInfo, [Cluster])]
+treeToClusterList =
+    concatMap (\ (!ns, (_, !xs))
+                -> zip (maybe [] F.toList xs) . repeat . fmap Cluster $ ns
+                )
+        . F.toList
+        . flip getGraphLeavesWithParents 0
+        . unClusterGraph
+        . treeToGraph
 
 -- | Find the diversity of each leaf cluster.
 clusterDiversity :: Order

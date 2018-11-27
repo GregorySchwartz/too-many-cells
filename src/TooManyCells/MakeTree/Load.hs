@@ -8,11 +8,14 @@ Collects the functions pertaining to loading labels for the tree.
 {-# LANGUAGE OverloadedStrings #-}
 
 module TooManyCells.MakeTree.Load
-    ( loadLabelData
+    ( loadClusterResultsFiles
+    , loadClusterResults
     ) where
 
 -- Remote
-import BirchBeer.Types hiding (LabelFile, Delimiter)
+import BirchBeer.Load
+import BirchBeer.Types
+import BirchBeer.Utility
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
@@ -24,6 +27,7 @@ import Data.Monoid ((<>))
 import Data.Vector (Vector)
 import Safe
 import qualified Control.Lens as L
+import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Csv as CSV
@@ -44,22 +48,28 @@ import TooManyCells.File.Types
 import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Types
 
--- | Load a CSV containing the label of each cell.
-loadLabelData :: Delimiter -> LabelFile -> IO LabelMap
-loadLabelData (Delimiter delim) (LabelFile file) = do
-    let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
+-- | Load a format for the tree and results from a file.
+loadClusterResultsFiles :: FilePath -> FilePath -> IO ClusterResults
+loadClusterResultsFiles clusterListFile treeFile = do
+  clusterList <-
+    fmap (either error id . A.eitherDecode) . B.readFile $ clusterListFile
+  tree        <-
+    fmap (either error id . A.eitherDecode) . B.readFile $ treeFile
 
-    rows <- fmap (\ x -> either error snd ( CSV.decodeByNameWith csvOpts x
-                                        :: Either String (CSV.Header, Vector (Map.Map T.Text T.Text))
-                                         )
-                 )
-          . B.readFile
-          $ file
+  return $ ClusterResults clusterList tree
 
-    let toLabelMap :: Map.Map T.Text T.Text -> Map.Map Id Label
-        toLabelMap m =
-            Map.singleton
-                (Id $ Map.findWithDefault (error "No \"item\" column in label file.") "item" m)
-                (Label $ Map.findWithDefault (error "No \"label\" column in label file.") "label" m)
+-- | Load a format for the tree and results from a file.
+loadClusterResults :: FilePath -> IO ClusterResults
+loadClusterResults file = do
+  dend <-
+    fmap (fmap clusterResultConversion . A.eitherDecode) . B.readFile $ file
+  tree <- fmap A.eitherDecode . B.readFile $ file
 
-    return . LabelMap . Map.unions . fmap toLabelMap . V.toList $ rows
+  return . either error id $ dend <> tree
+
+-- | Convert a dendrogram type to a tree type in the cluster results.
+clusterResultConversion :: ClusterResultsDend -> ClusterResults
+clusterResultConversion cr =
+  ClusterResults { _clusterList = _clusterList' cr
+                 , _clusterDend = dendToTree $ _clusterDend' cr
+                 }
