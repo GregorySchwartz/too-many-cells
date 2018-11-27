@@ -204,6 +204,7 @@ We can now run the =too-many-cells= algorithm on our data.
 too-many-cells make-tree \
     --matrix-path input \
     --labels-file labels.csv \
+    --draw-collection "PieRing" \
     --output out
 #+END_SRC
 
@@ -244,7 +245,8 @@ too-many-cells make-tree \
 
 **** Pie charts
 
-What if we want pie charts instead of showing each individual cell?
+What if we want pie charts instead of showing each individual cell (the
+default)?
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
