@@ -338,8 +338,6 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
-    --draw-max-node-size 10 \
-    --draw-no-scale-nodes \
     --output out_gene_expression
 #+END_SRC
 
@@ -359,8 +357,7 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
-    --draw-max-node-size 40 \
-    --draw-no-scale-nodes \
+    --draw-scale-saturation 10
     --output out_gene_expression
 #+END_SRC
 
