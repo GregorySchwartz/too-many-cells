@@ -104,6 +104,7 @@ data Options
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
                , drawMaxNodeSize :: Maybe Double <?> "([72] | DOUBLE) The max node size when drawing the graph. 36 is the theoretical default, but here 72 makes for thicker branches."
+               , drawMaxLeafNodeSize :: Maybe Double <?> "([--draw-max-node-size] | DOUBLE) The max leaf node size when drawing the graph. Defaults to the value of --draw-max-node-size."
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , drawLegendSep :: Maybe Double <?> "([1] | DOUBLE) The amount of space between the legend and the tree."
                , drawLegendAllLabels :: Bool <?> "Whether to show all the labels in the label file instead of only showing labels within the current tree. The program generates colors from all labels in the label file first in order to keep consistent colors. By default, this value is false, meaning that only the labels present in the tree are shown (even though the colors are the same). The subset process occurs after --draw-colors, so when using that argument make sure to account for all labels."
@@ -169,6 +170,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawLeaf"             = Just 'L'
     short "drawMark"             = Just 'K'
     short "drawMaxNodeSize"      = Just 'A'
+    short "drawMaxLeafNodeSize"  = Nothing
     short "drawNoScaleNodes"     = Just 'W'
     short "drawNodeNumber"       = Just 'N'
     short "drawLegendSep"        = Just 'Q'
@@ -350,6 +352,11 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
         drawMaxNodeSize'  =
             DrawMaxNodeSize . fromMaybe 72 . unHelpful . drawMaxNodeSize $ opts
+        drawMaxLeafNodeSize' = DrawMaxLeafNodeSize
+                             . fromMaybe (unDrawMaxNodeSize drawMaxNodeSize')
+                             . unHelpful
+                             . drawMaxLeafNodeSize
+                             $ opts
         drawNoScaleNodes' =
             DrawNoScaleNodesFlag . unHelpful . drawNoScaleNodes $ opts
         drawLegendSep'    = DrawLegendSep
@@ -489,6 +496,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawMark = drawMark'
                     , _birchDrawNodeNumber = drawNodeNumber'
                     , _birchDrawMaxNodeSize = drawMaxNodeSize'
+                    , _birchDrawMaxLeafNodeSize = drawMaxLeafNodeSize'
                     , _birchDrawNoScaleNodes = drawNoScaleNodes'
                     , _birchDrawLegendSep    = drawLegendSep'
                     , _birchDrawLegendAllLabels = drawLegendAllLabels'
@@ -609,16 +617,17 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                                 $ err
                                <> "\nError in clumpiness, skipping clumpiness.* output."
                     (Right clumpList) -> do
-                        -- Plot clumpiness.
-                        plotClumpinessHeatmapR
-                            (unOutputDirectory output' FP.</> "clumpiness.pdf")
-                            clumpList
-
                         -- Save clumpiness to a file.
                         H.io
                             . B.writeFile (unOutputDirectory output' FP.</> "clumpiness.csv")
                             . clumpToCsv
                             $ clumpList
+
+                        -- Plot clumpiness.
+                        either (H.io . hPutStrLn stderr) id
+                            $ plotClumpinessHeatmapR
+                                (unOutputDirectory output' FP.</> "clumpiness.pdf")
+                                clumpList
 
         -- Increment  progress bar.
         H.io $ Progress.autoProgressBar

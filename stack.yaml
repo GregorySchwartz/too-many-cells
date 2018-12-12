@@ -52,6 +52,7 @@ extra-deps:
   - SVGFonts-1.6.0.3
   - aeson-1.4.0.0
   - attoparsec-0.13.1.0
+  - clustering-0.4.0
   - cubicbezier-0.6.0.5
   - diagrams-1.4
   - diagrams-cairo-1.4.1

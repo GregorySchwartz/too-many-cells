@@ -221,8 +221,10 @@ plotClustersOnlyR outputPlot (RMatObsRow mat) clustering = do
     return ()
 
 -- | Plot heatmap in R.
-plotClumpinessHeatmapR :: String -> [(T.Text, T.Text, Double)] -> R s ()
-plotClumpinessHeatmapR outputPlot cs = do
+plotClumpinessHeatmapR :: String -> [(T.Text, T.Text, Double)] -> Either String (R s ())
+plotClumpinessHeatmapR _ [] =
+  Left "\nNo labels for leaves based on chosen clumpiness method, skipping clumpiness plot."
+plotClumpinessHeatmapR outputPlot cs = Right $ do
     let xs = fmap (T.unpack . L.view L._1) cs
         ys = fmap (T.unpack . L.view L._2) cs
         vs = fmap (L.view L._3) cs
