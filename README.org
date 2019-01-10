@@ -4,6 +4,8 @@
 
 #+SETUPFILE: https://fniessen.github.io/org-html-themes/setup/theme-readtheorg.setup
 
+See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version.
+
 * Description
 
 =too-many-cells= is an "ism". That is, /too manyism/. More specifically,
