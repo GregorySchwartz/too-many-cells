@@ -31,7 +31,7 @@ import Data.List (nub, sort, sortBy, foldl1', transpose, unzip3, unzip4)
 import Data.Maybe (fromMaybe, catMaybes)
 import Data.Tuple (swap)
 import Diagrams.Backend.Cairo
-import Diagrams.Dendrogram (dendrogramCustom, Width(..))
+-- import Diagrams.Dendrogram (dendrogramCustom, Width(..))
 import Diagrams.Prelude
 import Graphics.SVGFonts
 import Language.R as R
