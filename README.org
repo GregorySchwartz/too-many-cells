@@ -8,17 +8,18 @@ See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version.
 
 * Description
 
-=too-many-cells= is an "ism". That is, /too manyism/. More specifically,
-=too-many-cells= is a different perspective on existing single cell tools. While
-=too-many-cells= was intended for single cell RNA-seq, any abundance data can be
-used. Rather than opt for a unique positioning of each cell using dimensionality
-reduction approaches like tSNE, PCA, and other, =too-many-cells= recursively
-divides cells into clusters and relates clusters rather than individual cells.
-In fact, by recursively dividing until further dividing would be considered
-noise or random partitioning, we can eliminate noisy relationships at the
-fine-grain level. The resulting binary tree serves as a basis for a different
-perspective of single cells, using our =birch-beer= visualization and tree
-measures to describe simultaneously large and small populations, without
+=too-many-cells= is a suite of tools, algorithms, and visualizations focusing on
+the relationships between cell clades. This includes new ways of clustering,
+plotting, choosing differential expression comparisons, and more! While
+=too-many-cells= was intended for single cell RNA-seq, any abundance data in any
+domain can be used. Rather than opt for a unique positioning of each cell using
+dimensionality reduction approaches like t-SNE and PCA, =too-many-cells=
+recursively divides cells into clusters and relates clusters rather than
+individual cells. In fact, by recursively dividing until further dividing would
+be considered noise or random partitioning, we can eliminate noisy relationships
+at the fine-grain level. The resulting binary tree serves as a basis for a
+different perspective of single cells, using our [[http://github.com/GregorySchwartz/birch-beer#readme][=birch-beer=]] visualization and
+tree measures to describe simultaneously large and small populations, without
 additional parameters or runs. See below for a full list of features.
 
 * Installation
@@ -117,7 +118,7 @@ The main input is the =--matrix-path= argument. When a directory is supplied,
 =barcodes.tsv= files (=cellranger= outputs, see =cellranger= for specifics). If
 a file is supplied, we assume a =csv= file containing gene row names and cell
 column names. This argument can be called multiple times to combine multiple
-single cell matrices: =--matrixPath input1 --matrixPath input2=.
+single cell matrices: =--matrix-path input1 --matrix-path input2=.
 
 The second most important argument is =--labels-file=. Supply with a =csv= with
 a format and header of "item,label" to provide colorings and statistics of the
