@@ -63,7 +63,7 @@ stack setup
 #+END_SRC
 
 ** Install =too-many-cells=
-   
+
 *** Source
 
 Probably the easiest method if you don't want to mess with dependencies (outside

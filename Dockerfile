@@ -1,7 +1,11 @@
 FROM fpco/stack-build:lts-12.0 as build
 
-# Upgrade gcc version.
-RUN apt-get update \
+# Make sure /tmp has correct permission and upgrade gcc version.
+RUN chown root:root /tmp \
+    && chmod 1777 /tmp \
+    && chown root:root /root/.stack \
+    && chmod 1777 /root/.stack \
+    && apt-get update \
     && apt-get install -y software-properties-common \
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
     && apt-get update \
@@ -10,20 +14,12 @@ RUN apt-get update \
 
 RUN mkdir /opt/build
 
-# Copy dependencies.
-COPY utility/spectral-clustering /opt/build/spectral-clustering
-COPY utility/modularity /opt/build/modularity
-COPY utility/hierarchical-spectral-clustering /opt/build/hierarchical-spectral-clustering
-COPY utility/differential /opt/build/differential
-COPY utility/birch-beer /opt/build/birch-beer
-
 # Copy source.
-COPY single_cell/too-many-cells /opt/build
+COPY ./ /opt/build
 
 # Replace dependency location and install.
 RUN cd /opt/build \
     && rm -rf .stack-work \
-    && sed -i "s/\/home\/gw\/code\/utility/\./" stack.yaml \
     && stack build --system-ghc
 
 FROM ubuntu:16.04
