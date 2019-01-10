@@ -63,12 +63,23 @@ stack setup
 #+END_SRC
 
 ** Install =too-many-cells=
+   
+*** Source
+
+Probably the easiest method if you don't want to mess with dependencies (outside
+of the ones above).
+
+#+BEGIN_SRC sh
+git clone https://github.com/GregorySchwartz/too-many-cells.git
+cd too-many-cells
+stack install
+#+END_SRC
 
 *** Online
 
 We only require =stack= (or =cabal=), you do not need to download any source
-code, just run the following command to place =too-many-cells= in your
-=~/.local/bin/=:
+code (but you might need the stack.yaml dependency versions), just run the
+following command to place =too-many-cells= in your =~/.local/bin/=:
 
 #+BEGIN_SRC sh
 stack install too-many-cells
@@ -80,12 +91,6 @@ just need to follow the suggestion and add the dependencies to the specified
 file. For a quick =yaml= configuration, refer to
 [[https://github.com/GregorySchwartz/too-many-cells/blob/master/stack.yaml]]. Relies
 on =eigen-3.3.4.1= right now.
-
-*** Source
-
-#+BEGIN_SRC sh
-stack install
-#+END_SRC
 
 * Usage
 
