@@ -1,0 +1,1153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>too-many-cells</title>
+<meta name="generator" content="Org mode" />
+<meta name="author" content="Gregory W. Schwartz" />
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/styles/readtheorg/css/htmlize.css"/>
+<link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/styles/readtheorg/css/readtheorg.css"/>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/styles/lib/js/jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/styles/readtheorg/js/readtheorg.js"></script>
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2018 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script type="text/javascript"
+        src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="content">
+<h1 class="title">too-many-cells</h1>
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org7e9e23f">1. Description</a></li>
+<li><a href="#org06e7473">2. Installation</a>
+<ul>
+<li><a href="#org1dd0b9a">2.1. Dependencies</a></li>
+<li><a href="#orge136c5d">2.2. Install <code>stack</code></a></li>
+<li><a href="#org4d3b5ac">2.3. Install <code>too-many-cells</code></a>
+<ul>
+<li><a href="#orgdefac5e">2.3.1. Online</a></li>
+<li><a href="#orgfadebe7">2.3.2. Source</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#orgd9060e8">3. Usage</a>
+<ul>
+<li><a href="#org4bc1ec3">3.1. <code>make-tree</code></a>
+<ul>
+<li><a href="#org982ae1c">3.1.1. Output</a></li>
+<li><a href="#org40f4656">3.1.2. Outline with options</a></li>
+<li><a href="#org4d75e59">3.1.3. Example</a></li>
+</ul>
+</li>
+<li><a href="#org2b757c4">3.2. <code>interactive</code></a></li>
+<li><a href="#org140538a">3.3. <code>differential</code></a></li>
+<li><a href="#org5e8a1cc">3.4. <code>diversity</code></a></li>
+<li><a href="#org3bbd9cc">3.5. <code>paths</code></a></li>
+</ul>
+</li>
+<li><a href="#org514cd15">4. Documentation</a></li>
+</ul>
+</div>
+</div>
+<p>
+See <a href="https://github.com/GregorySchwartz/too-many-cells">https://github.com/GregorySchwartz/too-many-cells</a> for latest version.
+</p>
+
+<div id="outline-container-org7e9e23f" class="outline-2">
+<h2 id="org7e9e23f"><span class="section-number-2">1</span> Description</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+<code>too-many-cells</code> is an "ism". That is, <i>too manyism</i>. More specifically,
+<code>too-many-cells</code> is a different perspective on existing single cell tools. While
+<code>too-many-cells</code> was intended for single cell RNA-seq, any abundance data can be
+used. Rather than opt for a unique positioning of each cell using dimensionality
+reduction approaches like tSNE, PCA, and other, <code>too-many-cells</code> recursively
+divides cells into clusters and relates clusters rather than individual cells.
+In fact, by recursively dividing until further dividing would be considered
+noise or random partitioning, we can eliminate noisy relationships at the
+fine-grain level. The resulting binary tree serves as a basis for a different
+perspective of single cells, using our <code>birch-beer</code> visualization and tree
+measures to describe simultaneously large and small populations, without
+additional parameters or runs. See below for a full list of features.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org06e7473" class="outline-2">
+<h2 id="org06e7473"><span class="section-number-2">2</span> Installation</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+We provide multiple ways to install <code>too-many-cells</code>. We recommend installing
+<code>stack</code> <a href="#orge136c5d">see below</a>), but we also have a <code>Dockerfile</code> to use in any system in case
+you have a custom build (for instance, a non-standard R installation).
+</p>
+</div>
+
+<div id="outline-container-org1dd0b9a" class="outline-3">
+<h3 id="org1dd0b9a"><span class="section-number-3">2.1</span> Dependencies</h3>
+<div class="outline-text-3" id="text-2-1">
+<p>
+You may require the following dependencies to build and run (from Ubuntu 14.04,
+use the appropriate packages from your distribution of choice):
+</p>
+
+<ul class="org-ul">
+<li>build-essential</li>
+<li>libgmp-dev</li>
+<li>libblas-dev</li>
+<li>liblapack-dev</li>
+<li>libgsl-dev</li>
+<li>libgtk2.0-dev</li>
+<li>libcairo2-dev</li>
+<li>libpango1.0-dev</li>
+<li>graphviz</li>
+<li>r-base</li>
+<li>r-base-dev</li>
+</ul>
+
+<p>
+Uses the following packages from R:
+</p>
+
+<ul class="org-ul">
+<li>cowplot</li>
+<li>ggplot2</li>
+<li>edgeR</li>
+<li>jsonlite</li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-orge136c5d" class="outline-3">
+<h3 id="orge136c5d"><span class="section-number-3">2.2</span> Install <code>stack</code></h3>
+<div class="outline-text-3" id="text-2-2">
+<p>
+See <a href="https://docs.haskellstack.org/en/stable/README/">https://docs.haskellstack.org/en/stable/README/</a> for more details.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">curl -sSL https://get.haskellstack.org/ | sh
+stack setup
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org4d3b5ac" class="outline-3">
+<h3 id="org4d3b5ac"><span class="section-number-3">2.3</span> Install <code>too-many-cells</code></h3>
+<div class="outline-text-3" id="text-2-3">
+</div>
+<div id="outline-container-orgdefac5e" class="outline-4">
+<h4 id="orgdefac5e"><span class="section-number-4">2.3.1</span> Online</h4>
+<div class="outline-text-4" id="text-2-3-1">
+<p>
+We only require <code>stack</code> (or <code>cabal</code>), you do not need to download any source
+code, just run the following command to place <code>too-many-cells</code> in your
+<code>~/.local/bin/</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">stack install too-many-cells
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgfadebe7" class="outline-4">
+<h4 id="orgfadebe7"><span class="section-number-4">2.3.2</span> Source</h4>
+<div class="outline-text-4" id="text-2-3-2">
+<div class="org-src-container">
+<pre class="src src-sh">stack install
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgd9060e8" class="outline-2">
+<h2 id="orgd9060e8"><span class="section-number-2">3</span> Usage</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+<code>too-many-cells</code> has several entry points depending on the desired analysis.
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Argument</th>
+<th scope="col" class="org-left">Analysis</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>make-tree</code></td>
+<td class="org-left">Generate the tree from single cell data with various measurement outputs and visualize tree</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>interactive</code></td>
+<td class="org-left">Interactive visuzalization of the tree, very slow</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>differential</code></td>
+<td class="org-left">Find differentially expressed genes between two nodes</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>diversity</code></td>
+<td class="org-left">Conduct diversity analyses of multiple cell populations</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>paths</code></td>
+<td class="org-left">The binary tree equivalent of the so called "pseudotime", or 1D dimensionality reduction</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+The main workflow is to first generate and plot the population tree using
+<code>too-many-cells make-tree</code>, then use the rest of the entry points as needed.
+</p>
+
+<p>
+At any point, use <code>-h</code> to see the help of each entry point.
+</p>
+</div>
+
+<div id="outline-container-org4bc1ec3" class="outline-3">
+<h3 id="org4bc1ec3"><span class="section-number-3">3.1</span> <code>make-tree</code></h3>
+<div class="outline-text-3" id="text-3-1">
+<p>
+<code>too-many-cells make-tree</code> generates a binary tree using hierarchical spectral
+clustering. We start with all cells in a single node. Spectral clustering
+partitions the cells into two groups. We assess the clustering using
+Newman-Girvan modularity: if \(Q > 0\) then we recursively continue with
+hierarchical spectral clustering. If not, then there is only a single community
+and we do not partition &#x2013; the resulting node is a leaf and is considered the
+finest-grain cluster.
+</p>
+
+<p>
+<b>The most important argument is the <code>--prior</code> argument.</b> Making the tree may
+take some time, so if the tree was already generated and other analysis or
+visualizations need to be run on the tree, point the <code>--prior</code> argument to the
+output folder from a previous run of <code>too-many-cells</code>. If you do not use
+<code>--prior</code>, <b>the entire tree will be recalculated even if you just wanted to
+change the visualization!</b>
+</p>
+
+<p>
+The main input is the <code>--matrix-path</code> argument. When a directory is supplied,
+<code>too-many-cells</code> interprets the folder to have <code>matrix.mtx</code>, <code>genes.tsv</code>, and
+<code>barcodes.tsv</code> files (<code>cellranger</code> outputs, see <code>cellranger</code> for specifics). If
+a file is supplied, we assume a <code>csv</code> file containing gene row names and cell
+column names. This argument can be called multiple times to combine multiple
+single cell matrices: <code>--matrixPath input1 --matrixPath input2</code>.
+</p>
+
+<p>
+The second most important argument is <code>--labels-file</code>. Supply with a <code>csv</code> with
+a format and header of "item,label" to provide colorings and statistics of the
+relationships between labels. Here the "item" column contains the name of each
+cell (barcode) and the label is any property of the cell (the tissue of origin,
+hour in a time course, celltype, etc.).
+</p>
+
+<p>
+To see the full list of options, use <code>too-many-cells -h</code> and <code>-h</code> for each entry
+point (i.e. <code>too-many-cells make-tree -h</code>).
+</p>
+</div>
+
+<div id="outline-container-org982ae1c" class="outline-4">
+<h4 id="org982ae1c"><span class="section-number-4">3.1.1</span> Output</h4>
+<div class="outline-text-4" id="text-3-1-1">
+<p>
+<code>too-many-cells make-tree</code> generates several files in the output folder. Below
+is a short description of each file.
+</p>
+
+<table border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">File</th>
+<th scope="col" class="org-left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left"><code>clumpiness.csv</code></td>
+<td class="org-left">When labels are provided, uses the clumpiness measure to determine the level of aggregation between each label within the tree.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>clumpiness.pdf</code></td>
+<td class="org-left">When labels are provided, a figure of the clumpiness between labels.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>cluster_diversity.csv</code></td>
+<td class="org-left">When labels are provided, the diversity, or "effective number of labels", of each cluster.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>cluster_info.csv</code></td>
+<td class="org-left">Various bits of information for each cluster and the path leading up to each cluster, from that cluster to the root. For instance, the <code>size</code> column has <code>cluster_size/parent_size/parent_parent_size/.../root_size</code></td>
+</tr>
+
+<tr>
+<td class="org-left"><code>cluster_list.json</code></td>
+<td class="org-left">The <code>json</code> file containing a list of clusterings.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>cluster_tree.json</code></td>
+<td class="org-left">The <code>json</code> file containing the output tree in a recursive format.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>dendrogram.svg</code></td>
+<td class="org-left">The visualization of the tree. There are many possible options for this visualization included. Can rename to choose between PNG, PS, PDF, and SVG using <code>--dendrogram-output</code>.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>graph.dot</code></td>
+<td class="org-left">A <code>dot</code> file of the tree, with less information than the tree in <code>cluster_results.json</code>.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>node_info.csv</code></td>
+<td class="org-left">Various information of each node in the tree.</td>
+</tr>
+
+<tr>
+<td class="org-left"><code>projection.pdf</code></td>
+<td class="org-left">When <code>--projection</code> is supplied with a file of the format "barcode,x,y", provides a plot of each cell at the specified x and y coordinates (for instance, when looking at tSNE plots with the same labelings as the dendrogram here).</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<div id="outline-container-org40f4656" class="outline-4">
+<h4 id="org40f4656"><span class="section-number-4">3.1.2</span> Outline with options</h4>
+<div class="outline-text-4" id="text-3-1-2">
+<p>
+The basic outline of the <b>default</b> pre-processing pipeline with some relevant
+options is as follows (there are many additional options including cell
+whitelists and PCA that can be seen using <code>too-many-cells make-tree -h</code>):
+</p>
+
+<ol class="org-ol">
+<li>Read matrix.</li>
+<li>Remove cells with less than 250 counts (<code>--filter-thresholds, =--no-filter</code>).</li>
+<li>Remove genes with less than 1 count (<code>--filter-thresholds, =--no-filter</code>).</li>
+<li>Term frequency-inverse document frequency normalization (<code>--normalization</code>).</li>
+<li>Finish.</li>
+</ol>
+</div>
+</div>
+
+<div id="outline-container-org4d75e59" class="outline-4">
+<h4 id="org4d75e59"><span class="section-number-4">3.1.3</span> Example</h4>
+<div class="outline-text-4" id="text-3-1-3">
+</div>
+<ol class="org-ol">
+<li><a id="org57dcee9"></a>Setup<br />
+<div class="outline-text-5" id="text-3-1-3-1">
+<p>
+We start with our input matrix.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">ls ./input
+</pre>
+</div>
+
+<p>
+We also know where each cell came from, so we mark that down as well in a
+<code>labels.csv</code> file.
+</p>
+
+<pre class="example">
+item,label
+AAAGTAGAGATGCCAG-1,Bladder
+AACCGCGTCCAACCAA-1,Bladder
+AACTCCCGTCGGGTCT-1,Bladder
+AACTCTTAGTTGCAGG-1,Bladder
+AACTCTTTCATAACCG-1,Bladder
+...
+</pre>
+
+<p>
+This can be easily accomplished with <code>sed</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">cat barcodes.tsv | sed <span style="color: #afaf00;">"s/-1/-1,Bladder/"</span> | s/-2/etc... &gt; labels.csv
+</pre>
+</div>
+
+<p>
+For <code>cellranger</code>, note that the <code>-1</code>, <code>-2</code>, etc. postfixes denote the first,
+second, etc. label in the aggregation <code>csv</code> file used as input for <code>cellranger
+aggr</code>.
+</p>
+</div>
+</li>
+
+<li><a id="orgb84504b"></a>Default run<br />
+<div class="outline-text-5" id="text-3-1-3-2">
+<p>
+We can now run the <code>too-many-cells</code> algorithm on our data.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --draw-collection <span style="color: #afaf00;">"PieRing"</span> <span style="color: #afaf00;">\</span>
+    --output out
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/complete_default_tree.png" alt="complete_default_tree.png" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org5fd16f3"></a>Pruning tree<br />
+<div class="outline-text-5" id="text-3-1-3-3">
+<p>
+Large cell populations can result in a very large tree. What if we only want to
+see larger subpopulations rather than the large (inner nodes) and small
+(leaves)? We can use the <code>--min-size 100</code> argument to set the minimum size of a
+leaf to 100 in this case. Alternatively, we can specify <code>--smart-cutoff 4</code> in
+addition to <code>--min-size 1</code> to set the minimum size of a node to \(4 *
+\text{median absolute deviation (MAD)}\) of the nodes in the original tree.
+Varying the number of MADs varies the number of leaves in the tree.
+<code>--smart-cutoff</code> should be used in addition to <code>--min-size</code>, <code>max-proportion</code>,
+or <code>min-distance</code> to decide which cutoff variable to use. The value supplied to
+the cutoff variable is ignored when <code>--smart-cutoff</code> is specified. We'll prune
+the tree for better visibility in this document.
+</p>
+
+<p>
+<b>Note: the pruning arguments change the tree file, not just the plot, so be sure
+to output into a different directory.</b>
+</p>
+
+<p>
+Also, <b>we do not need to recalculate the entire tree!</b> We can just supply the
+previous results using <code>--prior</code> (we can also remove <code>--matrix-path</code> with
+<code>--prior</code> to speed things up, but miss out on some features if needed):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-collection <span style="color: #afaf00;">"PieRing"</span> <span style="color: #afaf00;">\</span>
+    --output out_pruned
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/pruned_tree.png" alt="pruned_tree.png" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="orgc9f6d96"></a>Pie charts<br />
+<div class="outline-text-5" id="text-3-1-3-4">
+<p>
+What if we want pie charts instead of showing each individual cell (the
+default)?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
+    --output out_pruned
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/piechart_pruned_tree.png" alt="piechart_pruned_tree.png" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org5e42fc9"></a>Node numbering<br />
+<div class="outline-text-5" id="text-3-1-3-5">
+<p>
+Now that we see the relationships between clusters and nodes in the dendrogram,
+how can we go back to the data &#x2013; which nodes represent which node IDs in the
+data?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
+    --draw-node-number <span style="color: #afaf00;">\</span>
+    --output out_pruned
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/numbered_pruned_tree.png" alt="numbered_pruned_tree.png" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="orgd7bedd2"></a>Branch width<br />
+<div class="outline-text-5" id="text-3-1-3-6">
+<p>
+We can also change the width of the nodes and branches, for instance if we want
+thinner branches:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
+    --draw-max-node-size <span style="color: #d787af;">40</span> <span style="color: #afaf00;">\</span>
+    --output out_pruned
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/thin_pruned_tree.png" alt="thin_pruned_tree.png" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="org8946f3d"></a>No scaling<br />
+<div class="outline-text-5" id="text-3-1-3-7">
+<p>
+We can remove all scaling for a normal tree and still control the branch widths:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
+    --draw-max-node-size <span style="color: #d787af;">40</span> <span style="color: #afaf00;">\</span>
+    --draw-no-scale-nodes <span style="color: #afaf00;">\</span>
+    --output out_pruned
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/no_scaling_pruned_tree.png" alt="no_scaling_pruned_tree.png" />
+</p>
+</div>
+
+<p>
+How strong is each split? We can tell by drawing the modularity of the children
+on top of each node:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
+    --draw-mark <span style="color: #afaf00;">"MarkModularity"</span> <span style="color: #afaf00;">\</span>
+    --output out_pruned
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/modularity_pruned_tree.png" alt="modularity_pruned_tree.png" />
+</p>
+</div>
+</div>
+</li>
+
+<li><a id="orgd718eb9"></a>Gene expression<br />
+<div class="outline-text-5" id="text-3-1-3-8">
+<p>
+What if we want to draw the gene expression onto the tree in another folder
+(requires <code>--matrix-path</code>, may take some time depending on matrix size)?
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous \"Cd4\")"</span> <span style="color: #afaf00;">\</span>
+    --output out_gene_expression
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/cd4_dendrogram.png" alt="cd4_dendrogram.png" />
+</p>
+</div>
+
+<p>
+While this representation shows the expression of <i>Cd4</i> in each cell and blends
+those levels together, due to the sparsity of single cell data these cells and
+their respective subtrees may be hard to see without additional processing.
+Let's scale the saturation to more clearly see sections of the tree with our
+desired expression.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous \"Cd4\")"</span> <span style="color: #afaf00;">\</span>
+    --draw-scale-saturation <span style="color: #d787af;">10</span>
+    --output out_gene_expression
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/cd4_saturated_10_dendrogram.png" alt="cd4_saturated_10_dendrogram.png" />
+</p>
+</div>
+
+<p>
+There, much better! Now it's clearly enriched in the subtree containing the
+thymus, where we would expect many T cells to be. While this tree makes the
+expression a bit more visible, there is another tactic we can use. Instead of
+the continuous color spectrum of expression values, we can have a binary "high"
+and "low" expression. Here, we'll continue to have the red and white colors
+represent high and low expressions respectively using the <code>--draw-colors</code>
+argument. Note that this binary expression technique can be used for multiple
+features, hence it's a list of features with cutoffs so you can be high in a
+gene and low in another gene, etc. for all possible combinations.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawThresholdContinuous [(\"Cd4\", 0), (\"Cd8a\", 0)])"</span> <span style="color: #afaf00;">\</span>
+    --draw-colors <span style="color: #afaf00;">"[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]"</span>
+    --draw-scale-saturation <span style="color: #d787af;">10</span>
+    --output out_gene_expression
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/cd4_cd8_sat_10_dendrogram.png" alt="cd4_cd8_sat_10_dendrogram.png" />
+</p>
+</div>
+
+<p>
+Now we can see the expression of both <i>Cd4</i> and <i>Cd8a</i> at the same time!
+</p>
+</div>
+</li>
+
+<li><a id="orgd2d1987"></a>Diversity<br />
+<div class="outline-text-5" id="text-3-1-3-9">
+<p>
+We can also see an overview of the diversity of cell labels within each subtree
+and leaves.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
+    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
+    --draw-leaf <span style="color: #afaf00;">"DrawItem DrawDiversity"</span>
+    --output out_diversity
+</pre>
+</div>
+
+
+<div class="figure">
+<p><img src="img/diversity_pruned_tree.png" alt="diversity_pruned_tree.png" />
+</p>
+</div>
+
+<p>
+Here, the deeper the red, the more diverse (a larger "effective number of cell
+states") the cell labels in that group are. Note that the inner nodes are
+colored relative to themselves, while the leaves are colored relative to all
+leaves, so there are two different scales.
+</p>
+</div>
+</li>
+</ol>
+</div>
+</div>
+
+<div id="outline-container-org2b757c4" class="outline-3">
+<h3 id="org2b757c4"><span class="section-number-3">3.2</span> <code>interactive</code></h3>
+<div class="outline-text-3" id="text-3-2">
+<p>
+The <code>interactive</code> entry point has a basic GUI interface for quick plotting with
+a few features. We recommend limited use of this feature, however,
+as it can be quite slow at this stage, has fewer customizations, and requires
+specific dependencies.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells interactive <span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org140538a" class="outline-3">
+<h3 id="org140538a"><span class="section-number-3">3.3</span> <code>differential</code></h3>
+<div class="outline-text-3" id="text-3-3">
+<p>
+A main use of single cell clustering is to find differential genes between
+multiple groups of cells. The <code>differential</code> aids in this endeavor by allowing
+comparisons with <code>edgeR</code>. Let's find the differential genes between the liver
+group and all other cells. Consider our pruned tree from earlier:
+</p>
+
+
+<div class="figure">
+<p><img src="img/piechart_pruned_tree.png" alt="piechart_pruned_tree.png" />
+</p>
+</div>
+
+<p>
+We can see the id of each group with <code>--draw-node-number</code>.
+</p>
+
+
+<div class="figure">
+<p><img src="img/numbered_pruned_tree.png" alt="numbered_pruned_tree.png" />
+</p>
+</div>
+
+<p>
+We need to define two groups to compare. Well, it looks like node 98 defines the
+liver cluster. Then, since we don't want 98 to be in the other group, we say
+that all other cells are within nodes 89 and 1. As a result, we end up with a
+tuple containing two lists: ([89, 1], [98]). Then our differential genes for
+(liver / others) can be found with <code>differential</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    -n <span style="color: #afaf00;">"([89, 1], [98])"</span>
+</pre>
+</div>
+
+<p>
+If we wanted to make the same comparison, but compare the liver subtree with
+liver cells from all other subtrees, we can use the <code>--labels</code> argument:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    -n <span style="color: #afaf00;">"([89, 1], [98])"</span> <span style="color: #afaf00;">\</span>
+    --labels <span style="color: #afaf00;">"([\"Liver\"], [\"Liver\"])"</span>
+</pre>
+</div>
+
+<p>
+We can also look at the distribution of abundance for individual genes using the
+<code>--genes</code> and <code>--plot-output</code> arguments.
+</p>
+
+<p>
+Furthermore, we can compare each node to all other cells by specifying no nodes
+at all. The output file will contain the top <code>--top-n</code> genes for each node. We
+recommend using multiple OS threads here to speed up the process using <code>+RTS
+-N${NUMOSTHREADS}</code> (no number to use all cores). The following example will
+compare all nodes to all other cells using 8 OS threads:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+    --matrix-path input <span style="color: #afaf00;">\</span>
+    -n <span style="color: #afaf00;">"([], [])"</span> <span style="color: #afaf00;">\</span>
+    --normalization <span style="color: #afaf00;">"UQNorm"</span> <span style="color: #afaf00;">\</span>
+    +RTS -N8
+</pre>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org5e8a1cc" class="outline-3">
+<h3 id="org5e8a1cc"><span class="section-number-3">3.4</span> <code>diversity</code></h3>
+<div class="outline-text-3" id="text-3-4">
+<p>
+Diversity is the measure of the "effective number of entities within a system",
+originating from ecology (See Jost: Entropy and Diversity). Here, each cell is
+an organism and each cell label or cluster is a species, depending on the
+question. In ecology, the diversity index measures the effective number of
+species within a population such that the minimum is a diversity of 1 for a
+single dominant species up to maximum of the total number of species (evenly
+abundant). If our species is a cluster, then here the diversity is the effective
+number of cell states within a population (for labels, <code>make-tree</code> generates
+these results automatically in "diversity" columns). Say we have two populations
+and we generated the trees using <code>make-tree</code> into two different output folders,
+<code>out1</code> and <code>out2</code>. We can find the diversity of each population using the
+<code>diversity</code> entry point.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells diversity<span style="color: #afaf00;">\</span>
+    --priors out1 <span style="color: #afaf00;">\</span>
+    --priors out2 <span style="color: #afaf00;">\</span>
+    -o out_diversity_stats
+</pre>
+</div>
+
+<p>
+We can then find a simple plot of diversity in <code>diversity_output</code>. In addition,
+we also provide rarefaction curves for comparing the number of different cell
+states at each subsampling useful for comparing the number of cell states where
+the population sizes differ.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org3bbd9cc" class="outline-3">
+<h3 id="org3bbd9cc"><span class="section-number-3">3.5</span> <code>paths</code></h3>
+<div class="outline-text-3" id="text-3-5">
+<p>
+"Pseudotime" refers to the one dimensional relationship between cells, useful
+for looking at the ordering of cell states or labels. The implementation of
+pseudotime in a <code>too-many-cells</code> point-of-view is by finding the distance
+between all cells and the cells found in the longest path from the root in the
+tree. Then each cell has a distance from the "start" and thus we plot those
+distances.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-sh">too-many-cells paths<span style="color: #afaf00;">\</span>
+    --prior out <span style="color: #afaf00;">\</span>
+    --labels-file labels.csv <span style="color: #afaf00;">\</span>
+    --bandwidth <span style="color: #d787af;">3</span> <span style="color: #afaf00;">\</span>
+    -o out_paths
+</pre>
+</div>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org514cd15" class="outline-2">
+<h2 id="org514cd15"><span class="section-number-2">4</span> Documentation</h2>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="author">Author: Gregory W. Schwartz</p>
+<p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>
