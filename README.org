@@ -26,7 +26,8 @@ additional parameters or runs. See below for a full list of features.
 
 We provide multiple ways to install =too-many-cells=. We recommend installing
 =stack= [[Install =stack= ][see below]]), but we also have a =Dockerfile= to use in any system in case
-you have a custom build (for instance, a non-standard R installation).
+you have a custom build (for instance, a non-standard R installation) or
+difficulty installing.
 
 ** Dependencies
 
