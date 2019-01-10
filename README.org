@@ -77,7 +77,9 @@ stack install too-many-cells
 If you run into errors like =Error: While constructing the build plan, the
 following exceptions were encountered:=, then follow it's advice. Usually you
 just need to follow the suggestion and add the dependencies to the specified
-file. Relies on =eigen-3.3.4.1= right now.
+file. For a quick =yaml= configuration, refer to
+[[https://github.com/GregorySchwartz/too-many-cells/blob/master/stack.yaml]]. Relies
+on =eigen-3.3.4.1= right now.
 
 *** Source
 
