@@ -73,6 +73,10 @@ code, just run the following command to place =too-many-cells= in your
 stack install too-many-cells
 #+END_SRC
 
+If you run into errors like =Error: While constructing the build plan, the
+following exceptions were encountered:=, then follow it's advice. Usually you
+just need to follow the suggestion and add the dependencies to the specified file.
+
 *** Source
 
 #+BEGIN_SRC sh
