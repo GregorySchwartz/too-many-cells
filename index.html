@@ -261,37 +261,37 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgfc9ddb9">1. Description</a></li>
-<li><a href="#orgb11bd82">2. Installation</a>
+<li><a href="#org85b1bea">1. Description</a></li>
+<li><a href="#orgeb91d54">2. Installation</a>
 <ul>
-<li><a href="#orgc1fa071">2.1. Dependencies</a></li>
-<li><a href="#org29472f6">2.2. Install <code>stack</code></a></li>
-<li><a href="#orgdfa7a2b">2.3. Install <code>too-many-cells</code></a>
+<li><a href="#org9b50f71">2.1. Dependencies</a></li>
+<li><a href="#orgde1161b">2.2. Install <code>stack</code></a></li>
+<li><a href="#org818b017">2.3. Install <code>too-many-cells</code></a>
 <ul>
-<li><a href="#org88db859">2.3.1. Source</a></li>
-<li><a href="#orgeede394">2.3.2. Online</a></li>
-<li><a href="#org7d40baf">2.3.3. Docker</a></li>
+<li><a href="#org66bef97">2.3.1. Source</a></li>
+<li><a href="#org8bd8bf4">2.3.2. Online</a></li>
+<li><a href="#org284ec3d">2.3.3. Docker</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#org00f6a09">3. Included projects</a></li>
-<li><a href="#org9b9f144">4. Usage</a>
+<li><a href="#org7a3168b">3. Included projects</a></li>
+<li><a href="#org3d05cc1">4. Usage</a>
 <ul>
-<li><a href="#org6b0307f">4.1. <code>make-tree</code></a>
+<li><a href="#orgd87a702">4.1. <code>make-tree</code></a>
 <ul>
-<li><a href="#orgef09195">4.1.1. Output</a></li>
-<li><a href="#orgff0b270">4.1.2. Outline with options</a></li>
-<li><a href="#orgc4853bb">4.1.3. Example</a></li>
+<li><a href="#org9759c68">4.1.1. Output</a></li>
+<li><a href="#orgd1cbacf">4.1.2. Outline with options</a></li>
+<li><a href="#orgb7f2e53">4.1.3. Example</a></li>
 </ul>
 </li>
-<li><a href="#org5249b92">4.2. <code>interactive</code></a></li>
-<li><a href="#orgf752b6f">4.3. <code>differential</code></a></li>
-<li><a href="#orgeac0060">4.4. <code>diversity</code></a></li>
-<li><a href="#org95c8b73">4.5. <code>paths</code></a></li>
+<li><a href="#org6e522f4">4.2. <code>interactive</code></a></li>
+<li><a href="#orge56fd9b">4.3. <code>differential</code></a></li>
+<li><a href="#org9f71371">4.4. <code>diversity</code></a></li>
+<li><a href="#org92540e8">4.5. <code>paths</code></a></li>
 </ul>
 </li>
-<li><a href="#org00fb21f">5. Documentation</a></li>
+<li><a href="#org5e757d2">5. Documentation</a></li>
 </ul>
 </div>
 </div>
@@ -309,8 +309,8 @@ See <a href="https://github.com/GregorySchwartz/too-many-cells">https://github.c
 </p>
 </div>
 
-<div id="outline-container-orgfc9ddb9" class="outline-2">
-<h2 id="orgfc9ddb9"><span class="section-number-2">1</span> Description</h2>
+<div id="outline-container-org85b1bea" class="outline-2">
+<h2 id="org85b1bea"><span class="section-number-2">1</span> Description</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 <code>too-many-cells</code> is a suite of tools, algorithms, and visualizations focusing on
@@ -323,26 +323,26 @@ recursively divides cells into clusters and relates clusters rather than
 individual cells. In fact, by recursively dividing until further dividing would
 be considered noise or random partitioning, we can eliminate noisy relationships
 at the fine-grain level. The resulting binary tree serves as a basis for a
-different perspective of single cells, using our <a href="http://github.com/GregorySchwartz/birch-beer#readme"><code>birch-beer</code></a> visualization and
-tree measures to describe simultaneously large and small populations, without
-additional parameters or runs. See below for a full list of features.
+different perspective of single cells, using our <a href="http://github.com/GregorySchwartz/birch-beer#readme"> <code>birch-beer</code> </a> visualization
+and tree measures to describe simultaneously large and small populations,
+without additional parameters or runs. See below for a full list of features.
 </p>
 </div>
 </div>
 
-<div id="outline-container-orgb11bd82" class="outline-2">
-<h2 id="orgb11bd82"><span class="section-number-2">2</span> Installation</h2>
+<div id="outline-container-orgeb91d54" class="outline-2">
+<h2 id="orgeb91d54"><span class="section-number-2">2</span> Installation</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 We provide multiple ways to install <code>too-many-cells</code>. We recommend installing
-<code>stack</code> (<a href="#org29472f6">see below</a>), but we also have <a href="#org7d40baf">docker</a> images and a <code>Dockerfile</code> to use in
+<code>stack</code> (<a href="#orgde1161b">see below</a>), but we also have <a href="#org284ec3d">docker</a> images and a <code>Dockerfile</code> to use in
 any system in case you have a custom build (for instance, a non-standard R
 installation) or difficulty installing.
 </p>
 </div>
 
-<div id="outline-container-orgc1fa071" class="outline-3">
-<h3 id="orgc1fa071"><span class="section-number-3">2.1</span> Dependencies</h3>
+<div id="outline-container-org9b50f71" class="outline-3">
+<h3 id="org9b50f71"><span class="section-number-3">2.1</span> Dependencies</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 You may require the following dependencies to build and run (from Ubuntu 14.04,
@@ -376,8 +376,8 @@ Uses the following packages from R:
 </div>
 </div>
 
-<div id="outline-container-org29472f6" class="outline-3">
-<h3 id="org29472f6"><span class="section-number-3">2.2</span> Install <code>stack</code></h3>
+<div id="outline-container-orgde1161b" class="outline-3">
+<h3 id="orgde1161b"><span class="section-number-3">2.2</span> Install <code>stack</code></h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 See <a href="https://docs.haskellstack.org/en/stable/README/">https://docs.haskellstack.org/en/stable/README/</a> for more details.
@@ -391,12 +391,12 @@ stack setup
 </div>
 </div>
 
-<div id="outline-container-orgdfa7a2b" class="outline-3">
-<h3 id="orgdfa7a2b"><span class="section-number-3">2.3</span> Install <code>too-many-cells</code></h3>
+<div id="outline-container-org818b017" class="outline-3">
+<h3 id="org818b017"><span class="section-number-3">2.3</span> Install <code>too-many-cells</code></h3>
 <div class="outline-text-3" id="text-2-3">
 </div>
-<div id="outline-container-org88db859" class="outline-4">
-<h4 id="org88db859"><span class="section-number-4">2.3.1</span> Source</h4>
+<div id="outline-container-org66bef97" class="outline-4">
+<h4 id="org66bef97"><span class="section-number-4">2.3.1</span> Source</h4>
 <div class="outline-text-4" id="text-2-3-1">
 <p>
 Probably the easiest method if you don't want to mess with dependencies (outside
@@ -412,8 +412,8 @@ stack install
 </div>
 </div>
 
-<div id="outline-container-orgeede394" class="outline-4">
-<h4 id="orgeede394"><span class="section-number-4">2.3.2</span> Online</h4>
+<div id="outline-container-org8bd8bf4" class="outline-4">
+<h4 id="org8bd8bf4"><span class="section-number-4">2.3.2</span> Online</h4>
 <div class="outline-text-4" id="text-2-3-2">
 <p>
 We only require <code>stack</code> (or <code>cabal</code>), you do not need to download any source
@@ -437,8 +437,8 @@ on <code>eigen-3.3.4.1</code> right now.
 </div>
 </div>
 
-<div id="outline-container-org7d40baf" class="outline-4">
-<h4 id="org7d40baf"><span class="section-number-4">2.3.3</span> Docker</h4>
+<div id="outline-container-org284ec3d" class="outline-4">
+<h4 id="org284ec3d"><span class="section-number-4">2.3.3</span> Docker</h4>
 <div class="outline-text-4" id="text-2-3-3">
 <p>
 Different computers have different setups, operating systems, and repositories.
@@ -479,8 +479,8 @@ docker build -t too-many-cells -f ./Dockerfile .
 </div>
 </div>
 
-<div id="outline-container-org00f6a09" class="outline-2">
-<h2 id="org00f6a09"><span class="section-number-2">3</span> Included projects</h2>
+<div id="outline-container-org7a3168b" class="outline-2">
+<h2 id="org7a3168b"><span class="section-number-2">3</span> Included projects</h2>
 <div class="outline-text-2" id="text-3">
 <p>
 This project is a collection of libraries and programs written specifically for
@@ -488,20 +488,20 @@ This project is a collection of libraries and programs written specifically for
 </p>
 
 <dl class="org-dl">
-<dt><a href="https://github.com/GregorySchwartz/birch-beer"><code>birch-beer</code></a></dt><dd>Generate a tree for displaying a hierarchy of groups with
+<dt><a href="https://github.com/GregorySchwartz/birch-beer"> <code>birch-beer</code> </a></dt><dd>Generate a tree for displaying a hierarchy of groups with
 colors, scaling, and more.</dd>
-<dt><a href="https://github.com/GregorySchwartz/modularity"><code>modularity</code></a></dt><dd>Find the modularity of a network.</dd>
-<dt><a href="https://github.com/GregorySchwartz/spectral-clustering"><code>spectral-clustering</code></a></dt><dd>Library for spectral clustering.</dd>
-<dt><a href="https://github.com/GregorySchwartz/hierarchical-spectral-clustering"><code>hierarchical-spectral-clustering</code></a></dt><dd>Hierarchical spectral clustering of a
+<dt><a href="https://github.com/GregorySchwartz/modularity"> <code>modularity</code> </a></dt><dd>Find the modularity of a network.</dd>
+<dt><a href="https://github.com/GregorySchwartz/spectral-clustering"> <code>spectral-clustering</code> </a></dt><dd>Library for spectral clustering.</dd>
+<dt><a href="https://github.com/GregorySchwartz/hierarchical-spectral-clustering"> <code>hierarchical-spectral-clustering</code> </a></dt><dd>Hierarchical spectral clustering of a
 graph.</dd>
-<dt><a href="https://github.com/GregorySchwartz/differential"><code>differential</code></a></dt><dd>Finds out whether an entity comes from different
+<dt><a href="https://github.com/GregorySchwartz/differential"> <code>differential</code> </a></dt><dd>Finds out whether an entity comes from different
 distributions (statuses).</dd>
 </dl>
 </div>
 </div>
 
-<div id="outline-container-org9b9f144" class="outline-2">
-<h2 id="org9b9f144"><span class="section-number-2">4</span> Usage</h2>
+<div id="outline-container-org3d05cc1" class="outline-2">
+<h2 id="org3d05cc1"><span class="section-number-2">4</span> Usage</h2>
 <div class="outline-text-2" id="text-4">
 <p>
 <code>too-many-cells</code> has several entry points depending on the desired analysis.
@@ -559,8 +559,8 @@ At any point, use <code>-h</code> to see the help of each entry point.
 </p>
 </div>
 
-<div id="outline-container-org6b0307f" class="outline-3">
-<h3 id="org6b0307f"><span class="section-number-3">4.1</span> <code>make-tree</code></h3>
+<div id="outline-container-orgd87a702" class="outline-3">
+<h3 id="orgd87a702"><span class="section-number-3">4.1</span> <code>make-tree</code></h3>
 <div class="outline-text-3" id="text-4-1">
 <p>
 <code>too-many-cells make-tree</code> generates a binary tree using hierarchical spectral
@@ -605,8 +605,8 @@ point (i.e. <code>too-many-cells make-tree -h</code>).
 </p>
 </div>
 
-<div id="outline-container-orgef09195" class="outline-4">
-<h4 id="orgef09195"><span class="section-number-4">4.1.1</span> Output</h4>
+<div id="outline-container-org9759c68" class="outline-4">
+<h4 id="org9759c68"><span class="section-number-4">4.1.1</span> Output</h4>
 <div class="outline-text-4" id="text-4-1-1">
 <p>
 <code>too-many-cells make-tree</code> generates several files in the output folder. Below
@@ -682,8 +682,8 @@ is a short description of each file.
 </div>
 </div>
 
-<div id="outline-container-orgff0b270" class="outline-4">
-<h4 id="orgff0b270"><span class="section-number-4">4.1.2</span> Outline with options</h4>
+<div id="outline-container-orgd1cbacf" class="outline-4">
+<h4 id="orgd1cbacf"><span class="section-number-4">4.1.2</span> Outline with options</h4>
 <div class="outline-text-4" id="text-4-1-2">
 <p>
 The basic outline of the <b>default</b> pre-processing pipeline with some relevant
@@ -701,12 +701,12 @@ whitelists and PCA that can be seen using <code>too-many-cells make-tree -h</cod
 </div>
 </div>
 
-<div id="outline-container-orgc4853bb" class="outline-4">
-<h4 id="orgc4853bb"><span class="section-number-4">4.1.3</span> Example</h4>
+<div id="outline-container-orgb7f2e53" class="outline-4">
+<h4 id="orgb7f2e53"><span class="section-number-4">4.1.3</span> Example</h4>
 <div class="outline-text-4" id="text-4-1-3">
 </div>
 <ol class="org-ol">
-<li><a id="orgd91df0a"></a>Setup<br />
+<li><a id="org386948f"></a>Setup<br />
 <div class="outline-text-5" id="text-4-1-3-1">
 <p>
 We start with our input matrix. Here, 
@@ -754,7 +754,7 @@ aggr</code>.
 </div>
 </li>
 
-<li><a id="org08a7d55"></a>Default run<br />
+<li><a id="org72d98a0"></a>Default run<br />
 <div class="outline-text-5" id="text-4-1-3-2">
 <p>
 We can now run the <code>too-many-cells</code> algorithm on our data.
@@ -777,7 +777,7 @@ We can now run the <code>too-many-cells</code> algorithm on our data.
 </div>
 </li>
 
-<li><a id="org242703c"></a>Pruning tree<br />
+<li><a id="org732f050"></a>Pruning tree<br />
 <div class="outline-text-5" id="text-4-1-3-3">
 <p>
 Large cell populations can result in a very large tree. What if we only want to
@@ -823,7 +823,7 @@ previous results using <code>--prior</code> (we can also remove <code>--matrix-p
 </div>
 </li>
 
-<li><a id="org8f316bd"></a>Pie charts<br />
+<li><a id="org2351cb0"></a>Pie charts<br />
 <div class="outline-text-5" id="text-4-1-3-4">
 <p>
 What if we want pie charts instead of showing each individual cell (the
@@ -849,7 +849,7 @@ default)?
 </div>
 </li>
 
-<li><a id="org47b91f1"></a>Node numbering<br />
+<li><a id="orgfe3a328"></a>Node numbering<br />
 <div class="outline-text-5" id="text-4-1-3-5">
 <p>
 Now that we see the relationships between clusters and nodes in the dendrogram,
@@ -877,7 +877,7 @@ data?
 </div>
 </li>
 
-<li><a id="org64078bc"></a>Branch width<br />
+<li><a id="org69ec263"></a>Branch width<br />
 <div class="outline-text-5" id="text-4-1-3-6">
 <p>
 We can also change the width of the nodes and branches, for instance if we want
@@ -904,7 +904,7 @@ thinner branches:
 </div>
 </li>
 
-<li><a id="org4cbb99c"></a>No scaling<br />
+<li><a id="org1867f4c"></a>No scaling<br />
 <div class="outline-text-5" id="text-4-1-3-7">
 <p>
 We can remove all scaling for a normal tree and still control the branch widths:
@@ -954,7 +954,7 @@ on top of each node:
 </div>
 </li>
 
-<li><a id="org6a32fde"></a>Gene expression<br />
+<li><a id="org3e780fe"></a>Gene expression<br />
 <div class="outline-text-5" id="text-4-1-3-8">
 <p>
 What if we want to draw the gene expression onto the tree in another folder
@@ -1044,7 +1044,7 @@ Now we can see the expression of both <i>Cd4</i> and <i>Cd8a</i> at the same tim
 </div>
 </li>
 
-<li><a id="org9687eaa"></a>Diversity<br />
+<li><a id="orge95126e"></a>Diversity<br />
 <div class="outline-text-5" id="text-4-1-3-9">
 <p>
 We can also see an overview of the diversity of cell labels within each subtree
@@ -1081,8 +1081,8 @@ leaves, so there are two different scales.
 </div>
 </div>
 
-<div id="outline-container-org5249b92" class="outline-3">
-<h3 id="org5249b92"><span class="section-number-3">4.2</span> <code>interactive</code></h3>
+<div id="outline-container-org6e522f4" class="outline-3">
+<h3 id="org6e522f4"><span class="section-number-3">4.2</span> <code>interactive</code></h3>
 <div class="outline-text-3" id="text-4-2">
 <p>
 The <code>interactive</code> entry point has a basic GUI interface for quick plotting with
@@ -1100,8 +1100,8 @@ specific dependencies.
 </div>
 </div>
 
-<div id="outline-container-orgf752b6f" class="outline-3">
-<h3 id="orgf752b6f"><span class="section-number-3">4.3</span> <code>differential</code></h3>
+<div id="outline-container-orge56fd9b" class="outline-3">
+<h3 id="orge56fd9b"><span class="section-number-3">4.3</span> <code>differential</code></h3>
 <div class="outline-text-3" id="text-4-3">
 <p>
 A main use of single cell clustering is to find differential genes between
@@ -1179,8 +1179,8 @@ compare all nodes to all other cells using 8 OS threads:
 </div>
 </div>
 
-<div id="outline-container-orgeac0060" class="outline-3">
-<h3 id="orgeac0060"><span class="section-number-3">4.4</span> <code>diversity</code></h3>
+<div id="outline-container-org9f71371" class="outline-3">
+<h3 id="org9f71371"><span class="section-number-3">4.4</span> <code>diversity</code></h3>
 <div class="outline-text-3" id="text-4-4">
 <p>
 Diversity is the measure of the "effective number of entities within a system",
@@ -1214,8 +1214,8 @@ the population sizes differ.
 </div>
 </div>
 
-<div id="outline-container-org95c8b73" class="outline-3">
-<h3 id="org95c8b73"><span class="section-number-3">4.5</span> <code>paths</code></h3>
+<div id="outline-container-org92540e8" class="outline-3">
+<h3 id="org92540e8"><span class="section-number-3">4.5</span> <code>paths</code></h3>
 <div class="outline-text-3" id="text-4-5">
 <p>
 "Pseudotime" refers to the one dimensional relationship between cells, useful
@@ -1238,8 +1238,8 @@ distances.
 </div>
 </div>
 
-<div id="outline-container-org00fb21f" class="outline-2">
-<h2 id="org00fb21f"><span class="section-number-2">5</span> Documentation</h2>
+<div id="outline-container-org5e757d2" class="outline-2">
+<h2 id="org5e757d2"><span class="section-number-2">5</span> Documentation</h2>
 <div class="outline-text-2" id="text-5">
 <p>
 Each entry point has its own documentation accessible with <code>-h</code>, such as

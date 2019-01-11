@@ -22,9 +22,9 @@ recursively divides cells into clusters and relates clusters rather than
 individual cells. In fact, by recursively dividing until further dividing would
 be considered noise or random partitioning, we can eliminate noisy relationships
 at the fine-grain level. The resulting binary tree serves as a basis for a
-different perspective of single cells, using our [[http://github.com/GregorySchwartz/birch-beer#readme][=birch-beer=]] visualization and
-tree measures to describe simultaneously large and small populations, without
-additional parameters or runs. See below for a full list of features.
+different perspective of single cells, using our [[http://github.com/GregorySchwartz/birch-beer#readme][ =birch-beer= ]] visualization
+and tree measures to describe simultaneously large and small populations,
+without additional parameters or runs. See below for a full list of features.
 
 * Installation
 
@@ -127,13 +127,13 @@ docker build -t too-many-cells -f ./Dockerfile .
 This project is a collection of libraries and programs written specifically for
 =too-many-cells=:
 
-- [[https://github.com/GregorySchwartz/birch-beer][=birch-beer=]] :: Generate a tree for displaying a hierarchy of groups with
+- [[https://github.com/GregorySchwartz/birch-beer][ =birch-beer= ]] :: Generate a tree for displaying a hierarchy of groups with
      colors, scaling, and more.
-- [[https://github.com/GregorySchwartz/modularity][=modularity=]] :: Find the modularity of a network.
-- [[https://github.com/GregorySchwartz/spectral-clustering][=spectral-clustering=]] :: Library for spectral clustering.
-- [[https://github.com/GregorySchwartz/hierarchical-spectral-clustering][=hierarchical-spectral-clustering=]] :: Hierarchical spectral clustering of a
+- [[https://github.com/GregorySchwartz/modularity][ =modularity= ]] :: Find the modularity of a network.
+- [[https://github.com/GregorySchwartz/spectral-clustering][ =spectral-clustering= ]] :: Library for spectral clustering.
+- [[https://github.com/GregorySchwartz/hierarchical-spectral-clustering][ =hierarchical-spectral-clustering= ]] :: Hierarchical spectral clustering of a
      graph.
-- [[https://github.com/GregorySchwartz/differential][=differential=]] :: Finds out whether an entity comes from different
+- [[https://github.com/GregorySchwartz/differential][ =differential= ]] :: Finds out whether an entity comes from different
      distributions (statuses).
 
 * Usage
