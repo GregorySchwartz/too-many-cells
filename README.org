@@ -8,6 +8,8 @@
 
 See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version.
 
+[[file:img/pruned_tree.png]]
+
 * Description
 
 =too-many-cells= is a suite of tools, algorithms, and visualizations focusing on
@@ -100,7 +102,7 @@ Different computers have different setups, operating systems, and repositories.
 Do put the entire program in a container to bypass difficulties (with the other
 methods above), we user =docker=. So first, [[https://docs.docker.com/][install docker]].
 
-To get =too-many-cells= (replace 0.1.0.0 with [[https://hub.docker.com/r/gregoryschwartz/too-many-cells/tags][any version needed]]):
+To get =too-many-cells= (replace 0.1.0.0 with [[https://cloud.docker.com/repository/docker/gregoryschwartz/too-many-cells/general][any version needed]]):
 
 #+BEGIN_SRC sh
 docker pull gregoryschwartz/too-many-cells:0.1.0.0
