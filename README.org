@@ -29,7 +29,7 @@ additional parameters or runs. See below for a full list of features.
 * Installation
 
 We provide multiple ways to install =too-many-cells=. We recommend installing
-=stack= [[Install =stack= ][see below]]), but we also have [[Docker][docker]] images and a =Dockerfile= to use in
+=stack= ([[Install =stack= ][see below]]), but we also have [[Docker][docker]] images and a =Dockerfile= to use in
 any system in case you have a custom build (for instance, a non-standard R
 installation) or difficulty installing.
 
@@ -121,6 +121,20 @@ git clone https://github.com/GregorySchwartz/too-many-cells.git
 cd too-many-cells
 docker build -t too-many-cells -f ./Dockerfile .
 #+END_SRC
+
+* Included projects
+
+This project is a collection of libraries and programs written specifically for
+=too-many-cells=:
+
+- [[https://github.com/GregorySchwartz/birch-beer][=birch-beer=]] :: Generate a tree for displaying a hierarchy of groups with
+     colors, scaling, and more.
+- [[https://github.com/GregorySchwartz/modularity][=modularity=]] :: Find the modularity of a network.
+- [[https://github.com/GregorySchwartz/spectral-clustering][=spectral-clustering=]] :: Library for spectral clustering.
+- [[https://github.com/GregorySchwartz/hierarchical-spectral-clustering][=hierarchical-spectral-clustering=]] :: Hierarchical spectral clustering of a
+     graph.
+- [[https://github.com/GregorySchwartz/differential][=differential=]] :: Finds out whether an entity comes from different
+     distributions (statuses).
 
 * Usage
 
