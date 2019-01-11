@@ -173,9 +173,10 @@ change the visualization!*
 The main input is the =--matrix-path= argument. When a directory is supplied,
 =too-many-cells= interprets the folder to have =matrix.mtx=, =genes.tsv=, and
 =barcodes.tsv= files (=cellranger= outputs, see =cellranger= for specifics). If
-a file is supplied, we assume a =csv= file containing gene row names and cell
-column names. This argument can be called multiple times to combine multiple
-single cell matrices: =--matrix-path input1 --matrix-path input2=.
+a file is supplied instead of a directory, we assume a =csv= file containing
+gene row names and cell column names. This argument can be called multiple times
+to combine multiple single cell matrices: =--matrix-path input1 --matrix-path
+input2=.
 
 The second most important argument is =--labels-file=. Supply with a =csv= with
 a format and header of "item,label" to provide colorings and statistics of the
@@ -211,8 +212,8 @@ options is as follows (there are many additional options including cell
 whitelists and PCA that can be seen using =too-many-cells make-tree -h=):
 
 1. Read matrix.
-2. Remove cells with less than 250 counts (=--filter-thresholds, =--no-filter=).
-3. Remove genes with less than 1 count (=--filter-thresholds, =--no-filter=).
+2. Remove cells with less than 250 counts (=--filter-thresholds=, =--no-filter=).
+3. Remove genes with less than 1 count (=--filter-thresholds=, =--no-filter=).
 4. Term frequency-inverse document frequency normalization (=--normalization=).
 5. Finish.
 
@@ -220,18 +221,20 @@ whitelists and PCA that can be seen using =too-many-cells make-tree -h=):
 
 **** Setup
 
-We start with our input matrix.
+We start with our input matrix. Here, 
 
-#+HEADER: :results output verbatim
+#+HEADER: :results verbatim
 #+BEGIN_SRC sh
 ls ./input
 #+END_SRC
 
-#+RESULTS:
-: barcodes.tsv  genes.tsv  matrix.mtx
+#+BEGIN_EXAMPLE
+barcodes.tsv  genes.tsv  matrix.mtx
+#+END_EXAMPLE
 
-We also know where each cell came from, so we mark that down as well in a
-=labels.csv= file.
+Note that the input can be a directory (with the =cellranger= matrix format
+above) or a file (a =csv= file). We also know where each cell came from, so we
+mark that down as well in a =labels.csv= file.
 
 #+CAPTION: labels.csv
 #+BEGIN_EXAMPLE
