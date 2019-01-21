@@ -117,3 +117,5 @@ allow-newer: true
 
 docker:
   enable: false
+
+pvp-bounds: lower
