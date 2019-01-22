@@ -114,6 +114,15 @@ To run =too-many-cells= in a docker container:
 sudo docker run gregoryschwartz/too-many-cells:0.1.0.0 -h
 #+END_SRC
 
+Docker won't be able to find your files by default. You need to mount the
+folders with =-v= in order to have docker read and write from and to the
+filesystem, respectively. Read the [[https://docs.docker.com/storage/volumes/][documentation]] about volumes for more
+information. Essentially, =-v /path/to/matrix/on/host:/input_matrix= with =-m
+/input_matrix= is what you want, where before the =:= is on the host filesystem
+while after the =:= is what the docker program sees. Then you can write the
+output in the same way: =-v /path/to/output/on/host:/output= will write the
+output to the folder before the =:=.
+
 To build the =too-many-cells= image yourself if you want:
 
 #+BEGIN_SRC sh
