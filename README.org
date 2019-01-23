@@ -230,7 +230,7 @@ whitelists and PCA that can be seen using =too-many-cells make-tree -h=):
 
 **** Setup
 
-We start with our input matrix. Here, 
+We start with our input matrix. Here,
 
 #+HEADER: :results verbatim
 #+BEGIN_SRC sh
@@ -242,24 +242,92 @@ barcodes.tsv  genes.tsv  matrix.mtx
 #+END_EXAMPLE
 
 Note that the input can be a directory (with the =cellranger= matrix format
-above) or a file (a =csv= file). We also know where each cell came from, so we
-mark that down as well in a =labels.csv= file.
+above) or a file (a =csv= file). *You don't need to use scRNA-seq data!* You can
+use any data that has observations (cells) and features (genes), as long as you
+agree that the observations are related by their feature abundances. As for
+formats, the matrix market format contains three files like so:
+
+#+CAPTION: matrix.mtx
+#+BEGIN_EXAMPLE
+%%MatrixMarket matrix coordinate integer general
+%
+23433 1981 4255069
+4 1 1
+5 1 1
+11 1 2
+23 1 2
+25 1 2
+40 1 2
+48 1 1
+...
+#+END_EXAMPLE
+
+#+CAPTION: genes.tsv
+#+BEGIN_EXAMPLE
+Xkr4	Xkr4
+Rp1	Rp1
+Sox17	Sox17
+Mrpl15	Mrpl15
+Lypla1	Lypla1
+Tcea1	Tcea1
+Rgs20	Rgs20
+Atp6v1h	Atp6v1h
+Oprk1	Oprk1
+Npbwr1	Npbwr1
+...
+#+END_EXAMPLE
+
+#+CAPTION: barcodes.tsv
+#+BEGIN_EXAMPLE
+AAACCTGCAGTAACGG-1
+AAACGGGAGAAGAAGC-1
+AAACGGGAGACCGGAT-1
+AAACGGGAGCGCTCCA-1
+AAACGGGAGGACGAAA-1
+AAACGGGAGGTACTCT-1
+AAACGGGAGGTGCTTT-1
+AAACGGGAGTCGAGTG-1
+AAACGGGCATGGTCAT-1
+AAAGATGAGCTTCGCG-1
+...
+#+END_EXAMPLE
+
+For a =csv= file, the format is dense (observation columns (cells), feature rows
+(genes)):
+
+#+CAPTION: input.csv
+#+BEGIN_EXAMPLE
+"","A22.D042044.3_9_M.1.1","C5.D042044.3_9_M.1.1","D10.D042044.3_9_M.1.1","E13.D042044.3_9_M.1.1","F19.D042044.3_9_M.1.1","H2.D042044.3_9_M.1.1","I9.D042044.3_9_M.1.1",...
+"0610005C13Rik",0,0,0,0,0,0,0,...
+"0610007C21Rik",0,112,185,54,0,96,42,...
+"0610007L01Rik",0,0,0,0,0,153,170,...
+"0610007N19Rik",0,0,0,0,0,0,0,...
+"0610007P08Rik",0,0,0,0,0,19,0,...
+"0610007P14Rik",0,58,0,0,255,60,0,...
+"0610007P22Rik",0,0,0,0,0,65,0,...
+"0610008F07Rik",0,0,0,0,0,0,0,...
+"0610009B14Rik",0,0,0,0,0,0,0,...
+...
+#+END_EXAMPLE
+
+We also know where each cell came from, so we mark that down as well in a
+=labels.csv= file.
 
 #+CAPTION: labels.csv
 #+BEGIN_EXAMPLE
 item,label
-AAAGTAGAGATGCCAG-1,Bladder
-AACCGCGTCCAACCAA-1,Bladder
-AACTCCCGTCGGGTCT-1,Bladder
-AACTCTTAGTTGCAGG-1,Bladder
-AACTCTTTCATAACCG-1,Bladder
+AAACCTGCAGTAACGG-1,Marrow
+AAACGGGAGACCGGAT-1,Marrow
+AAACGGGAGCGCTCCA-1,Marrow
+AAACGGGAGGACGAAA-1,Marrow
+AAACGGGAGGTACTCT-1,Marrow
 ...
 #+END_EXAMPLE
 
 This can be easily accomplished with =sed=:
 
 #+BEGIN_SRC sh
-cat barcodes.tsv | sed "s/-1/-1,Bladder/" | s/-2/etc... > labels.csv
+cat barcodes.tsv | sed "s/-1/-1,Marrow/" | s/-2/etc... > labels.csv
 #+END_SRC
 
 For =cellranger=, note that the =-1=, =-2=, etc. postfixes denote the first,
@@ -620,9 +688,9 @@ Available options:
   -h,--help                Show this help text
 
 Available commands:
-  make-tree                
-  interactive              
-  differential             
-  diversity                
-  paths                    
+  make-tree
+  interactive
+  differential
+  diversity
+  paths
 #+end_example
