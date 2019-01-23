@@ -247,6 +247,8 @@ use any data that has observations (cells) and features (genes), as long as you
 agree that the observations are related by their feature abundances. As for
 formats, the matrix market format contains three files like so:
 
+The =matrix.mtx= file is in matrix market format.
+
 #+CAPTION: matrix.mtx
 #+BEGIN_EXAMPLE
 %%MatrixMarket matrix coordinate integer general
@@ -262,6 +264,9 @@ formats, the matrix market format contains three files like so:
 ...
 #+END_EXAMPLE
 
+The =genes.tsv= file contains the features of each cell and corresponds to the
+rows of =matrix.mtx=.
+
 #+CAPTION: genes.tsv
 #+BEGIN_EXAMPLE
 Xkr4	Xkr4
@@ -276,6 +281,9 @@ Oprk1	Oprk1
 Npbwr1	Npbwr1
 ...
 #+END_EXAMPLE
+
+The =barcodes.tsv= file contains the ids of each cell or observation and
+corresponds to the columns of =matrix.mtx=.
 
 #+CAPTION: barcodes.tsv
 #+BEGIN_EXAMPLE
