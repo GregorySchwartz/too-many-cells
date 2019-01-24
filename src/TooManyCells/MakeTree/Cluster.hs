@@ -52,12 +52,14 @@ import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as VU
+import qualified Math.Clustering.Hierarchical.Spectral.Dense as HSD
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
 import TooManyCells.MakeTree.Adjacency
 import TooManyCells.MakeTree.Types
 import TooManyCells.Matrix.Types
+import TooManyCells.Matrix.Utility
 import TooManyCells.Diversity.Types
 
 -- | Cluster cLanguage.R.QQ (r)olumns of a sparse matrix using HDBSCAN.
@@ -129,12 +131,13 @@ clustersToClusterList sc clustering = do
         $ (R.fromSomeSEXP clusters :: [Int32])
 
 -- | Hierarchical spectral clustering.
-hSpecClust :: EigenGroup
+hSpecClust :: DenseFlag
+           -> EigenGroup
            -> NormType
            -> Maybe NumEigen
            -> SingleCells
            -> (ClusterResults, ClusterGraph CellInfo)
-hSpecClust eigenGroup norm numEigen sc =
+hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
     ( ClusterResults { _clusterList = clustering
                      , _clusterDend = dendToTree dend
                      }
@@ -152,8 +155,7 @@ hSpecClust eigenGroup norm numEigen sc =
             $ gr
     gr         = dendrogramToGraph dend
     dend       = clusteringTreeToDendrogram tree
-    tree       = hSpecCommand norm
-               . Left
+    tree       = hSpecCommand norm isDense
                . unMatObsRow
                . _matrix
                $ sc
@@ -161,7 +163,7 @@ hSpecClust eigenGroup norm numEigen sc =
                     (\x y -> CellInfo x y)
                     (_rowNames sc)
                     (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
-    hSpecCommand TfIdfNorm   =
+    hSpecCommand TfIdfNorm False =
         hierarchicalSpectralCluster
           eigenGroup
           True
@@ -169,7 +171,8 @@ hSpecClust eigenGroup norm numEigen sc =
           Nothing
           Nothing
           items
-    hSpecCommand BothNorm =
+        . Left
+    hSpecCommand BothNorm False =
         hierarchicalSpectralCluster
           eigenGroup
           True
@@ -177,7 +180,8 @@ hSpecClust eigenGroup norm numEigen sc =
           Nothing
           Nothing
           items
-    hSpecCommand _        =
+        . Left
+    hSpecCommand _ False =
         hierarchicalSpectralCluster
           eigenGroup
           False
@@ -185,6 +189,37 @@ hSpecClust eigenGroup norm numEigen sc =
           Nothing
           Nothing
           items
+        . Left
+    hSpecCommand TfIdfNorm True =
+        HSD.hierarchicalSpectralCluster
+          eigenGroup
+          True
+          (fmap unNumEigen numEigen)
+          Nothing
+          Nothing
+          items
+        . Left
+        . sparseToHMat
+    hSpecCommand BothNorm True =
+        HSD.hierarchicalSpectralCluster
+          eigenGroup
+          True
+          (fmap unNumEigen numEigen)
+          Nothing
+          Nothing
+          items
+        . Left
+        . sparseToHMat
+    hSpecCommand _ True =
+        HSD.hierarchicalSpectralCluster
+          eigenGroup
+          False
+          (fmap unNumEigen numEigen)
+          Nothing
+          Nothing
+          items
+        . Left
+        . sparseToHMat
 
 dendrogramToClusterList :: HC.Dendrogram (V.Vector CellInfo)
                         -> [(CellInfo, [Cluster])]

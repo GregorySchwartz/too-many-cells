@@ -83,7 +83,7 @@ scToRMat sc = do
 sparseToHMat :: S.SpMatrix Double -> H.Matrix H.R
 sparseToHMat mat = H.assoc (S.dimSM mat) 0
                  . fmap (\(!x, !y, !z) -> ((x, y), z))
-                 . S.toDenseListSM
+                 . S.toListSM
                  $ mat
 
 -- | Convert a sparse matrix to an hmatrix.

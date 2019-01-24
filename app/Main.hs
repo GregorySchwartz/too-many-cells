@@ -117,6 +117,7 @@ data Options
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
                , clumpinessMethod :: Maybe String <?> "([Majority] | Exclusive | AllExclusive) The method used when calculating clumpiness: Majority labels leaves according to the most abundant label, Exclusive only looks at leaves consisting of cells solely from one label, and AllExclusive treats the leaf as containing both labels."
+               , dense :: Bool <?> "Whether to use dense matrix algorithms for clustering. Should be faster for dense matrices, so if batch correction, PCA, or other algorithms are applied upstream to the input matrix, consider using this option to speed up the tree generation."
                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
     | Interactive { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
@@ -318,6 +319,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
               . unHelpful
               . eigenGroup
               $ opts
+        dense'            = DenseFlag . unHelpful . dense $ opts
         normalization'    = getNormalization opts
         numEigen'         = fmap NumEigen . unHelpful . numEigen $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
@@ -447,9 +449,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Load previous results or calculate results if first run.
     originalClusterResults <- case prior' of
         Nothing -> do
-            let (fullCr, _) = hSpecClust eigenGroup' normalization' numEigen'
-                            . extractSc
-                            $ processedSc
+            let (fullCr, _) =
+                  hSpecClust dense' eigenGroup' normalization' numEigen'
+                    . extractSc
+                    $ processedSc
 
             return fullCr :: IO ClusterResults
         (Just x) -> do

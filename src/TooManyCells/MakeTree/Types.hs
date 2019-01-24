@@ -51,6 +51,8 @@ newtype PreNormalization = PreNormalization
     { unPreNormalization :: Bool
     } deriving (Read,Show)
 newtype IsLeaf = IsLeaf {unIsLeaf :: Bool} deriving (Eq, Ord, Read, Show)
+newtype DenseFlag = DenseFlag { unDenseFlag :: Bool }
+                    deriving (Eq, Ord, Read, Show)
 newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)
