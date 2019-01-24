@@ -246,7 +246,7 @@ above) or a file (a =csv= file). *You don't need to use scRNA-seq data!* You can
 use any data that has observations (cells) and features (genes), as long as you
 agree that the observations are related by their feature abundances. If you do
 upstream batch effect correction, PCA, normalization, or anything else, be sure
-to use `--no-filter --normalization NoneNorm` to avoid wrong filterings and
+to use =--no-filter --normalization NoneNorm= to avoid wrong filters and
 scalings! As for formats, the matrix market format contains three files like so:
 
 The =matrix.mtx= file is in matrix market format.
