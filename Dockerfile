@@ -32,6 +32,7 @@ RUN apt-get update && apt-get install -y apt-transport-https software-properties
     && add-apt-repository ppa:ubuntu-toolchain-r/test \
     && apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
+        locales \
         libgmp-dev \
         build-essential \
         libblas-dev \
@@ -48,10 +49,19 @@ RUN apt-get update && apt-get install -y apt-transport-https software-properties
         r-base-dev \
     && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 60 --slave /usr/bin/g++ g++ /usr/bin/g++-8 --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-8
 
+# Set the locale
+RUN locale-gen en_US.UTF-8
+ENV LANG en_US.UTF-8
+ENV LANGUAGE en_US:en
+ENV LC_ALL en_US.UTF-8
+
 RUN R -e "install.packages(c('cowplot', 'ggplot2', 'jsonlite'), repos='http://cran.us.r-project.org/')" \
     && Rscript -e "source('http://bioconductor.org/biocLite.R')" -e "biocLite('edgeR')"
-# NOTICE THIS LINE
+# NOTICE THESE LINES
 COPY --from=build /opt/build/.stack-work/install/x86_64-linux/lts-12.0/8.4.3/bin .
+RUN mkdir -p /opt/build/.stack-work/install/x86_64-linux/lts-12.0/8.4.3/share
+COPY --from=build /opt/build/.stack-work/install/x86_64-linux/lts-12.0/8.4.3/share /opt/build/.stack-work/install/x86_64-linux/lts-12.0/8.4.3/share
 #COPY static /opt/too-many-cells/static
 #COPY config /opt/too-many-cells/config
+
 ENTRYPOINT ["/opt/too-many-cells/too-many-cells"]
