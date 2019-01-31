@@ -55,14 +55,14 @@ import TooManyCells.Matrix.Utility
 loadCellrangerData
     :: GeneFile
     -> CellFile
-    -> MatrixFile
+    -> MatrixFileFolder
     -> IO SingleCells
-loadCellrangerData gf cf mf = do
+loadCellrangerData _ _ (MatrixFile mf) = error (mf <> " must be a folder for matrix market format.")
+loadCellrangerData gf cf (MatrixFolder mf) = do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
-       . unMatrixFile
        $ mf
     -- m <- fmap (MatObsRow . HS.transposeSM) . loadMatrixMarket $ mf -- We want observations as rows
     g <- fmap (\ x -> either error (fmap (Gene . fst)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
@@ -89,9 +89,10 @@ loadCellrangerData gf cf mf = do
 -- | Load an H Matrix in CSV format (rows were features) with row names and
 -- column names.
 loadHMatrixData :: Delimiter
-                -> MatrixFile
+                -> MatrixFileFolder
                 -> IO SingleCells
-loadHMatrixData (Delimiter delim) mf = do
+loadHMatrixData _ (MatrixFolder mf) = error $ mf <> " must be a csv for dense format."
+loadHMatrixData (Delimiter delim) (MatrixFile mf) = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
     all <- fmap (\ x -> either error id ( CSV.decodeWith csvOpts CSV.NoHeader x
@@ -99,7 +100,6 @@ loadHMatrixData (Delimiter delim) mf = do
                                         )
                 )
          . B.readFile
-         . unMatrixFile
          $ mf
 
     let c = fmap Cell . V.drop 1 . V.head $ all
@@ -122,16 +122,16 @@ loadHMatrixData (Delimiter delim) mf = do
 -- | Load a sparse matrix in CSV format (rows were features) with row names and
 -- column names.
 loadSparseMatrixData :: Delimiter
-                     -> MatrixFile
+                     -> MatrixFileFolder
                      -> IO SingleCells
-loadSparseMatrixData (Delimiter delim) mf = do
+loadSparseMatrixData _ (MatrixFolder mf) = error $ mf <> " must be a csv for dense format."
+loadSparseMatrixData (Delimiter delim) (MatrixFile mf) = do
     let csvOpts = CSV.defaultDecodeOptions
                     { CSV.decDelimiter = fromIntegral (ord delim) }
         strictRead path = (evaluate . force) =<< B.readFile path
 
     all <- fmap (\x -> either error id $ (CSV.decodeWith csvOpts CSV.NoHeader x :: Either String (V.Vector [T.Text])))
          . strictRead
-         . unMatrixFile
          $ mf
 
     let c = V.fromList . fmap Cell . drop 1 . V.head $ all
@@ -152,9 +152,10 @@ loadSparseMatrixData (Delimiter delim) mf = do
 -- | Load a sparse matrix streaming in CSV format (rows were features) with row
 -- names and column names.
 loadSparseMatrixDataStream :: Delimiter
-                           -> MatrixFile
+                           -> MatrixFileFolder
                            -> IO SingleCells
-loadSparseMatrixDataStream (Delimiter delim) mf = do
+loadSparseMatrixDataStream _ (MatrixFolder mf) = error $ mf <> " must be a csv for dense format."
+loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
     let csvOpts = S.defaultDecodeOptions
                     { S.decDelimiter = fromIntegral (ord delim) }
         cS = fmap (S.first (fmap Cell . drop 1 . fromMaybe (error "\nNo header.")))
@@ -166,7 +167,7 @@ loadSparseMatrixDataStream (Delimiter delim) mf = do
 
     res <- flip with return $ do
 
-        contents <- SW.withBinaryFileContents . unMatrixFile $ mf
+        contents <- SW.withBinaryFileContents mf
 
         (c S.:> g S.:> m S.:> _) <-
             fmap (either (error . show) id)

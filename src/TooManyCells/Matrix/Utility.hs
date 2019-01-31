@@ -19,11 +19,16 @@ module TooManyCells.Matrix.Utility
     , loadMatrixMarket
     , extractSc
     , writeMatrixLike
+    , isCsvFile
+    , getMatrixOutputType
     ) where
 
 -- Remote
 import BirchBeer.Types
+import Control.Monad.Managed (runManaged)
 import Control.Monad.State (MonadState (..), State (..), evalState, execState, modify)
+import Data.Bool (bool)
+import Data.Char (toUpper)
 import Data.Function (on)
 import Data.List (maximumBy)
 import Data.Maybe (fromMaybe)
@@ -32,19 +37,27 @@ import Data.Scientific (toRealFloat, Scientific)
 import Language.R as R
 import Language.R.QQ (r)
 import System.FilePath ((</>))
+import TextShow (showt)
 import qualified Control.Lens as L
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Read as TL
 import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
+import qualified Streaming as Stream
+import qualified Streaming.Cassava as Stream
+import qualified Streaming.Prelude as Stream
+import qualified Streaming.With.Lifted as SW
 import qualified System.Directory as FP
 
 -- Local
@@ -122,7 +135,7 @@ spMatToMat mat = RMatrix (S.dimSM mat) (S.nzSM mat) General
                $ mat
 
 -- | Load a matrix market format.
-loadMatrixMarket :: MatrixFile -> IO (S.SpMatrix Double)
+loadMatrixMarket :: MatrixFileFolder -> IO (S.SpMatrix Double)
 loadMatrixMarket (MatrixFile file) = do
     let toDouble [r, c, v] =
             ( either error fst . TL.decimal $ r
@@ -149,8 +162,8 @@ extractSc :: Maybe SingleCells -> SingleCells
 extractSc = fromMaybe (error "Need to provide matrix in --matrix-path for this functionality.")
 
 -- | Write a matrix to a file.
-writeMatrixLike :: MatrixLike (a) => MatrixFile -> a -> IO ()
-writeMatrixLike (MatrixFile folder) mat = do
+writeSparseMatrixLike :: MatrixLike (a) => MatrixFileFolder -> a -> IO ()
+writeSparseMatrixLike (MatrixFolder folder) mat = do
   -- Where to place output files.
   FP.createDirectoryIfMissing True folder
 
@@ -167,3 +180,41 @@ writeMatrixLike (MatrixFile folder) mat = do
     $ mat
 
   return ()
+
+-- | Print a dense matrix to a streaming string.
+printDenseMatrixLike :: (MatrixLike a, Monad m)
+                     => a
+                     -> BS.ByteString m ()
+printDenseMatrixLike mat = Stream.encode (Just $ Stream.header header)
+                         . Stream.zipWith (:) rowN
+                         . Stream.each
+                         . fmap (fmap showt . S.toDenseListSV)
+                         . S.toRowsL
+                         . S.transposeSM -- To have cells as columns
+                         . getMatrix
+                         $ mat
+  where
+    header = (B.empty :)
+           . fmap T.encodeUtf8
+           . V.toList
+           . getRowNames -- To have rows as columns
+           $ mat
+    rowN = Stream.each . V.toList . getColNames $ mat -- To have columns as rows
+
+-- | Write a matrix to a dense file.
+writeDenseMatrixLike :: (MatrixLike a) => MatrixFileFolder -> a -> IO ()
+writeDenseMatrixLike (MatrixFile file) =
+  runManaged . SW.writeBinaryFile file . printDenseMatrixLike
+
+-- | Write a MatrixLike to a file (dense) or folder (sparse).
+writeMatrixLike :: (MatrixLike a) => MatrixFileFolder -> a -> IO ()
+writeMatrixLike o@(MatrixFolder _) = writeSparseMatrixLike o
+writeMatrixLike o@(MatrixFile _) = writeDenseMatrixLike o
+
+-- | Check if a name ends with .csv
+isCsvFile :: FilePath -> Bool
+isCsvFile = (== ".CSV") . fmap toUpper . reverse . take 4 . reverse
+
+-- | Get matrix output format from input name.
+getMatrixOutputType :: FilePath -> MatrixFileFolder
+getMatrixOutputType x = bool (MatrixFolder x) (MatrixFile x) . isCsvFile $ x
