@@ -57,8 +57,8 @@ loadCellrangerData
     -> CellFile
     -> MatrixFileFolder
     -> IO SingleCells
-loadCellrangerData _ _ (MatrixFile mf) = error (mf <> " must be a folder for matrix market format.")
-loadCellrangerData gf cf (MatrixFolder mf) = do
+loadCellrangerData _ _ (MatrixFolder mf) = error "Expected matrix.mtx, impossible error."
+loadCellrangerData gf cf (MatrixFile mf) = do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
@@ -91,7 +91,7 @@ loadCellrangerData gf cf (MatrixFolder mf) = do
 loadHMatrixData :: Delimiter
                 -> MatrixFileFolder
                 -> IO SingleCells
-loadHMatrixData _ (MatrixFolder mf) = error $ mf <> " must be a csv for dense format."
+loadHMatrixData _ (MatrixFolder mf) = error "Expected matrix.mtx, impossible error."
 loadHMatrixData (Delimiter delim) (MatrixFile mf) = do
     let csvOpts = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord delim) }
 
