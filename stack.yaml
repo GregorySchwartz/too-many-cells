@@ -45,10 +45,10 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - differential-0.1.1.0
-  - hierarchical-spectral-clustering-0.2.2.0
+  - hierarchical-spectral-clustering-0.3.0.0
   - modularity-0.2.1.0
-  - spectral-clustering-0.2.2.3
-  - birch-beer-0.1.0.0
+  - spectral-clustering-0.3.0.1
+  - birch-beer-0.1.0.1
   - SVGFonts-1.6.0.3
   - aeson-1.4.0.0
   - attoparsec-0.13.1.0

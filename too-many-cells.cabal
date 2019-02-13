@@ -1,5 +1,5 @@
 name:                too-many-cells
-version:             0.1.2.1
+version:             0.1.2.2
 synopsis:            Cluster single cells and analyze cell clade relationships.
 description:         Different methods to cluster and analyze single cell data with diversity indices and differential expression.
 homepage:            http://github.com/GregorySchwartz/too-many-cells#readme

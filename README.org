@@ -8,6 +8,8 @@
 
 See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version.
 
+See [[https://www.biorxiv.org/content/10.1101/519660v1][the bioRxiv paper]] for more information about the algorithm.
+
 [[file:img/pruned_tree.png]]
 
 * Description
