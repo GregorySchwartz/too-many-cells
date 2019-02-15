@@ -84,7 +84,7 @@ import TooManyCells.Paths.Types
 
 -- | Command line arguments
 data Options
-    = MakeTree { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
+    = MakeTree { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". Cells without projections will not be plotted. If not supplied, no plot will be made."
                , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
@@ -119,7 +119,7 @@ data Options
                , clumpinessMethod :: Maybe String <?> "([Majority] | Exclusive | AllExclusive) The method used when calculating clumpiness: Majority labels leaves according to the most abundant label, Exclusive only looks at leaves consisting of cells solely from one label, and AllExclusive treats the leaf as containing both labels."
                , dense :: Bool <?> "Whether to use dense matrix algorithms for clustering. Should be faster for dense matrices, so if batch correction, PCA, or other algorithms are applied upstream to the input matrix, consider using this option to speed up the tree generation."
                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
-    | Interactive { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
+    | Interactive { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                   , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
@@ -128,7 +128,7 @@ data Options
                   , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                   , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
-    | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (matrix.mtx, genes.tsv, and barcodes.tsv) or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
+    | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing gene row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of genes in each matrix, so only cells are added."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                    , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
@@ -236,29 +236,38 @@ getNormalization opts@(Differential{}) =
 -- | Load the single cell matrix.
 loadSSM :: Options -> FilePath -> IO SingleCells
 loadSSM opts matrixPath' = do
-    fileExist      <- FP.doesFileExist matrixPath'
-    directoryExist <- FP.doesDirectoryExist matrixPath'
+  fileExist      <- FP.doesFileExist matrixPath'
+  directoryExist <- FP.doesDirectoryExist matrixPath'
+  compressedFileExist <- FP.doesFileExist $ matrixPath' FP.</> "matrix.mtx.gz"
 
-    let matrixFile' =
-            case (fileExist, directoryExist) of
-                (False, False) -> error "\nMatrix path does not exist."
-                (True, False)  -> Left $ MatrixFile matrixPath'
-                (False, True)  ->
-                    Right . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
-        genesFile'  = GeneFile $ matrixPath' FP.</> "genes.tsv"
-        cellsFile'  = CellFile $ matrixPath' FP.</> "barcodes.tsv"
-        delimiter'      =
-            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        unFilteredSc   =
-            case matrixFile' of
-                (Left file) -> loadSparseMatrixDataStream
-                                delimiter'
-                                file
-                (Right file) -> loadCellrangerData
-                                    genesFile'
-                                    cellsFile'
-                                    file
-    unFilteredSc
+  let matrixFile' =
+        case (fileExist, directoryExist, compressedFileExist) of
+          (False, False, False) -> error "\nMatrix path does not exist."
+          (True, False, False)  ->
+            Left . DecompressedMatrix . MatrixFile $ matrixPath'
+          (False, True, False)  ->
+            Right . DecompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
+          (False, True, True)  ->
+            Right . CompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx.gz"
+          _                     -> error "Cannot determine matrix pointed to, are there too many matrices here?"
+      genesFile'  = GeneFile
+                  $ matrixPath'
+             FP.</> (bool "genes.tsv" "features.tsv.gz" compressedFileExist)
+      cellsFile'  = CellFile
+                  $ matrixPath'
+             FP.</> (bool "barcodes.tsv" "barcodes.tsv.gz" compressedFileExist)
+      delimiter'      =
+          Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+      unFilteredSc   =
+          case matrixFile' of
+              (Left (DecompressedMatrix file))  ->
+                loadSparseMatrixDataStream delimiter' file
+              (Right (DecompressedMatrix file)) ->
+                loadCellrangerData genesFile' cellsFile' file
+              (Right (CompressedMatrix file))   ->
+                loadCellrangerDataFeatures genesFile' cellsFile' file
+              _ -> error "Does not supported this matrix type. See too-many-cells -h for each entry point for more information"
+  unFilteredSc
 
 -- | Load all single cell matrices.
 loadAllSSM :: Options -> IO (Maybe SingleCells)
@@ -301,6 +310,9 @@ loadAllSSM opts = runMaybeT $ do
                     . normMat normalization'
                     . _matrix
         processedSc = sc { _matrix = processMat sc }
+
+    -- Check for empty matrix.
+    when (V.null . getRowNames $ processedSc) $ error "Matrix is empty. Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
 
     return processedSc
 

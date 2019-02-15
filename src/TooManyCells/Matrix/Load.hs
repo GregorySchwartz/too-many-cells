@@ -12,6 +12,7 @@ module TooManyCells.Matrix.Load
     ( matToSpMat
     , spMatToMat
     , loadCellrangerData
+    , loadCellrangerDataFeatures
     , loadHMatrixData
     , loadSparseMatrixData
     , loadSparseMatrixDataStream
@@ -20,6 +21,7 @@ module TooManyCells.Matrix.Load
 
 -- Remote
 import BirchBeer.Types
+import Codec.Compression.GZip (decompress)
 import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
@@ -30,6 +32,7 @@ import Data.Maybe (fromMaybe, maybe)
 import Data.Monoid ((<>))
 import Data.Vector (Vector)
 import Safe
+import System.IO.Temp (withSystemTempFile)
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
@@ -45,6 +48,7 @@ import qualified Streaming as S
 import qualified Streaming.Cassava as S
 import qualified Streaming.Prelude as S
 import qualified Streaming.With.Lifted as SW
+import qualified System.IO as IO
 
 -- Local
 import TooManyCells.File.Types
@@ -73,6 +77,42 @@ loadCellrangerData gf cf (MatrixFile mf) = do
        . unGeneFile
        $ gf
     c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
+                                       :: Either String (Vector [T.Text])
+                                        )
+              )
+       . B.readFile
+       . unCellFile
+       $ cf
+
+    return $
+        SingleCells { _matrix   = m -- We want observations as rows.
+                    , _rowNames = c
+                    , _colNames = g
+                    }
+
+-- | Load output of cellranger >= 3.0.0
+loadCellrangerDataFeatures
+    :: GeneFile
+    -> CellFile
+    -> MatrixFileFolder
+    -> IO SingleCells
+loadCellrangerDataFeatures _ _ (MatrixFolder mf) = error "Expected matrix.mtx.gz, impossible error."
+loadCellrangerDataFeatures gf cf (MatrixFile mf) = withSystemTempFile "temp_mat.mtx" $ \tempMatFile h -> do
+    let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
+
+    B.readFile mf >>= B.hPut h . decompress >> IO.hClose h
+
+    m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
+       . readMatrix
+       $ tempMatFile
+    g <- fmap (\ x -> either error (fmap (Gene . L.view L._1)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
+                                       :: Either String (Vector (T.Text, T.Text, T.Text))
+                                        )
+              )
+       . B.readFile
+       . unGeneFile
+       $ gf
+    c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
                                        :: Either String (Vector [T.Text])
                                         )
               )
