@@ -76,7 +76,7 @@ To install them in R,
 #+BEGIN_SRC R
 install.packages(c("ggplot2", "cowplot", "jsonlite"))
 install.packages("BiocManager")
-BiocManager::install("edgeR", version = "3.8")
+BiocManager::install("edgeR")
 #+END_SRC
 
 ** Install =stack=
