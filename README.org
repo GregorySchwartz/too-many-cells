@@ -571,7 +571,7 @@ There, much better! Now it's clearly enriched in the subtree containing the
 thymus, where we would expect many T cells to be. While this tree makes the
 expression a bit more visible, there is another tactic we can use. Instead of
 the continuous color spectrum of expression values, we can have a binary "high"
-and "low" expression. Here, we'll continue to have the red and white colors
+and "low" expression. Here, we'll continue to have the red and gray colors
 represent high and low expressions respectively using the =--draw-colors=
 argument. Note that this binary expression technique can be used for multiple
 features, hence it's a list of features with cutoffs so you can be high in a
