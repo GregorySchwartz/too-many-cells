@@ -551,7 +551,8 @@ While this representation shows the expression of /Cd4/ in each cell and blends
 those levels together, due to the sparsity of single cell data these cells and
 their respective subtrees may be hard to see without additional processing.
 Let's scale the saturation to more clearly see sections of the tree with our
-desired expression.
+desired expression (when choosing other high and low colors with
+=--draw-colors=, scaling the saturation will only affect non-grayscale colors).
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
