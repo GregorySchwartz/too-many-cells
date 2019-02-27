@@ -530,7 +530,9 @@ too-many-cells make-tree \
 **** Gene expression
 
 What if we want to draw the gene expression onto the tree in another folder
-(requires =--matrix-path=, may take some time depending on matrix size)?
+(requires =--matrix-path=, may take some time depending on matrix size. Defaults
+to all black if the feature name is not present in the matrix, so check the first
+column of the feature file)?
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
