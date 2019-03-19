@@ -55,22 +55,28 @@ import TooManyCells.File.Types
 import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Utility
 
+-- | Get feature from feature file row with informative error.
+getFeature :: FeatureColumn -> [a] -> a
+getFeature (FeatureColumn fc) =
+  fromMaybe (error "Feature column selected not present in feature file (too few columns in feature file.)")
+    . flip atMay (fc - 1) -- Convert to 0-index.
+
 -- | Load output of cellranger.
 loadCellrangerData
-    :: GeneFile
+    :: FeatureColumn
+    -> GeneFile
     -> CellFile
     -> MatrixFileFolder
     -> IO SingleCells
-loadCellrangerData _ _ (MatrixFolder mf) = error "Expected matrix.mtx, impossible error."
-loadCellrangerData gf cf (MatrixFile mf) = do
+loadCellrangerData _ _ _ (MatrixFolder mf) = error "Expected matrix.mtx, impossible error."
+loadCellrangerData fc gf cf (MatrixFile mf) = do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
        $ mf
-    -- m <- fmap (MatObsRow . HS.transposeSM) . loadMatrixMarket $ mf -- We want observations as rows
-    g <- fmap (\ x -> either error (fmap (Gene . fst)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
-                                       :: Either String (Vector (T.Text, T.Text))
+    g <- fmap (\ x -> either error (fmap (Gene . getFeature fc)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
+                                       :: Either String (Vector [T.Text])
                                         )
               )
        . B.readFile
@@ -92,12 +98,13 @@ loadCellrangerData gf cf (MatrixFile mf) = do
 
 -- | Load output of cellranger >= 3.0.0
 loadCellrangerDataFeatures
-    :: GeneFile
+    :: FeatureColumn
+    -> GeneFile
     -> CellFile
     -> MatrixFileFolder
     -> IO SingleCells
-loadCellrangerDataFeatures _ _ (MatrixFolder mf) = error "Expected matrix.mtx.gz, impossible error."
-loadCellrangerDataFeatures gf cf (MatrixFile mf) = withSystemTempFile "temp_mat.mtx" $ \tempMatFile h -> do
+loadCellrangerDataFeatures _ _ _ (MatrixFolder mf) = error "Expected matrix.mtx.gz, impossible error."
+loadCellrangerDataFeatures fc gf cf (MatrixFile mf) = withSystemTempFile "temp_mat.mtx" $ \tempMatFile h -> do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
     B.readFile mf >>= B.hPut h . decompress >> IO.hClose h
@@ -105,8 +112,8 @@ loadCellrangerDataFeatures gf cf (MatrixFile mf) = withSystemTempFile "temp_mat.
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
        $ tempMatFile
-    g <- fmap (\ x -> either error (fmap (Gene . L.view L._1)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
-                                       :: Either String (Vector (T.Text, T.Text, T.Text))
+    g <- fmap (\ x -> either error (fmap (Gene . getFeature fc)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
+                                       :: Either String (Vector [T.Text])
                                         )
               )
        . B.readFile

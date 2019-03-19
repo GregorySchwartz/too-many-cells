@@ -124,16 +124,16 @@ Different computers have different setups, operating systems, and repositories.
 Do put the entire program in a container to bypass difficulties (with the other
 methods above), we user =docker=. So first, [[https://docs.docker.com/][install docker]].
 
-To get =too-many-cells= (replace 0.1.3.1 with [[https://cloud.docker.com/repository/docker/gregoryschwartz/too-many-cells/general][any version needed]]):
+To get =too-many-cells= (replace 0.1.4.0 with [[https://cloud.docker.com/repository/docker/gregoryschwartz/too-many-cells/general][any version needed]]):
 
 #+BEGIN_SRC sh
-docker pull gregoryschwartz/too-many-cells:0.1.3.1
+docker pull gregoryschwartz/too-many-cells:0.1.4.0
 #+END_SRC
 
 To run =too-many-cells= in a docker container:
 
 #+BEGIN_SRC sh
-sudo docker run gregoryschwartz/too-many-cells:0.1.3.1 -h
+sudo docker run gregoryschwartz/too-many-cells:0.1.4.0 -h
 #+END_SRC
 
 Docker won't be able to find your files by default. You need to mount the
@@ -314,8 +314,14 @@ The =matrix.mtx= file is in matrix market format.
 ...
 #+END_EXAMPLE
 
-The =genes.tsv= file contains the features of each cell and corresponds to the
-rows of =matrix.mtx=.
+The =genes.tsv= file (or =features.tsv.gz=) contains the features of each cell
+and corresponds to the rows of =matrix.mtx=. Here, both columns were the same
+gene symbols, but you can have Ensembl as the first column and gene symbol as
+the second, etc. The columns and column orders don't matter, but make sure all
+matrices have the same format and specify the symbols you want to use (for
+overlaying gene expression, differential expression, etc.) with
+=--feature-column COLUMN=. So to use the second column for gene expression, you
+would use =--feature-column 2=.
 
 #+CAPTION: genes.tsv
 #+BEGIN_EXAMPLE
@@ -532,7 +538,10 @@ too-many-cells make-tree \
 What if we want to draw the gene expression onto the tree in another folder
 (requires =--matrix-path=, may take some time depending on matrix size. Defaults
 to all black if the feature name is not present in the matrix, so check the first
-column of the feature file)?
+column of the feature file)? *Note*: the feature names are from the =genes.tsv= or
+=features.tsv.gz= file. Usually, =cellranger= has Ensembl identifiers as the
+first column and gene symbol as the second column, so if you want to specify
+gene symbol, use =--feature-column 2= (1 is default).
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
@@ -541,6 +550,7 @@ too-many-cells make-tree \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
+    --feature-column 2 \
     --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
     --output out_gene_expression
 #+END_SRC
@@ -561,6 +571,7 @@ too-many-cells make-tree \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
+    --feature-column 2 \
     --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
     --draw-scale-saturation 10
     --output out_gene_expression
@@ -585,6 +596,7 @@ too-many-cells make-tree \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
+    --feature-column 2 \
     --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", 0), (\"Cd8a\", 0)])" \
     --draw-colors "[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]"
     --draw-scale-saturation 10

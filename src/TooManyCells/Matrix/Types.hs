@@ -47,6 +47,7 @@ newtype Cell = Cell
 newtype Cols            = Cols { unCols :: [Double] }
 newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show, Generic)
 instance NFData Gene
+newtype FeatureColumn   = FeatureColumn { unFeatureColumn :: Int }
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: Set.Set Cell
     } deriving (Eq,Ord,Read,Show)
