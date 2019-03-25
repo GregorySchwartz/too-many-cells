@@ -400,14 +400,16 @@ aggr=.
 
 **** Default run
 
-We can now run the =too-many-cells= algorithm on our data.
+We can now run the =too-many-cells= algorithm on our data. The resulting cells
+with assigned clusters will be printed to =stdout=.
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
     --matrix-path input \
     --labels-file labels.csv \
     --draw-collection "PieRing" \
-    --output out
+    --output out \
+    > clusters.csv
 #+END_SRC
 
 [[file:img/complete_default_tree.png]]
@@ -440,7 +442,8 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --draw-collection "PieRing" \
-    --output out_pruned
+    --output out_pruned \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/pruned_tree.png]]
@@ -457,7 +460,8 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --draw-collection "PieChart" \
-    --output out_pruned
+    --output out_pruned \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/piechart_pruned_tree.png]]
@@ -476,7 +480,8 @@ too-many-cells make-tree \
     --min-size 1 \
     --draw-collection "PieChart" \
     --draw-node-number \
-    --output out_pruned
+    --output out_pruned \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/numbered_pruned_tree.png]]
@@ -494,7 +499,8 @@ too-many-cells make-tree \
     --min-size 1 \
     --draw-collection "PieChart" \
     --draw-max-node-size 40 \
-    --output out_pruned
+    --output out_pruned \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/thin_pruned_tree.png]]
@@ -512,7 +518,8 @@ too-many-cells make-tree \
     --draw-collection "PieChart" \
     --draw-max-node-size 40 \
     --draw-no-scale-nodes \
-    --output out_pruned
+    --output out_pruned \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/no_scaling_pruned_tree.png]]
@@ -528,7 +535,8 @@ too-many-cells make-tree \
     --min-size 1 \
     --draw-collection "PieChart" \
     --draw-mark "MarkModularity" \
-    --output out_pruned
+    --output out_pruned \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/modularity_pruned_tree.png]]
@@ -552,7 +560,8 @@ too-many-cells make-tree \
     --min-size 1 \
     --feature-column 2 \
     --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
-    --output out_gene_expression
+    --output out_gene_expression \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/cd4_dendrogram.png]]
@@ -574,7 +583,8 @@ too-many-cells make-tree \
     --feature-column 2 \
     --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
     --draw-scale-saturation 10
-    --output out_gene_expression
+    --output out_gene_expression \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/cd4_saturated_10_dendrogram.png]]
@@ -598,9 +608,10 @@ too-many-cells make-tree \
     --min-size 1 \
     --feature-column 2 \
     --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", 0), (\"Cd8a\", 0)])" \
-    --draw-colors "[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]"
-    --draw-scale-saturation 10
-    --output out_gene_expression
+    --draw-colors "[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]" \
+    --draw-scale-saturation 10 \
+    --output out_gene_expression \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/cd4_cd8_sat_10_dendrogram.png]]
@@ -619,8 +630,9 @@ too-many-cells make-tree \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
-    --draw-leaf "DrawItem DrawDiversity"
-    --output out_diversity
+    --draw-leaf "DrawItem DrawDiversity" \
+    --output out_diversity \
+    > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/diversity_pruned_tree.png]]
@@ -660,12 +672,13 @@ We need to define two groups to compare. Well, it looks like node 98 defines the
 liver cluster. Then, since we don't want 98 to be in the other group, we say
 that all other cells are within nodes 89 and 1. As a result, we end up with a
 tuple containing two lists: ([89, 1], [98]). Then our differential genes for
-(liver / others) can be found with =differential=:
+(liver / others) can be found with =differential= (sent to =stdout=):
 
 #+BEGIN_SRC sh
 too-many-cells differential \
     --matrix-path input \
-    -n "([89, 1], [98])"
+    -n "([89, 1], [98])" \
+    > differential.csv
 #+END_SRC
 
 If we wanted to make the same comparison, but compare the liver subtree with
@@ -676,7 +689,8 @@ too-many-cells differential \
     --matrix-path input \
     --labels-file labels.csv \
     -n "([89, 1], [98])" \
-    --labels "([\"Liver\"], [\"Liver\"])"
+    --labels "([\"Liver\"], [\"Liver\"])" \
+    > differential_liver.csv
 #+END_SRC
 
 We can also look at the distribution of abundance for individual genes using the
