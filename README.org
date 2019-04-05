@@ -37,9 +37,13 @@ without additional parameters or runs. See below for a full list of features.
 * Installation
 
 We provide multiple ways to install =too-many-cells=. We recommend installing
-=stack= ([[Install =stack= ][see below]]), but we also have [[Docker][docker]] images and a =Dockerfile= to use in
-any system in case you have a custom build (for instance, a non-standard R
-installation) or difficulty installing.
+=stack= ([[Install =stack= ][see below]]), but we also have [[Docker][docker]] images and a =Dockerfile= to
+use in any system in case you have a custom build (for instance, a non-standard
+R installation) or difficulty installing. *macOS and Windows users:*
+=too-many-cells= was built and tested on linux, so we highly recommend using the
+[[Docker][docker]] image (which a completely isolated environment which requires no
+compiling or installation, other than docker itself) as there may be
+difficulties in installing the dependencies.
 
 ** Dependencies
 
