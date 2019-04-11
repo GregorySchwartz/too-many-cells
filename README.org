@@ -297,10 +297,10 @@ above) or a file (a =csv= file). You can also point to a =cellranger= >= 3.0
 folder which has =matrix.mtx.gz=, =features.tsv.gz=, and =barcodes.tsv.gz= files
 instead. *You don't need to use scRNA-seq data!* You can use any data that has
 observations (cells) and features (genes), as long as you agree that the
-observations are related by their feature abundances. If you do upstream batch
-effect correction, PCA, normalization, or anything else, be sure to use
-=--no-filter --normalization NoneNorm= to avoid wrong filters and scalings! As
-for formats, the matrix market format contains three files like so:
+observations are related by their feature abundances. <<preprocessedData>> If
+you do upstream batch effect correction, PCA, normalization, or anything else,
+be sure to use =--no-filter --normalization NoneNorm= to avoid wrong filters and
+scalings! As for formats, the matrix market format contains three files like so:
 
 The =matrix.mtx= file is in matrix market format.
 
@@ -406,7 +406,9 @@ aggr=.
 **** Default run
 
 We can now run the =too-many-cells= algorithm on our data. The resulting cells
-with assigned clusters will be printed to =stdout=.
+with assigned clusters will be printed to =stdout= (don't forget to use
+=--no-filter= and =--normalization NoneNorm= on preprocessed data, as stated
+[[preprocessedData][here]]).
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
