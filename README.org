@@ -84,6 +84,29 @@ install.packages("BiocManager")
 BiocManager::install("edgeR")
 #+END_SRC
 
+*** macOS
+
+We recommend using [[Docker][docker]] on macOS. If you need to build =too-many-cells=, you
+should get the above dependencies. For some dependencies, you can use [[https://brew.sh/][brewer]],
+then install =too-many-cells= (in the cloned folder, don't forget to install the
+R dependencies above):
+
+#+BEGIN_SRC shell
+brew cask install xquartz
+brew install glib cairo gtk gettext fontconfig freetype
+
+brew tap brewsci/bio
+brew tap brewsci/science
+brew install r zeromq graphviz pkg-config gsl libffi gobject-introspection gtk+ gtk+3
+
+# Needed so pkg-config and libraries can be found.
+# For the second path, use the ouput of "brew info libffi".
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/opt/libffi/lib/pkgconfig
+
+# Tell gtk that it's quartz
+stack install --flag gtk:have-quartz-gtk
+#+END_SRC
+
 ** Install =stack=
 
 See [[https://docs.haskellstack.org/en/stable/README/]] for more details.
