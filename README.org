@@ -240,6 +240,8 @@ Also, check out [[https://github.com/GregorySchwartz/tooManyCellsR][tooManyCells
 
 ** =make-tree=
 
+<<makeTreeUsage>>
+
 =too-many-cells make-tree= generates a binary tree using hierarchical spectral
 clustering. We start with all cells in a single node. Spectral clustering
 partitions the cells into two groups. We assess the clustering using
@@ -786,7 +788,7 @@ too-many-cells paths\
     -o out_paths
 #+END_SRC
 
-* Documentation
+* Advanced documentation
 
 Each entry point has its own documentation accessible with =-h=, such as
 =too-many-cells make-tree -h=:
@@ -813,3 +815,8 @@ Available commands:
   diversity
   paths
 #+end_example
+
+* Demo
+
+Check out an instructional example of using =too-many-cells= [[file:workshop/workshop.html][here]] when finished
+looking at the brief [[makeTreeUsage][feature overview]].
