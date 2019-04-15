@@ -1,0 +1,668 @@
+#+TITLE: =too-many-cells= Workshop
+#+AUTHOR: Gregory W. Schwartz
+#+OPTIONS: date:nil creator:nil timestamp:nil toc:t
+
+#+SETUPFILE: https://fniessen.github.io/org-html-themes/setup/theme-readtheorg.setup
+
+This is an instructional example of using =too-many-cells= meant to demonstrate
+typical usage, originally presented in the IFI Advanced Computational Biology
+Club.
+
+For more information about =too-many-cells=:
+
+[[https://gregoryschwartz.github.io/too-many-cells/][Website]]
+
+See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version.
+
+See [[https://www.biorxiv.org/content/10.1101/519660v1][the bioRxiv paper]] for more information about the algorithm.
+
+* Install =too-many-cells=
+
+** Install =too-many-cells=
+
+Follow instructions on https://gregoryschwartz.github.io/too-many-cells/ for
+details. First, install listed dependences.
+
+Next, clone the =too-many-cells= repository.
+
+#+begin_src sh
+git clone https://github.com/GregorySchwartz/too-many-cells.git
+#+end_src
+
+Enter the folder and install.
+
+#+begin_src sh
+cd ./too-many-cells
+stack install
+#+end_src
+
+** Adding to path
+
+The resulting binary will install to =~/.local/bin=. Add to =$PATH= so you can
+invoke the command from anywhere!
+
+#+begin_src sh
+export PATH=$HOME/.local/bin:$PATH
+#+end_src
+
+This command will only work in the current shell. To permanently add to path,
+add the previous line to =~/.bashrc= or =~/.profile=.
+
+** Testing the installation
+
+Test to see if the installation worked when in path:
+
+#+header: :results verbatim
+#+header: :exports both
+#+begin_src sh
+too-many-cells -h
+#+end_src
+
+#+RESULTS:
+#+begin_example
+too-many-cells, Gregory W. Schwartz. Clusters and analyzes single cell data.
+
+Usage: too-many-cells (make-tree | interactive | differential | diversity |
+                      paths)
+
+Available options:
+  -h,--help                Show this help text
+
+Available commands:
+  make-tree
+  interactive
+  differential
+  diversity
+  paths
+#+end_example
+
+* Data download
+
+** Download brain data
+
+We'll need data from 10x. Let's cluster mouse brain and heart cells from
+https://support.10xgenomics.com/single-cell-gene-expression/datasets/3.0.0/neuron_1k_v3
+and
+https://support.10xgenomics.com/single-cell-gene-expression/datasets/3.0.0/heart_1k_v3
+as a quick, illustrative example here. *Note*: these are modern formats of
+=cellranger= outputs (=v3), but ==too-many-cells== works with both older and
+newer formats.
+
+#+header: :exports both
+#+begin_src shell :async
+# Make the data directory
+mkdir -p data/brain
+
+# Enter the directory
+cd ./data/brain
+
+# Download the data
+wget http://cf.10xgenomics.com/samples/cell-exp/3.0.0/neuron_1k_v3/neuron_1k_v3_filtered_feature_bc_matrix.tar.gz
+
+# Uncompress data
+tar xvf neuron_1k_v3_filtered_feature_bc_matrix.tar.gz
+#+end_src
+
+#+RESULTS:
+| filtered_feature_bc_matrix/                |
+| filtered_feature_bc_matrix/features.tsv.gz |
+| filtered_feature_bc_matrix/matrix.mtx.gz   |
+| filtered_feature_bc_matrix/barcodes.tsv.gz |
+
+** Download heart data
+
+Let's do the same for the heart cells:
+
+#+header: :exports both
+#+begin_src shell :async
+# Make the data directory
+mkdir -p data/heart
+
+# Enter the directory
+cd ./data/heart
+
+# Download the data
+wget http://cf.10xgenomics.com/samples/cell-exp/3.0.0/heart_1k_v3/heart_1k_v3_filtered_feature_bc_matrix.tar.gz
+
+# Uncompress data
+tar xvf heart_1k_v3_filtered_feature_bc_matrix.tar.gz
+#+end_src
+
+#+RESULTS:
+| filtered_feature_bc_matrix/                |
+| filtered_feature_bc_matrix/features.tsv.gz |
+| filtered_feature_bc_matrix/barcodes.tsv.gz |
+| filtered_feature_bc_matrix/matrix.mtx.gz   |
+
+* Prevent overlapping
+
+** Backup barcodes
+
+These matrices both use =BARCODE-1= as their cell identifiers. If aggregating
+with =cellranger= this won't be an issue, but because we aren't doing that let's
+make sure there are no conflicts. First, let's backup our barcodes as we will be
+making changes to ensure no overlapping.
+
+#+header: :exports both
+#+begin_src shell
+cp ./data/brain/filtered_feature_bc_matrix/barcodes.tsv{.gz,.gz.bk}
+cp ./data/heart/filtered_feature_bc_matrix/barcodes.tsv{.gz,.gz.bk}
+#+end_src
+
+#+RESULTS:
+
+** Edit barcodes
+
+Now let's edit the heart barcodes to have =-2= instead of =-1=.
+
+#+header: :exports both
+#+begin_src shell
+cat ./data/heart/filtered_feature_bc_matrix/barcodes.tsv.gz.bk \
+  | gzip -d \
+  | sed "s/-1/-2/g" \
+  | gzip \
+  > ./data/heart/filtered_feature_bc_matrix/barcodes.tsv.gz
+
+cat ./data/heart/filtered_feature_bc_matrix/barcodes.tsv.gz | gzip -d | head
+#+end_src
+
+#+RESULTS:
+| AAACCCACACCAGTAT-2 |
+| AAACCCAGTCACCTTC-2 |
+| AAACCCAGTGGAACAC-2 |
+| AAACGAAAGTGCCCGT-2 |
+| AAACGAAGTCAGGTGA-2 |
+| AAAGGATAGCACCGAA-2 |
+| AAAGGATGTAACGGTG-2 |
+| AAAGGGCAGGACGGAG-2 |
+| AAAGTGACAGAACATA-2 |
+| AAAGTGATCAAAGGAT-2 |
+
+That's it! This will help when we assign labels to each cell later on.
+
+* Tree creation with =too-many-cells=
+
+** Initial tree creation
+
+We now have everything we need for initial runs with =too-many-cells=! Let's begin
+by building a tree (ignore =printf= throughout this document, they are just
+reporting the resulting file). We can specify multiple matrices to combine
+automatically.
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --output out \
+  > clusters.csv
+
+printf "./out/dendrogram.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/dendrogram.svg]]
+
+The initial tree is built! It tells us the tree structure and the number of
+cells in each leaf. Want to actually see which cells are brain and which cells
+are heart? Let's give the tree some colors!
+
+* Coloring the =too-many-cells= tree.
+
+** Prepare labels file
+
+We can color the tree using any label. In this case, we want to give each cell a
+label based on it's celltype from the data set. Let's quickly do that.
+
+#+header: :exports both
+#+begin_src shell
+gzip -d -c ./data/brain/filtered_feature_bc_matrix/barcodes.tsv.gz ./data/heart/filtered_feature_bc_matrix/barcodes.tsv.gz \
+  | sed "s/-1/-1,Brain/" \
+  | sed "s/-2/-2,Heart/" \
+  | sed "1i item,label" \
+  > labels.csv
+
+head ./labels.csv
+#+end_src
+
+#+RESULTS:
+| item               | label |
+| AAACGAATCAAAGCCT-1 | Brain |
+| AAACGCTGTAATGTGA-1 | Brain |
+| AAACGCTGTCCTGGGT-1 | Brain |
+| AAAGAACCAGGACATG-1 | Brain |
+| AAAGGTACACACGGTC-1 | Brain |
+| AAAGTCCAGTCACTAC-1 | Brain |
+| AAAGTCCGTGACTGTT-1 | Brain |
+| AAAGTCCTCCAGCCTT-1 | Brain |
+| AAAGTGAGTTCCTAAG-1 | Brain |
+
+** Color tree
+
+Great! Now we just need to feed it to =too-many-cells=. *Note*: We use =--prior=
+from now on so we don't need to calculate the tree all over again. This argument
+makes things much faster!
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  --labels-file ./labels.csv \
+  --dendrogram-output "tree_labeled.svg" \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_labeled.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_labeled.svg]]
+
+** Custom colors
+
+We can also change the colors however we want:
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  --labels-file ./labels.csv \
+  --draw-colors "[\"#66c2a5\", \"#fc8d62\"]" \
+  --dendrogram-output "tree_labeled_alternate.svg" \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_labeled_alternate.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_labeled_alternate.svg]]
+
+* Getting more information from the tree
+
+** Overlay modularity
+
+Now that we have a basic tree, we can start doing some quick edits. Want
+modularity overlays to show the modularity at each node in the tree?
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  --labels-file ./labels.csv \
+  --dendrogram-output "tree_modularity.svg" \
+  --draw-mark "MarkModularity" \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_modularity.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_modularity.svg]]
+
+* Pruning the tree
+
+** Prune tree by size
+
+For a large number of cells, the tree can grow quite large. To prune the tree,
+we can use different cutoffs. However, this will change the tree structure, so
+be sure to output the tree in a different folder to avoid overwriting the
+original tree (so we can still use =--prior=)! Let's have no leaf with less than
+30 cells:
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  --labels-file ./labels.csv \
+  --min-size 30 \
+  --output out_pruned \
+  > clusters_pruned.csv
+
+printf "./out_pruned/dendrogram.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out_pruned/dendrogram.svg]]
+
+** Prune tree by size distribution
+
+Don't want arbitrary number cutoffs? Let's instead make a cutoff using the
+distribution of cluster sizes. We can use =--smart-cutoff= to look at the
+distribution of cluster sizes, split proportions, or distances (modularity here)
+and select certain median absolute deviations (MADs) away from the median as a
+cutoff. We select which feature to create a distribution by using that feature's
+normal cutoff argument, where the cutoff value is ignored (so we can put 1, for
+instance, as it will be ignored). Let's revise our previous attempt by cutting 1
+MAD away from the median node size:
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  --labels-file ./labels.csv \
+  --min-size 1 \
+  --smart-cutoff 1 \
+  --dendrogram-output "tree_smart.svg" \
+  --output out_pruned \
+  > clusters_pruned.csv
+
+printf "./out_pruned/tree_smart.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out_pruned/tree_smart.svg]]
+
+* Gene expression
+
+** Neuron marker overlay
+
+Want to overlay gene expression? We'll need the matrices again, but still use
+=--prior= to avoid clustering. Also, we use normalization to avoid looking at
+only the counts, but rather normalized counts. Let's look neuron cell marker
+/Rbfox3/:
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --normalization "UQNorm" \
+  --draw-leaf "DrawItem (DrawContinuous \"ENSMUSG00000025576\")" \
+  --dendrogram-output "tree_neuron.svg" \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_neuron.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_neuron.svg]]
+
+** Increasing visibility
+
+Can't see too well? Let's up the saturation!
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --normalization "UQNorm" \
+  --draw-leaf "DrawItem (DrawContinuous \"ENSMUSG00000025576\")" \
+  --dendrogram-output "tree_neuron_saturated.svg" \
+  --draw-scale-saturation 6 \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_neuron_saturated.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_neuron_saturated.svg]]
+
+** Gene symbol rather than Ensembl
+
+Want to use the gene symbol? =cellranger= provides that! Let's use that feature
+column:
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --draw-leaf "DrawItem (DrawContinuous \"Rbfox3\")" \
+  --dendrogram-output "tree_neuron_gene_symbol.svg" \
+  --draw-scale-saturation 6 \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_neuron_gene_symbol.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_neuron_gene_symbol.svg]]
+
+** Heart marker overlay
+
+What about heart?
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --draw-leaf "DrawItem (DrawContinuous \"Gata6\")" \
+  --dendrogram-output "tree_heart.svg" \
+  --draw-scale-saturation 6 \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_heart.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_heart.svg]]
+
+** Multiple gene expression overlays
+
+What about *both*!?
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Rbfox3\", 0), (\"Gata6\", 0)])" \
+  --dendrogram-output "tree_brain_heart_markers.svg" \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_brain_heart_markers.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_brain_heart_markers.svg]]
+
+** Custom colors for multiple expression overlays
+
+Now we can see a more complete picture! But this is combinatorial in the number
+of features with high and low, can we focus in on a few? The order is always
+alphabetical, so we can assign our own colors -- ones that don't get saturated
+for unimportant cases!
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Rbfox3\", 0), (\"Gata6\", 0)])" \
+  --dendrogram-output "tree_brain_heart_markers_alternate.svg" \
+  --draw-colors "[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#999999\"]" \
+  --draw-scale-saturation 6 \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_brain_heart_markers_alternate.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_brain_heart_markers_alternate.svg]]
+
+* Differential expression
+
+** Overlay node numbers
+
+Now that we've seen some expressions, we quantify the differences in
+expressions between populations using the =differential= entry point. First,
+which node is which? Let's overlay their node IDs.
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  --labels-file ./labels.csv \
+  --draw-node-number \
+  --dendrogram-output "tree_numbers.svg" \
+  --output out \
+  > clusters.csv
+
+printf "./out/tree_numbers.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/tree_numbers.svg]]
+
+** Differential expression for two nodes
+
+We know that =Gata6= is higher in node 94 versus 121. Let's look at the
+differential expression of 94 / 121.
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells differential \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --nodes "([121], [94])" \
+  > ./out/94_vs_121.csv
+
+printf "./out/94_vs_121.csv"
+#+end_src
+
+#+RESULTS:
+[[file:./out/94_vs_121.csv]]
+
+** Differential expression for two groups of nodes
+
+Why does the format have brackets? Because it's a list! We can compare
+multiple nodes to each other:
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells differential \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --nodes "([121], [94, 5])" \
+  > ./out/94_5_vs_121.csv
+
+printf "./out/94_5_vs_121.csv"
+#+end_src
+
+#+RESULTS:
+[[file:./out/94_5_vs_121.csv]]
+
+** Label-filtered differential expression
+
+There's some nodes with multiple celltypes in them -- can we compare just
+the brain cells to heart cells in their "respective" cluster?
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells differential \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --labels-file ./labels.csv \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --nodes "([121], [94, 5])" \
+  --labels "([\"Brain\"], [\"Heart\"])" \
+  > ./out/94_5_vs_121_filtered.csv
+
+printf "./out/94_5_vs_121_filtered.csv"
+#+end_src
+
+#+RESULTS:
+[[file:./out/94_5_vs_121_filtered.csv]]
+
+** Gene distribution plots
+
+We can do some basic plotting as well for specific genes, such as =Gata6= and
+=Rbfox3= here.
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells differential \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --labels-file ./labels.csv \
+  --prior out \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --nodes "([121], [94, 5])" \
+  --labels "([\"Brain\"], [\"Heart\"])" \
+  --genes "Gata6" \
+  --genes "Rbfox3" \
+  --plot-output "./out/genes.pdf"
+
+printf "./out/genes.pdf"
+#+end_src
+
+#+RESULTS:
+[[file:./out/genes.pdf]]
+
+** All to all!
+
+Last, but not least, we can get the differential genes for every node versus all
+other nodes by not specifying any nodes at all. Useful for quick gene enrichment
+analyses!
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells differential \
+  --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
+  --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --prior out \
+  --feature-column 2 \
+  --normalization "UQNorm" \
+  --nodes "([], [])" \
+  > ./out/all_nodes_differential.csv
+
+printf "./out/all_nodes_differential.csv"
+#+end_src
+
+#+RESULTS:
+[[file:./out/all_nodes_differential.csv]]
+
+** More to discover
+
+We've only scratched the surface here, for many more customizable options, check
+out the help documentation for each entry point, e.g. =too-many-cells make-tree
+-h=.
