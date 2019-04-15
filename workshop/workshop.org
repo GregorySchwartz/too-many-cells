@@ -1,6 +1,6 @@
 #+TITLE: =too-many-cells= Workshop
 #+AUTHOR: Gregory W. Schwartz
-#+OPTIONS: date:nil creator:nil timestamp:nil toc:t
+#+OPTIONS: date:nil creator:nil timestamp:nil toc:t ^:nil
 
 #+SETUPFILE: https://fniessen.github.io/org-html-themes/setup/theme-readtheorg.setup
 
