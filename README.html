@@ -274,47 +274,47 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#orgd2ba80f">Description</a></li>
-<li><a href="#orgd6629f8">New features for current version</a></li>
-<li><a href="#org05cda79">Installation</a>
+<li><a href="#org331b3fb">Description</a></li>
+<li><a href="#org5de72b7">New features for current version</a></li>
+<li><a href="#org6e9de18">Installation</a>
 <ul>
-<li><a href="#org345d115">Dependencies</a></li>
-<li><a href="#orgb55bbb5">Install <code>stack</code></a></li>
-<li><a href="#orge0d31ca">Install <code>too-many-cells</code></a>
+<li><a href="#orgb4212d3">Dependencies</a></li>
+<li><a href="#org93b67d3">Install <code>stack</code></a></li>
+<li><a href="#org1a96cc7">Install <code>too-many-cells</code></a>
 <ul>
-<li><a href="#org902ad5a">Source</a></li>
-<li><a href="#org1473df9">Online</a></li>
-<li><a href="#org2a4ae80">Docker</a></li>
+<li><a href="#org3b9ff14">Source</a></li>
+<li><a href="#orgda80eeb">Online</a></li>
+<li><a href="#orgfa5dc10">Docker</a></li>
 </ul>
 </li>
-<li><a href="#org0f5d921">macOS</a></li>
+<li><a href="#org062a8b4">macOS</a></li>
 </ul>
 </li>
-<li><a href="#orgfa1ef9d">Troubleshooting</a>
+<li><a href="#orgc10e04e">Troubleshooting</a>
 <ul>
-<li><a href="#org9db2b25">I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</a></li>
-<li><a href="#org7c20ac2">I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</a></li>
-<li><a href="#orge6bba42">I am still having issues with installation</a></li>
+<li><a href="#org0b69ba6">I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</a></li>
+<li><a href="#orgd8b1230">I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</a></li>
+<li><a href="#orgddfdc24">I am still having issues with installation</a></li>
 </ul>
 </li>
-<li><a href="#orge567f56">Included projects</a></li>
-<li><a href="#orgeb34af9">Usage</a>
+<li><a href="#org478cc02">Included projects</a></li>
+<li><a href="#org94e26ec">Usage</a>
 <ul>
-<li><a href="#org8b5f97b"><code>make-tree</code></a>
+<li><a href="#org0ca31b8"><code>make-tree</code></a>
 <ul>
-<li><a href="#orgcc3f97d">Output</a></li>
-<li><a href="#org6277a2a">Outline with options</a></li>
-<li><a href="#org2d14cb0">Example</a></li>
+<li><a href="#org516edb5">Output</a></li>
+<li><a href="#org5f8735d">Outline with options</a></li>
+<li><a href="#org7a8f497">Example</a></li>
 </ul>
 </li>
-<li><a href="#org7173676"><code>interactive</code></a></li>
-<li><a href="#org478c209"><code>differential</code></a></li>
-<li><a href="#org87d0a7c"><code>diversity</code></a></li>
-<li><a href="#orgba582a9"><code>paths</code></a></li>
+<li><a href="#org1135c8b"><code>interactive</code></a></li>
+<li><a href="#org018dacf"><code>differential</code></a></li>
+<li><a href="#orgc8c6e96"><code>diversity</code></a></li>
+<li><a href="#org10a19e3"><code>paths</code></a></li>
 </ul>
 </li>
-<li><a href="#orgcf1725e">Advanced documentation</a></li>
-<li><a href="#org556daca">Demo</a></li>
+<li><a href="#orgbf7fa57">Advanced documentation</a></li>
+<li><a href="#org2a772db">Demo</a></li>
 </ul>
 </div>
 </div>
@@ -336,9 +336,9 @@ See <a href="https://www.biorxiv.org/content/10.1101/519660v1">the bioRxiv paper
 </p>
 </div>
 
-<div id="outline-container-orgd2ba80f" class="outline-2">
-<h2 id="orgd2ba80f">Description</h2>
-<div class="outline-text-2" id="text-orgd2ba80f">
+<div id="outline-container-org331b3fb" class="outline-2">
+<h2 id="org331b3fb">Description</h2>
+<div class="outline-text-2" id="text-org331b3fb">
 <p>
 <code>too-many-cells</code> is a suite of tools, algorithms, and visualizations focusing on
 the relationships between cell clades. This includes new ways of clustering,
@@ -357,9 +357,9 @@ without additional parameters or runs. See below for a full list of features.
 </div>
 </div>
 
-<div id="outline-container-orgd6629f8" class="outline-2">
-<h2 id="orgd6629f8">New features for current version</h2>
-<div class="outline-text-2" id="text-orgd6629f8">
+<div id="outline-container-org5de72b7" class="outline-2">
+<h2 id="org5de72b7">New features for current version</h2>
+<div class="outline-text-2" id="text-org5de72b7">
 <ul class="org-ul">
 <li>A new R wrapper was written to quickly get data to and from <code>too-many-cells</code>
 from R. <a href="https://github.com/GregorySchwartz/tooManyCellsR">Check it out here</a>!</li>
@@ -369,25 +369,25 @@ from R. <a href="https://github.com/GregorySchwartz/tooManyCellsR">Check it out 
 </div>
 </div>
 
-<div id="outline-container-org05cda79" class="outline-2">
-<h2 id="org05cda79">Installation</h2>
-<div class="outline-text-2" id="text-org05cda79">
+<div id="outline-container-org6e9de18" class="outline-2">
+<h2 id="org6e9de18">Installation</h2>
+<div class="outline-text-2" id="text-org6e9de18">
 <p>
 We provide multiple ways to install <code>too-many-cells</code>. We recommend installing
-<code>stack</code> (<a href="#orgb55bbb5">see below</a>), but we also have <a href="#org2a4ae80">docker</a> images and a <code>Dockerfile</code> to
+<code>stack</code> (<a href="#org93b67d3">see below</a>), but we also have <a href="#orgfa5dc10">docker</a> images and a <code>Dockerfile</code> to
 use in any system in case you have a custom build (for instance, a non-standard
 R installation) or difficulty installing. <b>macOS and Windows users:</b>
 <code>too-many-cells</code> was built and tested on linux, so we highly recommend using the
-<a href="#org2a4ae80">docker</a> image (which a completely isolated environment which requires no
+<a href="#orgfa5dc10">docker</a> image (which a completely isolated environment which requires no
 compiling or installation, other than docker itself) as there may be
 difficulties in installing the dependencies. There are, however, additional
-instructions for macOS <a href="#org736b4e3">here</a> if you really want to compile it.
+instructions for macOS <a href="#orgad5e09e">here</a> if you really want to compile it.
 </p>
 </div>
 
-<div id="outline-container-org345d115" class="outline-3">
-<h3 id="org345d115">Dependencies</h3>
-<div class="outline-text-3" id="text-org345d115">
+<div id="outline-container-orgb4212d3" class="outline-3">
+<h3 id="orgb4212d3">Dependencies</h3>
+<div class="outline-text-3" id="text-orgb4212d3">
 <p>
 You may require the following dependencies to build and run (from Ubuntu 14.04,
 use the appropriate packages from your distribution of choice):
@@ -440,9 +440,9 @@ BiocManager::install<span style="color: #008787;">(</span><span style="color: #a
 </div>
 </div>
 
-<div id="outline-container-orgb55bbb5" class="outline-3">
-<h3 id="orgb55bbb5">Install <code>stack</code></h3>
-<div class="outline-text-3" id="text-orgb55bbb5">
+<div id="outline-container-org93b67d3" class="outline-3">
+<h3 id="org93b67d3">Install <code>stack</code></h3>
+<div class="outline-text-3" id="text-org93b67d3">
 <p>
 See <a href="https://docs.haskellstack.org/en/stable/README/">https://docs.haskellstack.org/en/stable/README/</a> for more details.
 </p>
@@ -455,13 +455,13 @@ stack setup
 </div>
 </div>
 
-<div id="outline-container-orge0d31ca" class="outline-3">
-<h3 id="orge0d31ca">Install <code>too-many-cells</code></h3>
-<div class="outline-text-3" id="text-orge0d31ca">
+<div id="outline-container-org1a96cc7" class="outline-3">
+<h3 id="org1a96cc7">Install <code>too-many-cells</code></h3>
+<div class="outline-text-3" id="text-org1a96cc7">
 </div>
-<div id="outline-container-org902ad5a" class="outline-4">
-<h4 id="org902ad5a">Source</h4>
-<div class="outline-text-4" id="text-org902ad5a">
+<div id="outline-container-org3b9ff14" class="outline-4">
+<h4 id="org3b9ff14">Source</h4>
+<div class="outline-text-4" id="text-org3b9ff14">
 <p>
 Probably the easiest method if you don't want to mess with dependencies (outside
 of the ones above).
@@ -476,9 +476,9 @@ stack install
 </div>
 </div>
 
-<div id="outline-container-org1473df9" class="outline-4">
-<h4 id="org1473df9">Online</h4>
-<div class="outline-text-4" id="text-org1473df9">
+<div id="outline-container-orgda80eeb" class="outline-4">
+<h4 id="orgda80eeb">Online</h4>
+<div class="outline-text-4" id="text-orgda80eeb">
 <p>
 We only require <code>stack</code> (or <code>cabal</code>), you do not need to download any source
 code (but you might need the stack.yaml dependency versions), just run the
@@ -501,9 +501,9 @@ on <code>eigen-3.3.4.1</code> right now.
 </div>
 </div>
 
-<div id="outline-container-org2a4ae80" class="outline-4">
-<h4 id="org2a4ae80">Docker</h4>
-<div class="outline-text-4" id="text-org2a4ae80">
+<div id="outline-container-orgfa5dc10" class="outline-4">
+<h4 id="orgfa5dc10">Docker</h4>
+<div class="outline-text-4" id="text-orgfa5dc10">
 <p>
 Different computers have different setups, operating systems, and repositories.
 Do put the entire program in a container to bypass difficulties (with the other
@@ -553,15 +553,15 @@ docker build -t too-many-cells -f ./Dockerfile .
 </div>
 </div>
 
-<div id="outline-container-org0f5d921" class="outline-3">
-<h3 id="org0f5d921">macOS</h3>
-<div class="outline-text-3" id="text-org0f5d921">
+<div id="outline-container-org062a8b4" class="outline-3">
+<h3 id="org062a8b4">macOS</h3>
+<div class="outline-text-3" id="text-org062a8b4">
 <p>
-<a id="org736b4e3"></a>
+<a id="orgad5e09e"></a>
 </p>
 
 <p>
-We recommend using <a href="#org2a4ae80">docker</a> on macOS. If you need to build <code>too-many-cells</code>, you
+We recommend using <a href="#orgfa5dc10">docker</a> on macOS. If you need to build <code>too-many-cells</code>, you
 should get the above dependencies. For some dependencies, you can use <a href="https://brew.sh/">brewer</a>,
 then install <code>too-many-cells</code> (in the cloned folder, don't forget to install the
 R dependencies above):
@@ -587,13 +587,13 @@ stack install --flag gtk:have-quartz-gtk
 </div>
 </div>
 
-<div id="outline-container-orgfa1ef9d" class="outline-2">
-<h2 id="orgfa1ef9d">Troubleshooting</h2>
-<div class="outline-text-2" id="text-orgfa1ef9d">
+<div id="outline-container-orgc10e04e" class="outline-2">
+<h2 id="orgc10e04e">Troubleshooting</h2>
+<div class="outline-text-2" id="text-orgc10e04e">
 </div>
-<div id="outline-container-org9db2b25" class="outline-3">
-<h3 id="org9db2b25">I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</h3>
-<div class="outline-text-3" id="text-org9db2b25">
+<div id="outline-container-org0b69ba6" class="outline-3">
+<h3 id="org0b69ba6">I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</h3>
+<div class="outline-text-3" id="text-org0b69ba6">
 <p>
 Try upgrading stack with <code>stack upgrade</code>. The new installation will be in
 <code>~/.local/bin</code>, so use that binary.
@@ -601,9 +601,9 @@ Try upgrading stack with <code>stack upgrade</code>. The new installation will b
 </div>
 </div>
 
-<div id="outline-container-org7c20ac2" class="outline-3">
-<h3 id="org7c20ac2">I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</h3>
-<div class="outline-text-3" id="text-org7c20ac2">
+<div id="outline-container-orgd8b1230" class="outline-3">
+<h3 id="orgd8b1230">I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</h3>
+<div class="outline-text-3" id="text-orgd8b1230">
 <p>
 <code>stack</code> and <code>too-many-cells</code> assume system libraries and programs. To solve this
 issue, first install the dependencies above at the system level, including
@@ -618,9 +618,9 @@ system <code>R</code>. Then to every <code>stack</code> and <code>too-many-cells
 </div>
 </div>
 
-<div id="outline-container-orge6bba42" class="outline-3">
-<h3 id="orge6bba42">I am still having issues with installation</h3>
-<div class="outline-text-3" id="text-orge6bba42">
+<div id="outline-container-orgddfdc24" class="outline-3">
+<h3 id="orgddfdc24">I am still having issues with installation</h3>
+<div class="outline-text-3" id="text-orgddfdc24">
 <p>
 <a href="https://github.com/GregorySchwartz/too-many-cells/issues">Open an issue</a>! While working on the issue, try out the docker for
 <code>too-many-cells</code>, it requires no installation at all (other than docker).
@@ -629,9 +629,9 @@ system <code>R</code>. Then to every <code>stack</code> and <code>too-many-cells
 </div>
 </div>
 
-<div id="outline-container-orge567f56" class="outline-2">
-<h2 id="orge567f56">Included projects</h2>
-<div class="outline-text-2" id="text-orge567f56">
+<div id="outline-container-org478cc02" class="outline-2">
+<h2 id="org478cc02">Included projects</h2>
+<div class="outline-text-2" id="text-org478cc02">
 <p>
 This project is a collection of libraries and programs written specifically for
 <code>too-many-cells</code>:
@@ -650,9 +650,9 @@ distributions (statuses).</dd>
 </div>
 </div>
 
-<div id="outline-container-orgeb34af9" class="outline-2">
-<h2 id="orgeb34af9">Usage</h2>
-<div class="outline-text-2" id="text-orgeb34af9">
+<div id="outline-container-org94e26ec" class="outline-2">
+<h2 id="org94e26ec">Usage</h2>
+<div class="outline-text-2" id="text-org94e26ec">
 <p>
 <code>too-many-cells</code> has several entry points depending on the desired analysis.
 </p>
@@ -713,11 +713,11 @@ Also, check out <a href="https://github.com/GregorySchwartz/tooManyCellsR">tooMa
 </p>
 </div>
 
-<div id="outline-container-org8b5f97b" class="outline-3">
-<h3 id="org8b5f97b"><code>make-tree</code></h3>
-<div class="outline-text-3" id="text-org8b5f97b">
+<div id="outline-container-org0ca31b8" class="outline-3">
+<h3 id="org0ca31b8"><code>make-tree</code></h3>
+<div class="outline-text-3" id="text-org0ca31b8">
 <p>
-<a id="orge503e3f"></a>
+<a id="org1c25758"></a>
 </p>
 
 <p>
@@ -763,9 +763,9 @@ point (i.e. <code>too-many-cells make-tree -h</code>).
 </p>
 </div>
 
-<div id="outline-container-orgcc3f97d" class="outline-4">
-<h4 id="orgcc3f97d">Output</h4>
-<div class="outline-text-4" id="text-orgcc3f97d">
+<div id="outline-container-org516edb5" class="outline-4">
+<h4 id="org516edb5">Output</h4>
+<div class="outline-text-4" id="text-org516edb5">
 <p>
 <code>too-many-cells make-tree</code> generates several files in the output folder. Below
 is a short description of each file.
@@ -840,9 +840,9 @@ is a short description of each file.
 </div>
 </div>
 
-<div id="outline-container-org6277a2a" class="outline-4">
-<h4 id="org6277a2a">Outline with options</h4>
-<div class="outline-text-4" id="text-org6277a2a">
+<div id="outline-container-org5f8735d" class="outline-4">
+<h4 id="org5f8735d">Outline with options</h4>
+<div class="outline-text-4" id="text-org5f8735d">
 <p>
 The basic outline of the <b>default</b> pre-processing pipeline with some relevant
 options is as follows (there are many additional options including cell
@@ -859,13 +859,13 @@ whitelists and PCA that can be seen using <code>too-many-cells make-tree -h</cod
 </div>
 </div>
 
-<div id="outline-container-org2d14cb0" class="outline-4">
-<h4 id="org2d14cb0">Example</h4>
-<div class="outline-text-4" id="text-org2d14cb0">
+<div id="outline-container-org7a8f497" class="outline-4">
+<h4 id="org7a8f497">Example</h4>
+<div class="outline-text-4" id="text-org7a8f497">
 </div>
 <ul class="org-ul">
-<li><a id="org8fe9e52"></a>Setup<br />
-<div class="outline-text-5" id="text-org8fe9e52">
+<li><a id="orga19851f"></a>Setup<br />
+<div class="outline-text-5" id="text-orga19851f">
 <p>
 We start with our input matrix. Here,
 </p>
@@ -885,7 +885,7 @@ above) or a file (a <code>csv</code> file). You can also point to a <code>cellra
 folder which has <code>matrix.mtx.gz</code>, <code>features.tsv.gz</code>, and <code>barcodes.tsv.gz</code> files
 instead. <b>You don't need to use scRNA-seq data!</b> You can use any data that has
 observations (cells) and features (genes), as long as you agree that the
-observations are related by their feature abundances. <a id="orga34141e"></a> If
+observations are related by their feature abundances. <a id="org518dd9c"></a> If
 you do upstream batch effect correction, PCA, normalization, or anything else,
 be sure to use <code>--no-filter --normalization NoneNorm</code> to avoid wrong filters and
 scalings! As for formats, the matrix market format contains three files like so:
@@ -1004,13 +1004,13 @@ aggr</code>.
 </div>
 </li>
 
-<li><a id="org960d480"></a>Default run<br />
-<div class="outline-text-5" id="text-org960d480">
+<li><a id="org1f5b21d"></a>Default run<br />
+<div class="outline-text-5" id="text-org1f5b21d">
 <p>
 We can now run the <code>too-many-cells</code> algorithm on our data. The resulting cells
 with assigned clusters will be printed to <code>stdout</code> (don't forget to use
 <code>--no-filter</code> and <code>--normalization NoneNorm</code> on preprocessed data, as stated
-<a href="#orga34141e">here</a>).
+<a href="#org518dd9c">here</a>).
 </p>
 
 <div class="org-src-container">
@@ -1031,8 +1031,8 @@ with assigned clusters will be printed to <code>stdout</code> (don't forget to u
 </div>
 </li>
 
-<li><a id="orgdeef56e"></a>Pruning tree<br />
-<div class="outline-text-5" id="text-orgdeef56e">
+<li><a id="org50e5b87"></a>Pruning tree<br />
+<div class="outline-text-5" id="text-org50e5b87">
 <p>
 Large cell populations can result in a very large tree. What if we only want to
 see larger subpopulations rather than the large (inner nodes) and small
@@ -1078,8 +1078,8 @@ previous results using <code>--prior</code> (we can also remove <code>--matrix-p
 </div>
 </li>
 
-<li><a id="org2b512c3"></a>Pie charts<br />
-<div class="outline-text-5" id="text-org2b512c3">
+<li><a id="org1c3e42f"></a>Pie charts<br />
+<div class="outline-text-5" id="text-org1c3e42f">
 <p>
 What if we want pie charts instead of showing each individual cell (the
 default)?
@@ -1105,8 +1105,8 @@ default)?
 </div>
 </li>
 
-<li><a id="org6721f97"></a>Node numbering<br />
-<div class="outline-text-5" id="text-org6721f97">
+<li><a id="orgc0db84e"></a>Node numbering<br />
+<div class="outline-text-5" id="text-orgc0db84e">
 <p>
 Now that we see the relationships between clusters and nodes in the dendrogram,
 how can we go back to the data &#x2013; which nodes represent which node IDs in the
@@ -1134,8 +1134,8 @@ data?
 </div>
 </li>
 
-<li><a id="orgdfa1454"></a>Branch width<br />
-<div class="outline-text-5" id="text-orgdfa1454">
+<li><a id="org18c93fc"></a>Branch width<br />
+<div class="outline-text-5" id="text-org18c93fc">
 <p>
 We can also change the width of the nodes and branches, for instance if we want
 thinner branches:
@@ -1162,8 +1162,8 @@ thinner branches:
 </div>
 </li>
 
-<li><a id="orgd75c640"></a>No scaling<br />
-<div class="outline-text-5" id="text-orgd75c640">
+<li><a id="org2d7ef79"></a>No scaling<br />
+<div class="outline-text-5" id="text-org2d7ef79">
 <p>
 We can remove all scaling for a normal tree and still control the branch widths:
 </p>
@@ -1214,8 +1214,8 @@ on top of each node:
 </div>
 </li>
 
-<li><a id="orgdf21d39"></a>Gene expression<br />
-<div class="outline-text-5" id="text-orgdf21d39">
+<li><a id="orgb492285"></a>Gene expression<br />
+<div class="outline-text-5" id="text-orgb492285">
 <p>
 What if we want to draw the gene expression onto the tree in another folder
 (requires <code>--matrix-path</code>, may take some time depending on matrix size. Defaults
@@ -1316,8 +1316,8 @@ Now we can see the expression of both <i>Cd4</i> and <i>Cd8a</i> at the same tim
 </div>
 </li>
 
-<li><a id="orgb64f957"></a>Diversity<br />
-<div class="outline-text-5" id="text-orgb64f957">
+<li><a id="org6a61b80"></a>Diversity<br />
+<div class="outline-text-5" id="text-org6a61b80">
 <p>
 We can also see an overview of the diversity of cell labels within each subtree
 and leaves.
@@ -1354,9 +1354,9 @@ leaves, so there are two different scales.
 </div>
 </div>
 
-<div id="outline-container-org7173676" class="outline-3">
-<h3 id="org7173676"><code>interactive</code></h3>
-<div class="outline-text-3" id="text-org7173676">
+<div id="outline-container-org1135c8b" class="outline-3">
+<h3 id="org1135c8b"><code>interactive</code></h3>
+<div class="outline-text-3" id="text-org1135c8b">
 <p>
 The <code>interactive</code> entry point has a basic GUI interface for quick plotting with
 a few features. We recommend limited use of this feature, however,
@@ -1373,9 +1373,9 @@ specific dependencies.
 </div>
 </div>
 
-<div id="outline-container-org478c209" class="outline-3">
-<h3 id="org478c209"><code>differential</code></h3>
-<div class="outline-text-3" id="text-org478c209">
+<div id="outline-container-org018dacf" class="outline-3">
+<h3 id="org018dacf"><code>differential</code></h3>
+<div class="outline-text-3" id="text-org018dacf">
 <p>
 A main use of single cell clustering is to find differential genes between
 multiple groups of cells. The <code>differential</code> aids in this endeavor by allowing
@@ -1454,9 +1454,9 @@ compare all nodes to all other cells using 8 OS threads:
 </div>
 </div>
 
-<div id="outline-container-org87d0a7c" class="outline-3">
-<h3 id="org87d0a7c"><code>diversity</code></h3>
-<div class="outline-text-3" id="text-org87d0a7c">
+<div id="outline-container-orgc8c6e96" class="outline-3">
+<h3 id="orgc8c6e96"><code>diversity</code></h3>
+<div class="outline-text-3" id="text-orgc8c6e96">
 <p>
 Diversity is the measure of the "effective number of entities within a system",
 originating from ecology (See Jost: Entropy and Diversity). Here, each cell is
@@ -1489,9 +1489,9 @@ the population sizes differ.
 </div>
 </div>
 
-<div id="outline-container-orgba582a9" class="outline-3">
-<h3 id="orgba582a9"><code>paths</code></h3>
-<div class="outline-text-3" id="text-orgba582a9">
+<div id="outline-container-org10a19e3" class="outline-3">
+<h3 id="org10a19e3"><code>paths</code></h3>
+<div class="outline-text-3" id="text-org10a19e3">
 <p>
 "Pseudotime" refers to the one dimensional relationship between cells, useful
 for looking at the ordering of cell states or labels. The implementation of
@@ -1513,9 +1513,9 @@ distances.
 </div>
 </div>
 
-<div id="outline-container-orgcf1725e" class="outline-2">
-<h2 id="orgcf1725e">Advanced documentation</h2>
-<div class="outline-text-2" id="text-orgcf1725e">
+<div id="outline-container-orgbf7fa57" class="outline-2">
+<h2 id="orgbf7fa57">Advanced documentation</h2>
+<div class="outline-text-2" id="text-orgbf7fa57">
 <p>
 Each entry point has its own documentation accessible with <code>-h</code>, such as
 <code>too-many-cells make-tree -h</code>:
@@ -1545,12 +1545,12 @@ Available commands:
 </div>
 </div>
 
-<div id="outline-container-org556daca" class="outline-2">
-<h2 id="org556daca">Demo</h2>
-<div class="outline-text-2" id="text-org556daca">
+<div id="outline-container-org2a772db" class="outline-2">
+<h2 id="org2a772db">Demo</h2>
+<div class="outline-text-2" id="text-org2a772db">
 <p>
 Check out an instructional example of using <code>too-many-cells</code> <a href="workshop/workshop.html">here</a> when finished
-looking at the brief <a href="#orge503e3f">feature overview</a>.
+looking at the brief <a href="#org1c25758">feature overview</a>.
 </p>
 </div>
 </div>
