@@ -200,6 +200,10 @@ system =R=. Then to every =stack= and =too-many-cells= command, prepend
 - ~PATH="$HOME/.local/bin:/usr/bin:$PATH" stack install~
 - ~PATH="$HOME/.local/bin:/usr/bin:$PATH" too-many-cells make-tree -h~
 
+If your shared libraries are abnormal and use =libR.so= from non-system
+locations, be sure to also have =LD_LIBRARY_PATH=/usr/lib/:$LD_LIBRARY_PATH=
+when installing.
+
 ** I am still having issues with installation
 
 [[https://github.com/GregorySchwartz/too-many-cells/issues][Open an issue]]! While working on the issue, try out the docker for
