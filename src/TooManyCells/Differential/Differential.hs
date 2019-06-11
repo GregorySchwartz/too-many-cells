@@ -77,12 +77,15 @@ getStatuses lm (v1, l1) (v2, l2) (ClusterGraph gr) =
         $ mappend (collapseStatus (1 :: Int) v1 l1) (collapseStatus (2 :: Int) v2 l2)
   where
     collapseStatus s vs ls =
-        fmap (\ !x -> (unRow . _cellRow $ x, _barcode x, (s, Diff.Status . showt $ vs)))
+        fmap (\ !x -> (unRow . _cellRow $ x, _barcode x, (s, Diff.Status $ statusName vs ls)))
             . mfilter (validCellInfo lm ls)
             . join
             . mconcat
             . fmap (fmap (fromMaybe mempty . snd) . getGraphLeaves gr)
             $ vs
+    statusName vs Nothing = showt vs
+    statusName vs (Just ls) =
+      (showt . fmap unLabel . Set.toAscList $ ls) <> " " <> showt vs
 
 -- | Filter barcodes by labels.
 validCellInfo :: Maybe LabelMap -> Maybe (Set.Set Label) -> CellInfo -> Bool
