@@ -377,7 +377,7 @@ too-many-cells make-tree \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
   --prior out \
   --normalization "UQNorm" \
-  --draw-leaf "DrawItem (DrawContinuous \"ENSMUSG00000025576\")" \
+  --draw-leaf "DrawItem (DrawContinuous [\"ENSMUSG00000025576\"])" \
   --dendrogram-output "tree_neuron.svg" \
   --output out \
   > clusters.csv
@@ -400,7 +400,7 @@ too-many-cells make-tree \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
   --prior out \
   --normalization "UQNorm" \
-  --draw-leaf "DrawItem (DrawContinuous \"ENSMUSG00000025576\")" \
+  --draw-leaf "DrawItem (DrawContinuous [\"ENSMUSG00000025576\"])" \
   --dendrogram-output "tree_neuron_saturated.svg" \
   --draw-scale-saturation 6 \
   --output out \
@@ -426,7 +426,7 @@ too-many-cells make-tree \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
-  --draw-leaf "DrawItem (DrawContinuous \"Rbfox3\")" \
+  --draw-leaf "DrawItem (DrawContinuous [\"Rbfox3\"])" \
   --dendrogram-output "tree_neuron_gene_symbol.svg" \
   --draw-scale-saturation 6 \
   --output out \
@@ -451,7 +451,7 @@ too-many-cells make-tree \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
-  --draw-leaf "DrawItem (DrawContinuous \"Gata6\")" \
+  --draw-leaf "DrawItem (DrawContinuous [\"Gata6\"])" \
   --dendrogram-output "tree_heart.svg" \
   --draw-scale-saturation 6 \
   --output out \

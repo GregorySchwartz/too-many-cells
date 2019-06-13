@@ -34,6 +34,12 @@ without additional parameters or runs. See below for a full list of features.
   from R. [[https://github.com/GregorySchwartz/tooManyCellsR][Check it out here]]!
 - Now works with Cellranger 3.0 matrices in addition to Cellranger 2.0
 - Can prune (make into leaves) specified nodes with =--custom-cut=.
+- Can analyze sets of features averaged together (e.g. gene sets). *Breaks API*,
+  so update your =--draw-leaf "DrawItem (DrawContinuous \"Cd4\")"= argument to
+  =--draw-leaf "DrawItem (DrawContinuous [\"Cd4\"])"= (notice the list
+  notation).
+- Outputs values from differential entry point plots (from =--genes=), and can
+  aggregate genes by average.
 
 * Installation
 
@@ -597,19 +603,21 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --feature-column 2 \
-    --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
+    --draw-leaf "DrawItem (DrawContinuous [\"Cd4\"])" \
     --output out_gene_expression \
     > clusters_pruned.csv
 #+END_SRC
 
 [[file:img/cd4_dendrogram.png]]
 
-While this representation shows the expression of /Cd4/ in each cell and blends
-those levels together, due to the sparsity of single cell data these cells and
-their respective subtrees may be hard to see without additional processing.
-Let's scale the saturation to more clearly see sections of the tree with our
-desired expression (when choosing other high and low colors with
-=--draw-colors=, scaling the saturation will only affect non-grayscale colors).
+Notice that /Cd4/ is within a list ([]), so multiple features can be listed and
+the average of those values for each cell will be used. While this
+representation shows the expression of /Cd4/ in each cell and blends those
+levels together, due to the sparsity of single cell data these cells and their
+respective subtrees may be hard to see without additional processing. Let's
+scale the saturation to more clearly see sections of the tree with our desired
+expression (when choosing other high and low colors with =--draw-colors=,
+scaling the saturation will only affect non-grayscale colors).
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
@@ -619,7 +627,7 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --feature-column 2 \
-    --draw-leaf "DrawItem (DrawContinuous \"Cd4\")" \
+    --draw-leaf "DrawItem (DrawContinuous [\"Cd4\"])" \
     --draw-scale-saturation 10
     --output out_gene_expression \
     > clusters_pruned.csv

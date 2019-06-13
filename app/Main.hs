@@ -101,7 +101,7 @@ data Options
                , customCut :: [Int] <?> "([Nothing] | NODE) List of nodes to prune (make these nodes leaves). Invoked by --custom-cut 34 --custom-cut 65 etc."
                , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
                , matrixOutput :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder in matrix market format or, if a csv file is specified, a dense csv format."
-               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous FEATURE), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)]), where each item is colored by the binary high / low expression of FEATURE with cutoff DOUBLE (so a value 0 means low <= 0, high > 0) and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default. If the label or feature cannot be found, the default color will be black (check your spelling!)."
+               , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous [FEATURE]), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix, [FEATURE] is a list, so if more than one FEATURE is listed, uses the average of the feature values), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)]), where each item is colored by the binary high / low expression of FEATURE based on DOUBLE and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default. If the label or feature cannot be found, the default color will be black (check your spelling!)."
                , drawCollection :: Maybe String <?> "([PieChart] | PieRing | PieNone | CollectionGraph MAXWEIGHT THRESHOLD [NODE]) How to draw item leaves in the dendrogram. PieRing draws a pie chart ring around the items. PieChart only draws a pie chart instead of items. PieNone only draws items, no pie rings or charts. (CollectionGraph MAXWEIGHT THRESHOLD [NODE]) draws the nodes and edges within leaves that are descendents of NODE (empty list [] indicates draw all leaf networks) based on the input matrix, normalizes edges based on the MAXWEIGHT, and removes edges for display less than THRESHOLD (after normalization, so for CollectionGraph 2 0.5 [26], draw the leaf graphs for all leaves under node 26, then a edge of 0.7 would be removed because (0.7 / 2) < 0.5). For CollectionGraph with no colors, use --draw-leaf \"DrawItem DrawLabel\" and all nodes will be black. If you don't specify this option, DrawText from --draw-leaf overrides this argument and only the number of cells will be plotted."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
                , drawNodeNumber :: Bool <?> "Draw the node numbers on top of each node in the graph."
@@ -145,6 +145,7 @@ data Options
                    , labels :: Maybe String <?> "([Nothing] | ([LABEL], [LABEL])) Use --labels-file to restrict the differential analysis to cells with these labels. Same format as --nodes, so the first list in --nodes and --labels gets the cells within that list of nodes with this list of labels. The same for the second list. For instance, --nodes \"([1], [2])\" --labels \"([\\\"A\\\"], [\\\"B\\\"])\" will compare cells from node 1 of label \"A\" only with cells from node 2 of label \"B\" only. To use all cells for that set of nodes, use an empty list, i.e. --labels \"([], [\\\"A\\\"])\". When comparing all nodes with all other cells, remember that the notation would be ([Other Cells], [Node]), so to compare cells of label X in Node with cells of label Y in Other Cells, use --labels \"([\\\"Y\\\", \\\"X\\\"])\". Requires both --labels and --labels-file, otherwise will include all labels."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed genes."
                    , genes :: [T.Text] <?> "([Nothing] | GENE) List of genes to plot for all cells within selected nodes. Invoked by --genes CD4 --genes CD8 etc. When this argument is supplied, only the plot is outputted and edgeR differential expression is ignored. Outputs to --output."
+                   , aggregate :: Bool <?> "([False] | True) Whether to plot the aggregate (mean here) of features for each cell from \"--genes\" instead of plotting different distributions for each feature."
                    , plotOutput :: Maybe String <?> "([out.pdf] | STRING) The file containing the output plot."}
     | Diversity { priors :: [String] <?> "(PATH) Either input folders containing the output from a run of too-many-cells or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case. If --labels-file is specified, those labels designate entity type, otherwise the assigned cluster is the entity type."
                 , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
@@ -166,6 +167,7 @@ data Options
 modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
+    short "aggregate"            = Nothing
     short "customCut"            = Nothing
     short "clumpinessMethod"     = Just 'u'
     short "clusterNormalization" = Just 'C'
@@ -361,7 +363,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         drawLeaf'         =
             maybe
               (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
-              (readOrErr "Cannot read draw-leaf.")
+              (readOrErr "Cannot read draw-leaf. If using DrawContinuous, remember to put features in a list: DrawItem (DrawContinuous [\\\"FEATURE\\\"])")
                 . unHelpful
                 . drawLeaf
                 $ opts
@@ -771,6 +773,7 @@ differentialMain opts = do
                   $ opts
         topN'     = TopN . fromMaybe 100 . unHelpful . topN $ opts
         genes'    = fmap Gene . unHelpful . genes $ opts
+        aggregate' = Aggregate . unHelpful . aggregate $ opts
         labels'   = fmap ( DiffLabels
                          . L.over L.both ( (\x -> bool (Just x) Nothing . Set.null $ x)
                                          . Set.fromList
@@ -822,29 +825,36 @@ differentialMain opts = do
 
               H.io . B.putStrLn . getDEString $ res
         _ -> do
+          let outputCsvR = FP.replaceExtension plotOutputR ".csv"
+
           diffPlot <- getSingleDiff
                        False
+                       aggregate'
                        labelMap
                        (extractSc processedSc)
                        combined1
                        combined2
                        genes'
                        gr
-          [r| suppressMessages(ggsave(diffPlot_hs, file = plotOutputR_hs)) |]
+          [r| suppressMessages(write.csv(diffPlot_hs[[2]], file = outputCsvR_hs, row.names = FALSE, quote = FALSE)) |]
+          [r| suppressMessages(ggsave(diffPlot_hs[[1]], file = plotOutputR_hs)) |]
 
           let normOutputR = FP.replaceBaseName
                               plotOutputR
                              (FP.takeBaseName plotOutputR <> "_scaled")
+              normOutputCsvR = FP.replaceExtension normOutputR ".csv"
 
           diffNormPlot <- getSingleDiff
                             True
+                            aggregate'
                             labelMap
                             (extractSc processedSc)
                             combined1
                             combined2
                             genes'
                             gr
-          [r| suppressMessages(ggsave(diffNormPlot_hs, file = normOutputR_hs)) |]
+          [r| suppressMessages(write.csv(diffNormPlot_hs[[2]], file = normOutputCsvR_hs, row.names = FALSE, quote = FALSE)) |]
+          [r| suppressMessages(ggsave(diffNormPlot_hs[[1]], file = normOutputR_hs)) |]
 
           return ()
 

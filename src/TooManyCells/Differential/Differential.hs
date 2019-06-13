@@ -24,7 +24,7 @@ import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeafItems)
 import Control.Monad (join, mfilter)
 import Data.Function (on)
-import Data.List (sort, sortBy)
+import Data.List (sort, sortBy, genericLength)
 import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Monoid ((<>))
 import Language.R as R
@@ -34,6 +34,7 @@ import Control.Parallel.Strategies (parMap, withStrategy, parBuffer, rdeepseq)
 import qualified "differential" Differential as Diff
 import qualified "differential" Plot as Diff
 import qualified "differential" Types as Diff
+import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
@@ -42,6 +43,7 @@ import qualified Data.Graph.Inductive as G
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified System.FilePath as FP
 
@@ -85,7 +87,7 @@ getStatuses lm (v1, l1) (v2, l2) (ClusterGraph gr) =
             $ vs
     statusName vs Nothing = showt vs
     statusName vs (Just ls) =
-      (showt . fmap unLabel . Set.toAscList $ ls) <> " " <> showt vs
+      (T.intercalate " " . fmap unLabel . Set.toAscList $ ls) <> " " <> showt vs
 
 -- | Filter barcodes by labels.
 validCellInfo :: Maybe LabelMap -> Maybe (Set.Set Label) -> CellInfo -> Bool
@@ -203,17 +205,30 @@ getAllDEStringKruskalWallis xs = header <> "\n" <> body
            $ xs
 
 -- | Convert a single cell matrix to a list of Entities with the specified
--- features.
-scToEntities :: [Gene]
+-- features. Also aggregates genes by average value or not.
+scToEntities :: Aggregate
+             -> [Gene]
              -> [(Int, Cell, (Int, Diff.Status))]
              -> SingleCells
              -> [Diff.Entity]
-scToEntities genes cellGroups sc =
-    concatMap (\x -> fmap (toEntity x) geneIdxs) cellGroups
+scToEntities aggregate genes cellGroups sc =
+    concatMap (\x -> toEntity aggregate x geneIdxs) cellGroups
   where
     mat = getMatrix sc
-    toEntity (cellIdx, _, (_, status)) (Gene gene, idx) =
-      Diff.Entity (Diff.Name gene) status $ S.lookupWD_SM mat (cellIdx, idx)
+    toEntity (Aggregate False) (cellIdx, (Cell b), (_, status)) =
+      fmap (\ (Gene gene, idx) -> Diff.Entity (Diff.Name gene) status (Diff.Id b)
+                                $ S.lookupWD_SM mat (cellIdx, idx)
+           )
+    toEntity (Aggregate True) (cellIdx, (Cell b), (_, status)) =
+      (:[])
+        . Diff.Entity
+            (Diff.Name . T.intercalate " " . fmap (unGene . fst) $ geneIdxs)
+            status
+            (Diff.Id b)
+        . (/ n)
+        . sum
+        . fmap (\(_, idx) -> S.lookupWD_SM mat (cellIdx, idx))
+    n = genericLength geneIdxs
     geneIdxs :: [(Gene, Int)]
     geneIdxs = fmap (\ !x -> ( x
                              , fromMaybe (err x)
@@ -222,8 +237,10 @@ scToEntities genes cellGroups sc =
                     ) genes
     err x = error $ "Feature " <> show x <> " not found for differential."
 
--- | Get the differential expression plot of features over statuses, filtered by labels.
+-- | Get the differential expression plot of features (or aggregate of features
+-- by average) over statuses, filtered by labels.
 getSingleDiff :: Bool
+              -> Aggregate
               -> Maybe LabelMap
               -> SingleCells
               -> ([G.Node], Maybe (Set.Set Label))
@@ -231,9 +248,9 @@ getSingleDiff :: Bool
               -> [Gene]
               -> ClusterGraph CellInfo
               -> R.R s (R.SomeSEXP s)
-getSingleDiff normalize lm sc v1 v2 genes gr = do
+getSingleDiff normalize aggregate lm sc v1 v2 genes gr = do
   let cellGroups = getStatuses lm v1 v2 gr
-      entities = scToEntities genes cellGroups sc
+      entities = scToEntities aggregate genes cellGroups sc
 
   Diff.plotSingleDiff normalize entities
 
