@@ -38,7 +38,7 @@ import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGr
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
-import Text.Read (readMaybe)
+import Text.Read (readMaybe, readEither)
 import TextShow (showt)
 import qualified "find-clumpiness" Types as Clump
 import qualified Control.Lens as L
@@ -112,6 +112,7 @@ data Options
                , drawLegendAllLabels :: Bool <?> "Whether to show all the labels in the label file instead of only showing labels within the current tree. The program generates colors from all labels in the label file first in order to keep consistent colors. By default, this value is false, meaning that only the labels present in the tree are shown (even though the colors are the same). The subset process occurs after --draw-colors, so when using that argument make sure to account for all labels."
                , drawPalette :: Maybe String <?> "([Set1] | Hsv | Ryb) Palette to use for legend colors. With high saturation in --draw-scale-saturation, consider using Hsv to better differentiate colors."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, gray]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
+               , drawDiscretize :: Maybe String <?> "([Nothing] | COLORS | INT) Discretize colors by finding the nearest color for each item and node. For instance, --draw-discretize \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\" will change all node and item colors to one of those two colors, based on Euclidean distance. If using \"--draw-discretize INT\", will instead take the default map and segment (or interpolate) it into INT colors, rather than a more continuous color scheme. May have unintended results when used with --draw-scale-saturation."
                , drawScaleSaturation :: Maybe Double <?> "([Nothing] | DOUBLE) Multiply the saturation value all nodes by this number in the HSV model. Useful for seeing more visibly the continuous colors by making the colors deeper against a gray scale."
                , pca :: Maybe Double <?> "([Nothing] | DOUBLE) The percent variance to retain for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
                , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
@@ -175,6 +176,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawCollection"       = Just 'E'
     short "drawColors"           = Just 'R'
     short "drawDendrogram"       = Just 'D'
+    short "drawDiscretize"       = Nothing
     short "drawLeaf"             = Just 'L'
     short "drawLegendAllLabels"  = Just 'J'
     short "drawLegendSep"        = Just 'Q'
@@ -406,6 +408,21 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . drawColors
                           $ opts
+        drawDiscretize' = (=<<) (\x -> either error Just
+                                . either
+                                    (\ err -> either
+                                                (\y -> Left $ finalError err y)
+                                                (Right . SegmentColorMap)
+                                              (readEither x :: Either String Int)
+                                    )
+                                    (Right . CustomColorMap . fmap sRGB24read)
+                                $ (readEither x :: Either String [String])
+                                )
+                        . unHelpful
+                        . drawDiscretize
+                        $ opts
+          where
+            finalError err x = "Error in draw-discretize: " <> err <> " " <> x
         drawScaleSaturation' =
             fmap DrawScaleSaturation . unHelpful . drawScaleSaturation $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
@@ -531,6 +548,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawLegendAllLabels = drawLegendAllLabels'
                     , _birchDrawPalette = drawPalette'
                     , _birchDrawColors = drawColors'
+                    , _birchDrawDiscretize      = drawDiscretize'
                     , _birchDrawScaleSaturation = drawScaleSaturation'
                     , _birchTree = _clusterDend originalClusterResults
                     , _birchMat = birchMat
