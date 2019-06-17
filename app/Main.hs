@@ -4,15 +4,6 @@ Gregory W. Schwartz
 Clusters single cell data.
 -}
 
-{-# LANGUAGE QuasiQuotes       #-}
-{-# LANGUAGE BangPatterns      #-}
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PackageImports    #-}
-{-# LANGUAGE TypeOperators     #-}
-{-# LANGUAGE TupleSections     #-}
-
 module Main where
 
 -- Remote
@@ -39,28 +30,6 @@ import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGr
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Math.Modularity.Types (Q (..))
 import Options.Generic
-import System.IO (hPutStrLn, stderr)
-import Text.Read (readMaybe, readEither)
-import TextShow (showt)
-import qualified "find-clumpiness" Types as Clump
-import qualified Control.Lens as L
-import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.Colour.Palette.BrewerSet as D
-import qualified Data.Colour.Palette.Harmony as D
-import qualified Data.Csv as CSV
-import qualified Data.GraphViz as G
-import qualified Data.Set as Set
-import qualified Data.Text as T
-import qualified Data.Text.Lazy.IO as T
-import qualified Data.Vector as V
-import qualified Diagrams.Backend.Cairo as D
-import qualified Diagrams.Prelude as D
-import qualified H.Prelude as H
-import qualified Plots as D
-import qualified System.Directory as FP
-import qualified System.FilePath as FP
-import qualified System.ProgressBar as Progress
 
 -- Local
 import TooManyCells.Differential.Differential
@@ -1059,6 +1028,14 @@ pathsMain opts = do
         return ()
 
     return ()
+-- =======
+-- import TooManyCells.Program.MakeTree
+-- import TooManyCells.Program.Paths
+-- import TooManyCells.Program.Diversity
+-- import TooManyCells.Program.Differential
+-- import TooManyCells.Program.Interactive
+-- import TooManyCells.Program.Options
+-- >>>>>>> In progress, changed gene to feature, split out Main.hs, added AtacSeq.
 
 main :: IO ()
 main = do

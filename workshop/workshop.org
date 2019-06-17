@@ -627,8 +627,8 @@ too-many-cells differential \
   --normalization "UQNorm" \
   --nodes "([121], [94, 5])" \
   --labels "([\"Brain\"], [\"Heart\"])" \
-  --genes "Gata6" \
-  --genes "Rbfox3" \
+  --features "Gata6" \
+  --features "Rbfox3" \
   --plot-output "./out/genes.pdf"
 
 printf "./out/genes.pdf"

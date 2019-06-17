@@ -175,7 +175,7 @@ scaleSparseMol xs = fmap (/ med) xs
         . S.toListSV
         $ xs
 
--- | Filter a matrix to remove low count cells and genes.
+-- | Filter a matrix to remove low count cells and features.
 filterDenseMat :: FilterThresholds -> SingleCells -> SingleCells
 filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
     SingleCells { _matrix   = m
@@ -210,7 +210,7 @@ filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
       . _colNames
       $ sc
 
--- | Filter a matrix to remove low count cells and genes.
+-- | Filter a matrix to remove low count cells and features.
 filterNumSparseMat :: FilterThresholds -> SingleCells -> SingleCells
 filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     SingleCells { _matrix   = m

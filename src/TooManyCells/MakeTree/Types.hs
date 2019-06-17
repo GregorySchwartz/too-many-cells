@@ -117,7 +117,7 @@ instance TreeItem CellInfo where
 instance MatrixLike SingleCells where
     getMatrix   = unMatObsRow . _matrix
     getRowNames = fmap unCell . _rowNames
-    getColNames = fmap unGene . _colNames
+    getColNames = fmap unFeature . _colNames
 
 instance A.ToJSON Q where
     toEncoding = A.genericToEncoding A.defaultOptions

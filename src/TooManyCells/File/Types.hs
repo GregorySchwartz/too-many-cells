@@ -36,7 +36,7 @@ import qualified Numeric.LinearAlgebra as H
 -- Basic
 newtype DendrogramFile  = DendrogramFile { unDendrogramFile :: FilePath }
 newtype CellFile        = CellFile { unCellFile :: FilePath }
-newtype GeneFile        = GeneFile { unGeneFile :: FilePath }
+newtype FeatureFile        = FeatureFile { unFeatureFile :: FilePath }
 newtype ProjectionFile  = ProjectionFile { unProjectionFile :: FilePath }
 newtype CellWhitelistFile = CellWhitelistFile
     { unCellWhitelistFile :: FilePath

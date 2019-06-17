@@ -24,23 +24,23 @@ new = setNames(as.character(cDf$cluster), as.character(cDf$cell))
 colnames(eDf) = new[colnames(eDf)]
 
 eDf = melt(eDf)
-names(eDf)[names(eDf) == "Var1"] = "gene"
+names(eDf)[names(eDf) == "Var1"] = "feature"
 names(eDf)[names(eDf) == "Var2"] = "cluster"
 
 df = eDf
 
-# Average genes in a cluster.
+# Average features in a cluster.
 print("Averaging.")
-df = plyr::ddply(df, c("cluster", "gene"), summarize, avgVal = mean(value))
+df = plyr::ddply(df, c("cluster", "feature"), summarize, avgVal = mean(value))
 
 # Plot.
 print("Plotting.")
 
-p = ggplot(df, aes(x = factor(cluster), y = factor(gene), fill = avgVal)) +
+p = ggplot(df, aes(x = factor(cluster), y = factor(feature), fill = avgVal)) +
     geom_tile() +
   scale_fill_gradient2(high = muted("red"), mid = "white", low = muted("blue"), guide = guide_legend(title = "Z-score Expression")) +
     xlab("Cluster") +
-    ylab("Gene") +
+    ylab("Feature") +
     theme(axis.text.x = element_text(angle = 315, hjust = 0))
 
 # Save.

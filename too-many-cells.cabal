@@ -29,6 +29,7 @@ library
                      , TooManyCells.MakeTree.Plot
                      , TooManyCells.MakeTree.Print
                      , TooManyCells.MakeTree.Types
+                     , TooManyCells.Matrix.AtacSeq
                      , TooManyCells.Matrix.Load
                      , TooManyCells.Matrix.Preprocess
                      , TooManyCells.Matrix.Types
@@ -36,8 +37,17 @@ library
                      , TooManyCells.Paths.Distance
                      , TooManyCells.Paths.Plot
                      , TooManyCells.Paths.Types
+                     , TooManyCells.Program.Options
+                     , TooManyCells.Program.LoadMatrix
+                     , TooManyCells.Program.MakeTree
+                     , TooManyCells.Program.Interactive
+                     , TooManyCells.Program.Differential
+                     , TooManyCells.Program.Diversity
+                     , TooManyCells.Program.Paths
+                     , TooManyCells.Program.Utility
   build-depends:       base >= 4.7 && < 5
                      , aeson
+                     , attoparsec
                      , birch-beer
                      , bytestring
                      , cassava

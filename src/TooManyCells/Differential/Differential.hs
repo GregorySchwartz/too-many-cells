@@ -57,7 +57,7 @@ scToTwoD :: [(Int, Cell, (Int, Diff.Status))] -> SingleCells -> Diff.TwoDMat
 scToTwoD cellGroups sc =
     Diff.TwoDMat rNames cNames statuses nRows nCols . S.toListSM $ filteredMat
   where
-    rNames = fmap (Diff.Name . unGene) . V.toList . _colNames $ sc
+    rNames = fmap (Diff.Name . unFeature) . V.toList . _colNames $ sc
     cNames = fmap (Diff.Name . unCell . L.view L._2) cellGroups -- We flip row and column because cells are columns here
     statuses = fmap (Diff.Status . showt . L.view (L._3 . L._1)) cellGroups
     nRows    = S.nrows filteredMat
@@ -131,7 +131,7 @@ getAllDEGraphKruskalWallis :: TopN
                     -> DiffLabels
                     -> SingleCells
                     -> ClusterGraph CellInfo
-                    -> [(G.Node, Gene, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+                    -> [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
 getAllDEGraphKruskalWallis topN lm ls sc gr =
   mconcat
     . catMaybes
@@ -151,7 +151,7 @@ compareClusterToOthersKruskalWallis
   -> SingleCells
   -> S.SpMatrix Double
   -> ClusterGraph CellInfo
-  -> Maybe [(G.Node, Gene, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+  -> Maybe [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
 compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr
   | fastFiveCheck nCells || fastFiveCheck nsCells = Nothing
   | otherwise = Just . take topN . sortBy (compare `on` (L.view L._4)) $ res
@@ -181,7 +181,7 @@ getDEString :: [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
             -> B.ByteString
 getDEString xs = header <> "\n" <> body
   where
-    header = "gene,logFC,pVal,FDR"
+    header = "feature,logFC,pVal,FDR"
     body   = CSV.encode
            . fmap ( L.over L._1 Diff.unName
                   . L.over L._3 Diff.unPValue
@@ -192,49 +192,49 @@ getDEString xs = header <> "\n" <> body
 -- | Get the differential expression of each node to all other nodes using
 -- KruskalWallis.
 getAllDEStringKruskalWallis
-  :: [(G.Node, Gene, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)] -> B.ByteString
+  :: [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)] -> B.ByteString
 getAllDEStringKruskalWallis xs = header <> "\n" <> body
   where
-    header = "node,gene,log2FC,pVal,FDR"
+    header = "node,feature,log2FC,pVal,FDR"
     body   = CSV.encode
            . fmap ( L.over L._5 (maybe "NA" (showt . Diff.unFDR))
                   . L.over L._4 (maybe "NA" (showt . Diff.unPValue))
                   . L.over L._3 Diff.unLog2Diff
-                  . L.over L._2 unGene
+                  . L.over L._2 unFeature
                   )
            $ xs
 
 -- | Convert a single cell matrix to a list of Entities with the specified
--- features. Also aggregates genes by average value or not.
+-- features. Also aggregates features by average value or not.
 scToEntities :: Aggregate
-             -> [Gene]
+             -> [Feature]
              -> [(Int, Cell, (Int, Diff.Status))]
              -> SingleCells
              -> [Diff.Entity]
-scToEntities aggregate genes cellGroups sc =
-    concatMap (\x -> toEntity aggregate x geneIdxs) cellGroups
+scToEntities aggregate features cellGroups sc =
+    concatMap (\x -> toEntity aggregate x featureIdxs) cellGroups
   where
     mat = getMatrix sc
     toEntity (Aggregate False) (cellIdx, (Cell b), (_, status)) =
-      fmap (\ (Gene gene, idx) -> Diff.Entity (Diff.Name gene) status (Diff.Id b)
+      fmap (\ (Feature feature, idx) -> Diff.Entity (Diff.Name feature) status (Diff.Id b)
                                 $ S.lookupWD_SM mat (cellIdx, idx)
            )
     toEntity (Aggregate True) (cellIdx, (Cell b), (_, status)) =
       (:[])
         . Diff.Entity
-            (Diff.Name . T.intercalate " " . fmap (unGene . fst) $ geneIdxs)
+            (Diff.Name . T.intercalate " " . fmap (unFeature . fst) $ featureIdxs)
             status
             (Diff.Id b)
         . (/ n)
         . sum
         . fmap (\(_, idx) -> S.lookupWD_SM mat (cellIdx, idx))
-    n = genericLength geneIdxs
-    geneIdxs :: [(Gene, Int)]
-    geneIdxs = fmap (\ !x -> ( x
+    n = genericLength featureIdxs
+    featureIdxs :: [(Feature, Int)]
+    featureIdxs = fmap (\ !x -> ( x
                              , fromMaybe (err x)
-                             $ V.elemIndex (unGene x) (getColNames sc)
+                             $ V.elemIndex (unFeature x) (getColNames sc)
                              )
-                    ) genes
+                    ) features
     err x = error $ "Feature " <> show x <> " not found for differential."
 
 -- | Get the differential expression plot of features (or aggregate of features
@@ -245,12 +245,12 @@ getSingleDiff :: Bool
               -> SingleCells
               -> ([G.Node], Maybe (Set.Set Label))
               -> ([G.Node], Maybe (Set.Set Label))
-              -> [Gene]
+              -> [Feature]
               -> ClusterGraph CellInfo
               -> R.R s (R.SomeSEXP s)
-getSingleDiff normalize aggregate lm sc v1 v2 genes gr = do
+getSingleDiff normalize aggregate lm sc v1 v2 features gr = do
   let cellGroups = getStatuses lm v1 v2 gr
-      entities = scToEntities aggregate genes cellGroups sc
+      entities = scToEntities aggregate features cellGroups sc
 
   Diff.plotSingleDiff normalize entities
 

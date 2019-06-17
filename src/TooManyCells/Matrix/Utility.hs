@@ -84,7 +84,7 @@ scToRMat sc = do
     [r| library(Matrix) |]
 
     let rowNamesR = fmap (T.unpack . unCell) . V.toList . _rowNames $ sc
-        colNamesR = fmap (T.unpack . unGene) . V.toList . _colNames $ sc
+        colNamesR = fmap (T.unpack . unFeature) . V.toList . _colNames $ sc
 
     mat <- fmap unRMatObsRow . matToRMat . _matrix $ sc
 

@@ -4,11 +4,14 @@ Gregory W. Schwartz
 Collects the types used in the program concerning the matrix.
 -}
 
-{-# LANGUAGE StrictData #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE StrictData #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module TooManyCells.Matrix.Types where
@@ -27,6 +30,7 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
 import Math.Modularity.Types (Q (..))
+import TextShow (TextShow (..))
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
@@ -45,9 +49,10 @@ newtype Cell = Cell
     { unCell :: Text
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON, A.FromJSON)
 newtype Cols            = Cols { unCols :: [Double] }
-newtype Gene            = Gene { unGene :: Text } deriving (Eq, Ord, Read, Show, Generic)
-instance NFData Gene
+newtype Feature            = Feature { unFeature :: Text } deriving (Eq, Ord, Read, Show, Generic)
+instance NFData Feature
 newtype FeatureColumn   = FeatureColumn { unFeatureColumn :: Int }
+newtype BinSize = BinSize { unBinSize :: Int}
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: Set.Set Cell
     } deriving (Eq,Ord,Read,Show)
@@ -84,34 +89,23 @@ newtype Row = Row
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 newtype Rows            = Rows { unRows :: [Double] }
 newtype Vals            = Vals { unVals :: [Double] }
+
 newtype MatObsRow = MatObsRow
     { unMatObsRow :: S.SpMatrix Double
     } deriving (Show)
+instance (Generic a) => Generic (Vector a)
+instance Semigroup MatObsRow where
+    (<>) (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
+instance Monoid MatObsRow where
+    mempty = MatObsRow $ S.zeroSM 0 0
 
 -- Advanced
 data SingleCells = SingleCells { _matrix :: MatObsRow
                                , _rowNames :: Vector Cell
-                               , _colNames :: Vector Gene
+                               , _colNames :: Vector Feature
                                }
                      deriving (Show)
 L.makeLenses ''SingleCells
-
-data CellInfo = CellInfo
-    { _barcode :: Cell
-    , _cellRow :: Row
-    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
-L.makeLenses ''CellInfo
-
-data NormType = TfIdfNorm | UQNorm | MedNorm | TotalMedNorm | BothNorm | LogCPMNorm | NoneNorm
-                deriving (Read, Show, Eq)
-
-instance (Generic a) => Generic (Vector a)
-
-instance Semigroup MatObsRow where
-    (<>) (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
-
-instance Monoid MatObsRow where
-    mempty  = MatObsRow $ S.zeroSM 0 0
 
 instance Semigroup SingleCells where
     (<>) x y =
@@ -119,9 +113,39 @@ instance Semigroup SingleCells where
                     , _rowNames    = (V.++) (_rowNames x) (_rowNames y)
                     , _colNames    = _colNames x
                     }
-
 instance Monoid SingleCells where
     mempty  = SingleCells { _matrix = mempty
                           , _rowNames = V.empty
                           , _colNames = V.empty
                           }
+
+data CellInfo = CellInfo
+    { _barcode :: Cell
+    , _cellRow :: Row
+    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
+L.makeLenses ''CellInfo
+
+data Range = Range {_rangeLabel :: Text, _rangeUpperBound :: Int, _rangeLowerBound :: Int }
+             deriving (Eq, Ord, Read, Show)
+L.makeFields ''Range
+instance TextShow Range where
+  showt (Range l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
+
+data Bin = Bin { _binLabel :: Text, _binUpperBound :: Int, _binLowerBound :: Int }
+             deriving (Eq, Ord, Read, Show)
+L.makeFields ''Bin
+instance TextShow Bin where
+  showt (Bin l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
+
+newtype BinRangeMap = BinRangeMap
+  { unBinRangeMap :: Map.Map Bin Int
+  }
+
+data NormType = TfIdfNorm
+              | UQNorm
+              | MedNorm
+              | TotalMedNorm
+              | BothNorm
+              | LogCPMNorm
+              | NoneNorm
+                deriving (Read, Show, Eq)

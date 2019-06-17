@@ -64,7 +64,7 @@ getFeature (FeatureColumn fc) =
 -- | Load output of cellranger.
 loadCellrangerData
     :: FeatureColumn
-    -> GeneFile
+    -> FeatureFile
     -> CellFile
     -> MatrixFileFolder
     -> IO SingleCells
@@ -75,12 +75,12 @@ loadCellrangerData fc gf cf (MatrixFile mf) = do
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
        $ mf
-    g <- fmap (\ x -> either error (fmap (Gene . getFeature fc)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
+    g <- fmap (\ x -> either error (fmap (Feature . getFeature fc)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
                                        :: Either String (Vector [T.Text])
                                         )
               )
        . B.readFile
-       . unGeneFile
+       . unFeatureFile
        $ gf
     c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
                                        :: Either String (Vector [T.Text])
@@ -99,7 +99,7 @@ loadCellrangerData fc gf cf (MatrixFile mf) = do
 -- | Load output of cellranger >= 3.0.0
 loadCellrangerDataFeatures
     :: FeatureColumn
-    -> GeneFile
+    -> FeatureFile
     -> CellFile
     -> MatrixFileFolder
     -> IO SingleCells
@@ -112,12 +112,12 @@ loadCellrangerDataFeatures fc gf cf (MatrixFile mf) = withSystemTempFile "temp_m
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
        $ tempMatFile
-    g <- fmap (\ x -> either error (fmap (Gene . getFeature fc)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
+    g <- fmap (\ x -> either error (fmap (Feature . getFeature fc)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
                                        :: Either String (Vector [T.Text])
                                         )
               )
        . B.readFile
-       . unGeneFile
+       . unFeatureFile
        $ gf
     c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
                                        :: Either String (Vector [T.Text])
@@ -150,7 +150,7 @@ loadHMatrixData (Delimiter delim) (MatrixFile mf) = do
          $ mf
 
     let c = fmap Cell . V.drop 1 . V.head $ all
-        g = fmap (Gene . V.head) . V.drop 1 $ all
+        g = fmap (Feature . V.head) . V.drop 1 $ all
         m = MatObsRow
           . hToSparseMat
           . H.tr -- We want observations as rows
@@ -182,7 +182,7 @@ loadSparseMatrixData (Delimiter delim) (MatrixFile mf) = do
          $ mf
 
     let c = V.fromList . fmap Cell . drop 1 . V.head $ all
-        g = fmap (Gene . head) . V.drop 1 $ all
+        g = fmap (Feature . head) . V.drop 1 $ all
         m = MatObsRow
           . HS.sparsifySM
           . HS.fromColsV -- We want observations as rows
@@ -207,7 +207,7 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
                     { S.decDelimiter = fromIntegral (ord delim) }
         cS = fmap (S.first (fmap Cell . drop 1 . fromMaybe (error "\nNo header.")))
            . S.head
-        gS = S.toList . S.map (Gene . head) . S.drop 1
+        gS = S.toList . S.map (Feature . head) . S.drop 1
         mS = S.toList
            . S.map (HS.sparsifySV . HS.vr . fmap (either error fst . T.double) . drop 1)
            . S.drop 1
