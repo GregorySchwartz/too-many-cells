@@ -97,7 +97,8 @@ data Options
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
                , maxProportion :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE proportion split. So a node N with L and R children will stop with this criteria at 0.5 if |L| / |R| < 0.5 or > 2 (absolute log2 transformed), that is, if one child has over twice as many items as the other child. Includes L and R in the final result."
                , minDistance :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE distance. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Includes L and R in the final result."
-               , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, and --min-distance based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
+               , minDistanceSearch :: Maybe Double <?> "([Nothing] | DOUBLE) Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, keep that path, otherwise prune it. This argument assists in finding distant nodes."
+               , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
                , customCut :: [Int] <?> "([Nothing] | NODE) List of nodes to prune (make these nodes leaves). Invoked by --custom-cut 34 --custom-cut 65 etc."
                , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
                , matrixOutput :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder in matrix market format or, if a csv file is specified, a dense csv format."
@@ -196,6 +197,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "maxProportion"        = Just 'X'
     short "maxStep"              = Just 'S'
     short "minDistance"          = Nothing
+    short "minDistanceSearch"    = Nothing
     short "minSize"              = Just 'M'
     short "noFilter"             = Just 'F'
     short "normalization"        = Just 'z'
@@ -350,7 +352,8 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
         maxProportion'    =
             fmap MaxProportion . unHelpful . maxProportion $ opts
-        minDistance'      = fmap MinDistance . unHelpful . minDistance $ opts
+        minDistance'       = fmap MinDistance . unHelpful . minDistance $ opts
+        minDistanceSearch' = fmap MinDistanceSearch . unHelpful . minDistanceSearch $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
         customCut'        = CustomCut . Set.fromList . unHelpful . customCut $ opts
         dendrogramOutput' = DendrogramFile
@@ -534,6 +537,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchMaxStep = maxStep'
                     , _birchMaxProportion = maxProportion'
                     , _birchMinDistance = minDistance'
+                    , _birchMinDistanceSearch   = minDistanceSearch'
                     , _birchSmartCutoff = smartCutoff'
                     , _birchCustomCut   = customCut'
                     , _birchOrder = Just order'
