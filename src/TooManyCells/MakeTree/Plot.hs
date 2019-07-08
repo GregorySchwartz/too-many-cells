@@ -16,6 +16,7 @@ module TooManyCells.MakeTree.Plot
     ( plotClustersR
     , plotLabelClustersR
     , plotClumpinessHeatmapR
+    , plotRankedModularityR
     ) where
 
 -- Remote
@@ -27,8 +28,9 @@ import Data.Colour.Names (black)
 import Data.Colour.Palette.BrewerSet (brewerSet, ColorCat(..), Kolor)
 import Data.Colour.SRGB (RGB (..), toSRGB, sRGB24show)
 import Data.Function (on)
-import Data.List (nub, sort, sortBy, foldl1', transpose, unzip3, unzip4)
+import Data.List (nub, sort, sortBy, foldl1', transpose, unzip3, unzip4, genericLength)
 import Data.Maybe (fromMaybe, catMaybes)
+import Data.Tree (Tree (..), flatten)
 import Data.Tuple (swap)
 import Diagrams.Backend.Cairo
 -- import Diagrams.Dendrogram (dendrogramCustom, Width(..))
@@ -69,7 +71,7 @@ getProjections :: ProjectionMap
 getProjections (ProjectionMap pm) (CellInfo { _barcode = !b }, Cluster !c) = do
     p <- Map.lookup b pm
     return $ (unX . fst $ p, unY . snd $ p, show c)
-    
+
 -- | Get the projections and label with colors for a cell.
 getProjectionsColor :: LabelMap
                     -> ItemColorMap
@@ -128,7 +130,7 @@ plotClustersR outputPlot pm clusterList = do
 plotLabelClustersR :: String
                    -> ProjectionMap
                    -> LabelMap
-                   -> ItemColorMap 
+                   -> ItemColorMap
                    -> [(CellInfo, [Cluster])]
                    -> R s ()
 plotLabelClustersR outputPlot pm lm icm clusterList = do
@@ -217,6 +219,33 @@ plotClustersOnlyR outputPlot (RMatObsRow mat) clustering = do
 
     --     dev.off()
     -- |]
+
+    return ()
+
+-- | Plot ranked modularity.
+plotRankedModularityR :: String
+                      -> Tree (TreeNode a)
+                      -> R s ()
+plotRankedModularityR outputPlot tree = do
+    let ms = sort
+           . catMaybes
+           . fmap (L.view BirchBeer.Types.distance)
+           . flatten
+           $ tree
+        rs = [1..genericLength ms] :: [Double]
+
+    [r| suppressMessages(library(ggplot2))
+        suppressMessages(library(cowplot))
+        df = data.frame(x = rs_hs, y = ms_hs)
+        p = ggplot(df, aes(x = x, y = y)) +
+                geom_line() +
+                # geom_vline(xintercept = cutoff_hs, linetype = "dashed", color = "red") +
+                xlab("Ranking") +
+                ylab("Modularity") +
+                theme(aspect.ratio = 1)
+
+        suppressMessages(ggsave(p, file = outputPlot_hs))
+    |]
 
     return ()
 

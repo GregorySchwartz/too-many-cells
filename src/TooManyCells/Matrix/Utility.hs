@@ -162,12 +162,16 @@ extractSc :: Maybe SingleCells -> SingleCells
 extractSc = fromMaybe (error "Need to provide matrix in --matrix-path for this functionality.")
 
 -- | Write a matrix to a file.
-writeSparseMatrixLike :: MatrixLike (a) => MatrixFileFolder -> a -> IO ()
-writeSparseMatrixLike (MatrixFolder folder) mat = do
+writeSparseMatrixLike :: MatrixLike a => MatrixTranspose -> MatrixFileFolder -> a -> IO ()
+writeSparseMatrixLike (MatrixTranspose mt) (MatrixFolder folder) mat = do
   -- Where to place output files.
   FP.createDirectoryIfMissing True folder
 
-  writeMatrix (folder </> "matrix.mtx") . spMatToMat . getMatrix $ mat
+  writeMatrix (folder </> "matrix.mtx")
+    . spMatToMat -- To have cells as columns
+    . (bool S.transposeSM id mt)
+    . getMatrix
+    $ mat
   T.writeFile (folder </> "genes.tsv")
     . T.unlines
     .  V.toList
@@ -183,16 +187,18 @@ writeSparseMatrixLike (MatrixFolder folder) mat = do
 
 -- | Print a dense matrix to a streaming string.
 printDenseMatrixLike :: (MatrixLike a, Monad m)
-                     => a
+                     => MatrixTranspose
+                     -> a
                      -> BS.ByteString m ()
-printDenseMatrixLike mat = Stream.encode (Just $ Stream.header header)
-                         . Stream.zipWith (:) rowN
-                         . Stream.each
-                         . fmap (fmap showt . S.toDenseListSV)
-                         . S.toRowsL
-                         . S.transposeSM -- To have cells as columns
-                         . getMatrix
-                         $ mat
+printDenseMatrixLike (MatrixTranspose mt) mat =
+  Stream.encode (Just $ Stream.header header)
+    . Stream.zipWith (:) rowN
+    . Stream.each
+    . fmap (fmap showt . S.toDenseListSV)
+    . S.toRowsL
+    . (bool S.transposeSM id mt) -- To have cells as columns
+    . getMatrix
+    $ mat
   where
     header = (B.empty :)
            . fmap T.encodeUtf8
@@ -202,14 +208,22 @@ printDenseMatrixLike mat = Stream.encode (Just $ Stream.header header)
     rowN = Stream.each . V.toList . getColNames $ mat -- To have columns as rows
 
 -- | Write a matrix to a dense file.
-writeDenseMatrixLike :: (MatrixLike a) => MatrixFileFolder -> a -> IO ()
-writeDenseMatrixLike (MatrixFile file) =
-  runManaged . SW.writeBinaryFile file . printDenseMatrixLike
+writeDenseMatrixLike :: (MatrixLike a)
+                     => MatrixTranspose
+                     -> MatrixFileFolder
+                     -> a
+                     -> IO ()
+writeDenseMatrixLike mt (MatrixFile file) =
+  runManaged . SW.writeBinaryFile file . printDenseMatrixLike mt
 
 -- | Write a MatrixLike to a file (dense) or folder (sparse).
-writeMatrixLike :: (MatrixLike a) => MatrixFileFolder -> a -> IO ()
-writeMatrixLike o@(MatrixFolder _) = writeSparseMatrixLike o
-writeMatrixLike o@(MatrixFile _) = writeDenseMatrixLike o
+writeMatrixLike :: (MatrixLike a)
+                => MatrixTranspose
+                -> MatrixFileFolder
+                -> a
+                -> IO ()
+writeMatrixLike mt o@(MatrixFolder _) = writeSparseMatrixLike mt o
+writeMatrixLike mt o@(MatrixFile _) = writeDenseMatrixLike mt o
 
 -- | Check if a name ends with .csv
 isCsvFile :: FilePath -> Bool

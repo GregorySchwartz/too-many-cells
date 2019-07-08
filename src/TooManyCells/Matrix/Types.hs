@@ -60,6 +60,9 @@ newtype NoFilterFlag = NoFilterFlag
 newtype FilterThresholds = FilterThresholds
     { unFilterThresholds :: (Double, Double)
     } deriving (Read,Show)
+newtype MatrixTranspose = MatrixTranspose
+    { unMatrixTranspose :: Bool
+    } deriving (Read,Show)
 newtype X = X
     { unX :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)

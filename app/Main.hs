@@ -101,7 +101,8 @@ data Options
                , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
                , customCut :: [Int] <?> "([Nothing] | NODE) List of nodes to prune (make these nodes leaves). Invoked by --custom-cut 34 --custom-cut 65 etc."
                , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
-               , matrixOutput :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder under the --output directory in matrix market format or, if a csv file is specified, a dense csv format."
+               , matrixOutput :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder under the --output directory in matrix market format or, if a csv file is specified, a dense csv format. Like input, features are rows. See --matrix-output-transpose."
+               , matrixOutputTranspose :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder under the --output directory in matrix market format or, if a csv file is specified, a dense csv format. Differs from --matrix-output in that features are columns.columns."
                , drawLeaf :: Maybe String <?> "([DrawText] | DrawItem DrawItemType) How to draw leaves in the dendrogram. DrawText is the number of items in that leaf. DrawItem is the collection of items represented by circles, consisting of: DrawItem DrawLabel, where each item is colored by its label, DrawItem (DrawContinuous [FEATURE]), where each item is colored by the expression of FEATURE (corresponding to a feature name in the input matrix, [FEATURE] is a list, so if more than one FEATURE is listed, uses the average of the feature values), DrawItem (DrawThresholdContinuous [(FEATURE, DOUBLE)]), where each item is colored by the binary high / low expression of FEATURE based on DOUBLE and multiple FEATUREs can be used to combinatorically label items (FEATURE1 high / FEATURE2 low, etc.), DrawItem DrawSumContinuous, where each item is colored by the sum of the post-normalized columns (use --normalization NoneNorm for UMI counts, default), and DrawItem DrawDiversity, where each node is colored by the diversity based on the labels of each item and the color is normalized separately for the leaves and the inner nodes. The default is DrawText, unless --labels-file is provided, in which DrawItem DrawLabel is the default. If the label or feature cannot be found, the default color will be black (check your spelling!)."
                , drawCollection :: Maybe String <?> "([PieChart] | PieRing | PieNone | CollectionGraph MAXWEIGHT THRESHOLD [NODE]) How to draw item leaves in the dendrogram. PieRing draws a pie chart ring around the items. PieChart only draws a pie chart instead of items. PieNone only draws items, no pie rings or charts. (CollectionGraph MAXWEIGHT THRESHOLD [NODE]) draws the nodes and edges within leaves that are descendents of NODE (empty list [] indicates draw all leaf networks) based on the input matrix, normalizes edges based on the MAXWEIGHT, and removes edges for display less than THRESHOLD (after normalization, so for CollectionGraph 2 0.5 [26], draw the leaf graphs for all leaves under node 26, then a edge of 0.7 would be removed because (0.7 / 2) < 0.5). For CollectionGraph with no colors, use --draw-leaf \"DrawItem DrawLabel\" and all nodes will be black. If you don't specify this option, DrawText from --draw-leaf overrides this argument and only the number of cells will be plotted."
                , drawMark :: Maybe String <?> "([MarkNone] | MarkModularity) How to draw annotations around each inner node in the tree. MarkNone draws nothing and MarkModularity draws a black circle representing the modularity at that node, darker black means higher modularity for that next split."
@@ -193,6 +194,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "filterThresholds"     = Just 'H'
     short "labels"               = Nothing
     short "matrixOutput"         = Nothing
+    short "matrixOutputTranspose" = Nothing
     short "maxDistance"          = Just 'T'
     short "maxProportion"        = Just 'X'
     short "maxStep"              = Just 'S'
@@ -365,6 +367,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . matrixOutput
                           $ opts
+        matrixOutputTranspose' = fmap (getMatrixOutputType . (unOutputDirectory output' FP.</>))
+                               . unHelpful
+                               . matrixOutput
+                               $ opts
         drawLeaf'         =
             maybe
               (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
@@ -602,9 +608,11 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (unOutputDirectory output' FP.</> "cluster_info.csv")
         . printClusterInfo
         $ gr'
-    case matrixOutput' of
-        Nothing  -> return ()
-        (Just x) -> writeMatrixLike x . extractSc $ processedSc
+    -- Write matrix
+    mapM_ (\x -> writeMatrixLike (MatrixTranspose False) x . extractSc $ processedSc) matrixOutput'
+    -- Write matrix transpose
+    mapM_ (\x -> writeMatrixLike (MatrixTranspose True) x . extractSc $ processedSc) matrixOutputTranspose'
+    -- Write node info
     B.writeFile
         (unOutputDirectory output' FP.</> "node_info.csv")
         . printNodeInfo labelMap
@@ -612,6 +620,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     case labelMap of
         Nothing   -> return ()
         (Just lm) ->
+            -- Write cluster diversity
             case clusterDiversity order' lm clusterResults of
                 (Left err) -> hPutStrLn stderr
                             $ err
@@ -679,6 +688,14 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                             $ plotClumpinessHeatmapR
                                 (unOutputDirectory output' FP.</> "clumpiness.pdf")
                                 clumpList
+
+        -- View cutting location for modularity.
+        case minDistanceSearch' of
+          Nothing -> return ()
+          (Just _) -> plotRankedModularityR
+                        (unOutputDirectory output' FP.</> "modularity_rank.pdf")
+                    . L.view clusterDend
+                    $ clusterResults
 
         -- Increment  progress bar.
         H.io $ Progress.autoProgressBar
