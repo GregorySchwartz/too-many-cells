@@ -4,6 +4,7 @@ Gregory W. Schwartz
 Collects helper functions in the program.
 -}
 
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE QuasiQuotes #-}
@@ -168,13 +169,14 @@ writeSparseMatrixLike (MatrixTranspose mt) (MatrixFolder folder) mat = do
   FP.createDirectoryIfMissing True folder
 
   writeMatrix (folder </> "matrix.mtx")
-    . spMatToMat -- To have cells as columns
-    . (bool S.transposeSM id mt)
+    . spMatToMat
+    . (bool S.transposeSM id mt) -- To have cells as columns
     . getMatrix
     $ mat
   T.writeFile (folder </> "genes.tsv")
     . T.unlines
-    .  V.toList
+    . fmap (\x -> T.intercalate "\t" [x, x])
+    . V.toList
     . getColNames
     $ mat
   T.writeFile (folder </> "barcodes.tsv")

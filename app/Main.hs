@@ -369,7 +369,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           $ opts
         matrixOutputTranspose' = fmap (getMatrixOutputType . (unOutputDirectory output' FP.</>))
                                . unHelpful
-                               . matrixOutput
+                               . matrixOutputTranspose
                                $ opts
         drawLeaf'         =
             maybe
