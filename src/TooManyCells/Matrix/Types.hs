@@ -51,8 +51,8 @@ newtype FeatureColumn   = FeatureColumn { unFeatureColumn :: Int }
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: Set.Set Cell
     } deriving (Eq,Ord,Read,Show)
-newtype PCAVar = PCAVar
-    { unPCAVar :: Double
+newtype PCADim = PCADim
+    { unPCADim :: Int
     } deriving (Eq,Ord,Read,Show)
 newtype NoFilterFlag = NoFilterFlag
     { unNoFilterFlag :: Bool

@@ -31,7 +31,6 @@ import Data.Maybe (fromMaybe)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
-import MachineLearning.PCA (getDimReducer_rv)
 import Statistics.Quantile (continuousBy, s)
 import qualified Control.Lens as L
 import qualified Data.Set as Set
@@ -42,6 +41,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Algorithms.Radix as V
 import qualified Data.Vector.Storable as VS
 import qualified Numeric.LinearAlgebra as H
+import qualified Numeric.LinearAlgebra.HMatrix as H
 
 -- Local
 import TooManyCells.File.Types
@@ -307,14 +307,20 @@ pcaRMat :: RMatObsRow s -> R s (RMatObsRow s)
 pcaRMat (RMatObsRow mat) = do
     fmap
         RMatObsRow
-        [r| mat = prcomp(t(mat_hs), tol = 0.95)$rotation
+        [r| mat = prcomp(t(mat_hs), tol = 0.95)$x
         |]
 
 -- | Conduct PCA on a matrix, retaining a percentage of variance.
-pcaDenseMat :: PCAVar -> MatObsRow -> MatObsRow
-pcaDenseMat (PCAVar pcaVar) (MatObsRow mat) = do
-    MatObsRow
-        . hToSparseMat
-        . L.view L._3
-        . getDimReducer_rv (sparseToHMat mat)
-        $ pcaVar
+pcaDenseMat :: PCADim -> MatObsRow -> MatObsRow
+pcaDenseMat (PCADim pcaDim) (MatObsRow matObs) =
+  MatObsRow
+    . hToSparseMat
+    . H.takeColumns pcaDim
+    . H.mul mat
+    . snd
+    . H.eigSH
+    . snd
+    . H.meanCov
+    $ mat
+  where
+    mat = sparseToHMat matObs

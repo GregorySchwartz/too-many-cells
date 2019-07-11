@@ -63,7 +63,6 @@ library
                      , lens
                      , managed
                      , matrix-market-attoparsec
-                     , mltool
                      , modularity
                      , mtl
                      , palette
