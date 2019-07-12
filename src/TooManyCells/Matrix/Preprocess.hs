@@ -22,9 +22,11 @@ module TooManyCells.Matrix.Preprocess
     , removeCorrelated
     , pcaRMat
     , pcaDenseMat
+    , shiftPositiveMat
     ) where
 
 -- Remote
+import Data.Bool (bool)
 import Data.List (sort)
 import Data.Monoid ((<>))
 import Data.Maybe (fromMaybe)
@@ -317,10 +319,25 @@ pcaDenseMat (PCADim pcaDim) (MatObsRow matObs) =
     . hToSparseMat
     . H.takeColumns pcaDim
     . H.mul mat
-    . snd
-    . H.eigSH
+    . (\(u, _, _) -> u)
+    . H.svd
+    . H.unSym
     . snd
     . H.meanCov
     $ mat
   where
     mat = sparseToHMat matObs
+
+-- | Shift features to positive values.
+shiftPositiveMat :: MatObsRow -> MatObsRow
+shiftPositiveMat = MatObsRow
+              . S.fromColsL
+              . fmap (\ xs -> bool xs (shift . S.toDenseListSV $ xs)
+                            . any (< 0)
+                            . S.toDenseListSV
+                            $ xs
+                     )
+              . S.toColsL
+              . unMatObsRow
+  where
+    shift xs = S.sparsifySV . S.vr . fmap (+ minimum xs) $ xs

@@ -57,6 +57,9 @@ newtype PCADim = PCADim
 newtype NoFilterFlag = NoFilterFlag
     { unNoFilterFlag :: Bool
     } deriving (Read,Show)
+newtype ShiftPositiveFlag = ShiftPositiveFlag
+    { unShiftPositiveFlag :: Bool
+    } deriving (Read,Show)
 newtype FilterThresholds = FilterThresholds
     { unFilterThresholds :: (Double, Double)
     } deriving (Read,Show)
@@ -99,7 +102,7 @@ data CellInfo = CellInfo
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 L.makeLenses ''CellInfo
 
-data NormType = TfIdfNorm | UQNorm | MedNorm | TotalMedNorm | BothNorm | NoneNorm deriving (Read, Show)
+data NormType = TfIdfNorm | UQNorm | MedNorm | TotalMedNorm | BothNorm | NoneNorm deriving (Read, Show, Eq)
 
 instance (Generic a) => Generic (Vector a)
 

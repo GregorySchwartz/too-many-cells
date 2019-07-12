@@ -19,7 +19,7 @@ the relationships between cell clades. This includes new ways of clustering,
 plotting, choosing differential expression comparisons, and more! While
 =too-many-cells= was intended for single cell RNA-seq, any abundance data in any
 domain can be used. Rather than opt for a unique positioning of each cell using
-dimensionality reduction approaches like t-SNE and PCA, =too-many-cells=
+dimensionality reduction approaches like t-SNE, UMAP, and PCA, =too-many-cells=
 recursively divides cells into clusters and relates clusters rather than
 individual cells. In fact, by recursively dividing until further dividing would
 be considered noise or random partitioning, we can eliminate noisy relationships
@@ -336,8 +336,15 @@ instead. *You don't need to use scRNA-seq data!* You can use any data that has
 observations (cells) and features (genes), as long as you agree that the
 observations are related by their feature abundances. <<preprocessedData>> If
 you do upstream batch effect correction, PCA, normalization, or anything else,
-be sure to use =--no-filter --normalization NoneNorm= to avoid wrong filters and
-scalings! As for formats, the matrix market format contains three files like so:
+be sure to use =--no-filter --normalization NoneNorm= (and =--shift-positive=
+for PCA) to avoid wrong filters and scalings! *If using dimensionality reduction
+such as PCA and t-SNE*, we highly recommend generating your own similarity
+matrix for use with our =cluster-tree= program and plot with =birch-beer=, as we
+emphasize a feature matrix in =too-many-cells= and dimensionality reduction
+algorithms transform counts (our input which works with cosine similarity) into
+more nebulous information (which may not work with cosine similarity).
+=cluster-tree=, however, can be used with adjacency and similarity matrices. As
+for formats, the matrix market format contains three files like so:
 
 The =matrix.mtx= file is in matrix market format.
 

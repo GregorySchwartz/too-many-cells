@@ -16,6 +16,7 @@ Clusters single cell data.
 module Main where
 
 -- Remote
+import Control.Concurrent
 import BirchBeer.ColorMap
 import BirchBeer.Interactive
 import BirchBeer.Load
@@ -116,8 +117,9 @@ data Options
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, gray]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , drawDiscretize :: Maybe String <?> "([Nothing] | COLORS | INT) Discretize colors by finding the nearest color for each item and node. For instance, --draw-discretize \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\" will change all node and item colors to one of those two colors, based on Euclidean distance. If using \"--draw-discretize INT\", will instead take the default map and segment (or interpolate) it into INT colors, rather than a more continuous color scheme. May have unintended results when used with --draw-scale-saturation."
                , drawScaleSaturation :: Maybe Double <?> "([Nothing] | DOUBLE) Multiply the saturation value all nodes by this number in the HSV model. Useful for seeing more visibly the continuous colors by making the colors deeper against a gray scale."
-               , pca :: Maybe Int <?> "([Nothing] | INT) The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
+               , pca :: Maybe Int <?> "([Nothing] | INT) Not recommended, as it makes cosine similarity less meaningful (therefore less accurate -- instead, consider making your own similarity matrix and using cluster-tree, our sister algorithm, to cluster the matrix and plot with birch-beer). The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information. Should use with --shift-positive to ensure no negative values."
                , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
+               , shiftPositive :: Bool <?> "Shift features to positive values. Positive values are shifted to allow modularity to work correctly."
                , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
                , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
                , order :: Maybe Double <?> "([1] | DOUBLE) The order of diversity."
@@ -130,7 +132,7 @@ data Options
                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
                   , featureColumn :: Maybe Int <?> "([1] | COLUMN) The column (1-indexed) in the features.tsv.gz file to use for feature names. If using matrix market format, cellranger stores multiple columns in the features file, usually the first column for the Ensembl identifier and the second column for the gene symbol. If the Ensembl identifier is not quickly accessible, use --feature-column 2 for the second column, which is usually more ubiquitous. Useful for overlaying gene expression so you can say --draw-leaf \"DrawItem (DrawContinuous \\\"CD4\\\")\") instead of --draw-leaf \"DrawItem (DrawContinuous \\\"ENSG00000010610\\\")\"). Does not affect CSV format (the column names will be the feature names)."
                   , normalization :: Maybe String <?> "([TfIdfNorm] | UQNorm | MedNorm | TotalMedNorm | BothNorm | NoneNorm) Type of normalization before clustering. TfIdfNorm normalizes based on the prevalence of each feature. UQNorm normalizes each observation by the upper quartile non-zero counts of that observation. MedNorm normalizes each observation by the median non-zero counts of that observation. TotalMedNorm normalized first each observation by total count then by median of non-zero counts across features. BothNorm uses both normalizations (first TotalMedNorm for all analysis then additionally TfIdfNorm during clustering). NoneNorm does not normalize. Default is TfIdfNorm for clustering and NoneNorm for differential (which instead uses the recommended edgeR single cell preprocessing including normalization and filtering, any normalization provided here will result in edgeR preprocessing on top). Cannot use TfIdfNorm for any other process as NoneNorm will become the default."
-                  , pca :: Maybe Int <?> "([Nothing] | INT) The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
+                  , pca :: Maybe Int <?> "([Nothing] | INT) Not recommended, as it makes cosine similarity less meaningful (therefore less accurate -- instead, consider making your own similarity matrix and using cluster-tree, our sister algorithm, to cluster the matrix and plot with birch-beer). The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information. Should use with --shift-positive to ensure no negative values."
                   , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                   , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
@@ -138,7 +140,7 @@ data Options
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                    , featureColumn :: Maybe Int <?> "([1] | COLUMN) The column (1-indexed) in the features.tsv.gz file to use for feature names. If using matrix market format, cellranger stores multiple columns in the features file, usually the first column for the Ensembl identifier and the second column for the gene symbol. If the Ensembl identifier is not quickly accessible, use --feature-column 2 for the second column, which is usually more ubiquitous. Useful for overlaying gene expression so you can say --draw-leaf \"DrawItem (DrawContinuous \\\"CD4\\\")\") instead of --draw-leaf \"DrawItem (DrawContinuous \\\"ENSG00000010610\\\")\"). Does not affect CSV format (the column names will be the feature names)."
-                   , pca :: Maybe Int <?> "([Nothing] | INT) The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information."
+                   , pca :: Maybe Int <?> "([Nothing] | INT) Not recommended, as it makes cosine similarity less meaningful (therefore less accurate -- instead, consider making your own similarity matrix and using cluster-tree, our sister algorithm, to cluster the matrix and plot with birch-beer). The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information. Should use with --shift-positive to ensure no negative values."
                    , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                    , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
@@ -209,6 +211,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "plotOutput"           = Nothing
     short "priors"               = Just 'P'
     short "projectionFile"       = Just 'j'
+    short "shiftPositive"      = Nothing
     short x                      = firstLetter x
 
 instance ParseRecord Options where
@@ -294,11 +297,18 @@ loadAllSSM opts = runMaybeT $ do
         normalization'     = getNormalization opts
         pca'               = fmap PCADim . unHelpful . pca $ opts
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
+        shiftPositiveFlag' =
+          ShiftPositiveFlag . unHelpful . shiftPositive $ opts
         filterThresholds'  = FilterThresholds
                            . maybe (250, 1) read
                            . unHelpful
                            . filterThresholds
                            $ opts
+
+    liftIO $ when (isJust pca' && (elem normalization' [TfIdfNorm, BothNorm])) $
+      hPutStrLn stderr "\nWarning: PCA (creating negative numbers) with tf-idf\
+                       \ normalization may lead to NaNs before spectral\
+                       \ clustering (leading to svdlibc to hang)! Continuing..."
 
     mats <- MaybeT
           $ if null matrixPaths'
@@ -310,9 +320,8 @@ loadAllSSM opts = runMaybeT $ do
         whiteListFilter (Just wl) = filterWhitelistSparseMat wl
         unFilteredSc = mconcat mats
         sc           =
-            (\ x -> if unNoFilterFlag noFilterFlag'
-                        then x
-                        else filterNumSparseMat filterThresholds' x
+            ( bool id (filterNumSparseMat filterThresholds')
+            $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
                 $ unFilteredSc
@@ -322,7 +331,10 @@ loadAllSSM opts = runMaybeT $ do
         normMat TotalMedNorm = scaleSparseMat
         normMat BothNorm     = scaleSparseMat
         normMat NoneNorm     = id
-        processMat  = (\m -> maybe m (flip pcaDenseMat m) pca')
+        processMat  = ( bool id shiftPositiveMat
+                      $ unShiftPositiveFlag shiftPositiveFlag'
+                      )
+                    . (\m -> maybe m (flip pcaDenseMat m) pca')
                     . normMat normalization'
                     . _matrix
         processedSc = sc { _matrix = processMat sc }
@@ -1029,7 +1041,10 @@ pathsMain opts = do
     return ()
 
 main :: IO ()
-main = do
+main = forkIO oldmain >> threadDelay 60000000
+
+oldmain :: IO ()
+oldmain = do
     opts <- getRecord "too-many-cells, Gregory W. Schwartz.\
                       \ Clusters and analyzes single cell data."
 
