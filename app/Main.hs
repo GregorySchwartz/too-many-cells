@@ -37,6 +37,7 @@ import Language.R as R
 import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
+import Math.Modularity.Types (Q (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import Text.Read (readMaybe, readEither)
@@ -97,6 +98,7 @@ data Options
                , minSize :: Maybe Int <?> "([1] | INT) The minimum size of a cluster. Defaults to 1."
                , maxStep :: Maybe Int <?> "([Nothing] | INT) Only keep clusters that are INT steps from the root. Defaults to all steps."
                , maxProportion :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE proportion split. So a node N with L and R children will stop with this criteria at 0.5 if |L| / |R| < 0.5 or > 2 (absolute log2 transformed), that is, if one child has over twice as many items as the other child. Includes L and R in the final result."
+               , minModularity :: Maybe Double <?> "([Nothing] | DOUBLE) Nearly the same as --min-distance, but for clustering instead of drawing (so the output json tree can be larger). Stopping criteria to stop at the node with DOUBLE modularity. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Does not include L and R in the final result."
                , minDistance :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE distance. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Includes L and R in the final result."
                , minDistanceSearch :: Maybe Double <?> "([Nothing] | DOUBLE) Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, keep that path, otherwise prune it. This argument assists in finding distant nodes."
                , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
@@ -202,6 +204,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "maxStep"              = Just 'S'
     short "minDistance"          = Nothing
     short "minDistanceSearch"    = Nothing
+    short "minModularity"        = Nothing
     short "minSize"              = Just 'M'
     short "noFilter"             = Just 'F'
     short "normalization"        = Just 'z'
@@ -307,8 +310,9 @@ loadAllSSM opts = runMaybeT $ do
 
     liftIO $ when (isJust pca' && (elem normalization' [TfIdfNorm, BothNorm])) $
       hPutStrLn stderr "\nWarning: PCA (creating negative numbers) with tf-idf\
-                       \ normalization may lead to NaNs before spectral\
-                       \ clustering (leading to svdlibc to hang)! Continuing..."
+                       \ normalization may lead to NaNs or 0s before spectral\
+                       \ clustering (leading to svdlibc to hang or dense SVD\
+                       \ to error out)! Continuing..."
 
     mats <- MaybeT
           $ if null matrixPaths'
@@ -367,6 +371,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         maxProportion'    =
             fmap MaxProportion . unHelpful . maxProportion $ opts
         minDistance'       = fmap MinDistance . unHelpful . minDistance $ opts
+        minModularity'     = fmap Q . unHelpful . minModularity $ opts
         minDistanceSearch' = fmap MinDistanceSearch . unHelpful . minDistanceSearch $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
         customCut'        = CustomCut . Set.fromList . unHelpful . customCut $ opts
@@ -511,7 +516,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     originalClusterResults <- case prior' of
         Nothing -> do
             let (fullCr, _) =
-                  hSpecClust dense' eigenGroup' normalization' numEigen'
+                  hSpecClust dense' eigenGroup' normalization' numEigen' minModularity'
                     . extractSc
                     $ processedSc
 

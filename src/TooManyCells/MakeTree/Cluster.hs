@@ -27,6 +27,7 @@ import Data.Function (on)
 import Data.List (sortBy, groupBy, zip4, genericLength)
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe, catMaybes, mapMaybe)
+import Math.Modularity.Types (Q (..))
 import Data.Monoid ((<>))
 import Data.Tree (Tree (..))
 import Data.Tuple (swap)
@@ -135,9 +136,10 @@ hSpecClust :: DenseFlag
            -> EigenGroup
            -> NormType
            -> Maybe NumEigen
+           -> Maybe Q
            -> SingleCells
            -> (ClusterResults, ClusterGraph CellInfo)
-hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
+hSpecClust (DenseFlag isDense) eigenGroup norm numEigen minModMay sc =
     ( ClusterResults { _clusterList = clustering
                      , _clusterDend = dendToTree dend
                      }
@@ -169,7 +171,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
           True
           (fmap unNumEigen numEigen)
           Nothing
-          Nothing
+          minModMay
           items
         . Left
     hSpecCommand BothNorm False =
@@ -178,7 +180,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
           True
           (fmap unNumEigen numEigen)
           Nothing
-          Nothing
+          minModMay
           items
         . Left
     hSpecCommand _ False =
@@ -187,7 +189,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
           False
           (fmap unNumEigen numEigen)
           Nothing
-          Nothing
+          minModMay
           items
         . Left
     hSpecCommand TfIdfNorm True =
@@ -196,7 +198,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
           True
           (fmap unNumEigen numEigen)
           Nothing
-          Nothing
+          minModMay
           items
         . Left
         . sparseToHMat
@@ -206,7 +208,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
           True
           (fmap unNumEigen numEigen)
           Nothing
-          Nothing
+          minModMay
           items
         . Left
         . sparseToHMat
@@ -216,7 +218,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen sc =
           False
           (fmap unNumEigen numEigen)
           Nothing
-          Nothing
+          minModMay
           items
         . Left
         . sparseToHMat

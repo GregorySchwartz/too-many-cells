@@ -110,6 +110,7 @@ executable too-many-cells
                      , inline-r
                      , lens
                      , matrix-market-attoparsec
+                     , modularity
                      , mtl
                      , optparse-generic
                      , palette
