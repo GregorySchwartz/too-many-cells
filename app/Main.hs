@@ -324,7 +324,7 @@ loadAllSSM opts = runMaybeT $ do
         whiteListFilter (Just wl) = filterWhitelistSparseMat wl
         unFilteredSc = mconcat mats
         sc           =
-            ( bool id (filterNumSparseMat filterThresholds')
+            ( bool (filterNumSparseMat filterThresholds') id
             $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
@@ -1046,10 +1046,7 @@ pathsMain opts = do
     return ()
 
 main :: IO ()
-main = forkIO oldmain >> threadDelay 60000000
-
-oldmain :: IO ()
-oldmain = do
+main = do
     opts <- getRecord "too-many-cells, Gregory W. Schwartz.\
                       \ Clusters and analyzes single cell data."
 
