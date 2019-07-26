@@ -239,16 +239,17 @@ getMatrixOutputType x = bool (MatrixFolder x) (MatrixFile x) . isCsvFile $ x
 -- | Check validity of matrix.
 matrixValidity :: (MatrixLike a) => a -> Maybe String
 matrixValidity mat
-  | rows /= numCells = Just $ "Mismatch in number of cells ("
+  | rows /= numCells || cols /= numFeatures =
+      Just $ "Warning: mismatch in number of (features, cells) ("
+                           <> show numFeatures
+                           <> ","
                            <> show numCells
-                           <> ") with matrix ("
+                           <> ") with matrix (rows, columns) ("
+                           <> show cols
+                           <> ","
                            <> show rows
-                           <> ")"
-  | cols /= numFeatures = Just $ "Mismatch in number of features ("
-                              <> show numFeatures
-                              <> ") with matrix ("
-                              <> show cols
-                              <> ")"
+                           <> "), will probably result in error."
+  | otherwise = Nothing
   where
     (rows, cols) = S.dimSM . getMatrix $ mat
     numCells = V.length . getRowNames $ mat

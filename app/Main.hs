@@ -348,7 +348,7 @@ loadAllSSM opts = runMaybeT $ do
     -- Check for empty matrix.
     when (V.null . getRowNames $ processedSc) $ error "Matrix is empty. Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
 
-    liftIO . mapM_ (print matrixValidity) $ processedSc
+    liftIO . mapM_ print . matrixValidity $ processedSc
 
     return processedSc
 
