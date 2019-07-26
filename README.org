@@ -474,10 +474,10 @@ leaf to 100 in this case. Alternatively, we can specify =--smart-cutoff 4= in
 addition to =--min-size 1= to set the minimum size of a node to \(4 *
 \text{median absolute deviation (MAD)}\) of the nodes in the original tree.
 Varying the number of MADs varies the number of leaves in the tree.
-=--smart-cutoff= should be used in addition to =--min-size=, =max-proportion=,
-or =min-distance= to decide which cutoff variable to use. The value supplied to
-the cutoff variable is ignored when =--smart-cutoff= is specified. We'll prune
-the tree for better visibility in this document.
+=--smart-cutoff= should be used in addition to =--min-size=, =--max-proportion=,
+=--min-distance=, or =--min-distance-search= to decide which cutoff variable to
+use. The value supplied to the cutoff variable is ignored when =--smart-cutoff=
+is specified. We'll prune the tree for better visibility in this document.
 
 *Note: the pruning arguments change the tree file, not just the plot, so be sure
 to output into a different directory.*

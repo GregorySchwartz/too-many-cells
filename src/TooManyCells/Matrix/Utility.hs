@@ -22,6 +22,7 @@ module TooManyCells.Matrix.Utility
     , writeMatrixLike
     , isCsvFile
     , getMatrixOutputType
+    , matrixValidity
     ) where
 
 -- Remote
@@ -234,3 +235,21 @@ isCsvFile = (== ".CSV") . fmap toUpper . reverse . take 4 . reverse
 -- | Get matrix output format from input name.
 getMatrixOutputType :: FilePath -> MatrixFileFolder
 getMatrixOutputType x = bool (MatrixFolder x) (MatrixFile x) . isCsvFile $ x
+
+-- | Check validity of matrix.
+matrixValidity :: (MatrixLike a) => a -> Maybe String
+matrixValidity mat
+  | rows /= numCells = Just $ "Mismatch in number of cells ("
+                           <> show numCells
+                           <> ") with matrix ("
+                           <> show rows
+                           <> ")"
+  | cols /= numFeatures = Just $ "Mismatch in number of features ("
+                              <> show numFeatures
+                              <> ") with matrix ("
+                              <> show cols
+                              <> ")"
+  where
+    (rows, cols) = S.dimSM . getMatrix $ mat
+    numCells = V.length . getRowNames $ mat
+    numFeatures = V.length . getColNames $ mat

@@ -101,7 +101,7 @@ data Options
                , minModularity :: Maybe Double <?> "([Nothing] | DOUBLE) Nearly the same as --min-distance, but for clustering instead of drawing (so the output json tree can be larger). Stopping criteria to stop at the node with DOUBLE modularity. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Does not include L and R in the final result."
                , minDistance :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE distance. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Includes L and R in the final result."
                , minDistanceSearch :: Maybe Double <?> "([Nothing] | DOUBLE) Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, keep that path, otherwise prune it. This argument assists in finding distant nodes."
-               , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --min-size distribution is log2 transformed."
+               , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the four arguments to an arbitrary number, whichever cutoff type you want to use. --min-proportion distribution is log2 transformed."
                , customCut :: [Int] <?> "([Nothing] | NODE) List of nodes to prune (make these nodes leaves). Invoked by --custom-cut 34 --custom-cut 65 etc."
                , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
                , matrixOutput :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder under the --output directory in matrix market format or, if a csv file is specified, a dense csv format. Like input, features are rows. See --matrix-output-transpose."
@@ -347,6 +347,8 @@ loadAllSSM opts = runMaybeT $ do
 
     -- Check for empty matrix.
     when (V.null . getRowNames $ processedSc) $ error "Matrix is empty. Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
+
+    liftIO . mapM_ (print matrixValidity) $ processedSc
 
     return processedSc
 
