@@ -4,9 +4,12 @@ Gregory W. Schwartz
 Clusters single cell data.
 -}
 
+{-# LANGUAGE OverloadedStrings #-}
+
 module Main where
 
 -- Remote
+import Options.Generic
 
 -- Local
 <<<<<<< HEAD
@@ -1029,8 +1032,8 @@ main = do
                       \ Clusters and analyzes single cell data."
 
     case opts of
-        MakeTree{}       -> makeTreeMain opts
-        Interactive{}    -> interactiveMain opts
-        Differential{}   -> differentialMain opts
-        Main.Diversity{} -> diversityMain opts
-        Paths{}          -> pathsMain opts
+        MakeTree{}     -> makeTreeMain opts
+        Interactive{}  -> interactiveMain opts
+        Differential{} -> differentialMain opts
+        Diversity{}    -> diversityMain opts
+        Paths{}        -> pathsMain opts

@@ -46,6 +46,7 @@ library
                      , TooManyCells.Program.Paths
                      , TooManyCells.Program.Utility
   build-depends:       base >= 4.7 && < 5
+                     , SVGFonts
                      , aeson
                      , attoparsec
                      , birch-beer
@@ -55,15 +56,15 @@ library
                      , containers
                      , deepseq
                      , diagrams
-                     , diagrams-lib
                      , diagrams-cairo
                      , diagrams-graphviz
+                     , diagrams-lib
                      , differential
                      , directory
                      , diversity
-                     , find-clumpiness
-                     , filepath
                      , fgl
+                     , filepath
+                     , find-clumpiness
                      , foldl
                      , graphviz
                      , hierarchical-clustering
@@ -75,22 +76,26 @@ library
                      , matrix-market-attoparsec
                      , modularity
                      , mtl
+                     , optparse-generic
                      , palette
                      , parallel
                      , plots
                      , safe
                      , scientific
                      , sparse-linear-algebra
+                     , spectral-clustering >= 0.3.0.2
                      , split
                      , statistics
                      , streaming
                      , streaming-bytestring
                      , streaming-cassava
+                     , streaming-utils
                      , streaming-with
-                     , SVGFonts
                      , temporary
+                     , terminal-progress-bar
                      , text
                      , text-show
+                     , transformers
                      , vector
                      , vector-algorithms
                      , zlib
@@ -103,37 +108,7 @@ executable too-many-cells
   ghc-options:         -threaded -rtsopts -O2
   build-depends:       base
                      , too-many-cells
-                     , aeson
-                     , birch-beer
-                     , bytestring
-                     , cassava
-                     , colour
-                     , containers
-                     , diagrams-lib
-                     , diagrams-cairo
-                     , directory
-                     , fgl
-                     , filepath
-                     , find-clumpiness
-                     , graphviz
-                     , hierarchical-spectral-clustering
-                     , inline-r
-                     , lens
-                     , matrix-market-attoparsec
-                     , modularity
-                     , mtl
                      , optparse-generic
-                     , palette
-                     , plots
-                     , spectral-clustering >= 0.3.0.2
-                     , streaming
-                     , streaming-bytestring
-                     , streaming-utils
-                     , terminal-progress-bar
-                     , text
-                     , text-show
-                     , transformers
-                     , vector
   default-language:    Haskell2010
 
 source-repository head

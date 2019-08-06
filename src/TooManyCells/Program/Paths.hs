@@ -16,16 +16,9 @@ Paths entry point into program.
 module TooManyCells.Program.Paths where
 
 -- Remote
-import BirchBeer.ColorMap
-import BirchBeer.Interactive
 import BirchBeer.Load
-import BirchBeer.MainDiagram
-import BirchBeer.Plot
 import BirchBeer.Types
 import BirchBeer.Utility
-import Control.Monad (when, unless, join)
-import Control.Monad.Trans (liftIO)
-import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
 import Data.Colour.SRGB (sRGB24read)
 import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
@@ -81,7 +74,18 @@ import TooManyCells.Matrix.Utility
 import TooManyCells.Paths.Distance
 import TooManyCells.Paths.Plot
 import TooManyCells.Paths.Types
-import Options
+import TooManyCells.Program.Options
+import TooManyCells.Differential.Differential
+import TooManyCells.Differential.Types
+import TooManyCells.MakeTree.Types
+import TooManyCells.Diversity.Diversity
+import TooManyCells.Diversity.Load
+import TooManyCells.Diversity.Plot
+import TooManyCells.Diversity.Types
+import TooManyCells.File.Types
+import TooManyCells.Matrix.Types
+import TooManyCells.Matrix.Preprocess
+import TooManyCells.Matrix.Utility
 
 -- | Paths path.
 pathsMain :: Options -> IO ()

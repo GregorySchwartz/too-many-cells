@@ -13,6 +13,7 @@ module TooManyCells.Program.Options where
 
 -- Remote
 import Options.Generic
+import qualified Data.Text as T
 
 -- Local
 

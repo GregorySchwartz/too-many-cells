@@ -16,9 +16,27 @@ Loading matrix for command line program.
 module TooManyCells.Program.LoadMatrix where
 
 -- Remote
+import BirchBeer.Types
+import Control.Monad (when)
+import Control.Monad.Trans (liftIO)
+import Control.Monad.Trans.Maybe (MaybeT (..))
+import Data.Bool (bool)
+import Data.Maybe (fromMaybe, isJust)
+import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
+import Options.Generic
+import System.IO (hPutStrLn, stderr)
+import qualified Data.Vector as V
+import qualified System.Directory as FP
+import qualified System.FilePath as FP
 
 -- Local
-import Options
+import TooManyCells.File.Types
+import TooManyCells.Matrix.Types
+import TooManyCells.Matrix.Preprocess
+import TooManyCells.Matrix.Utility
+import TooManyCells.Matrix.Load
+import TooManyCells.Program.Options
+import TooManyCells.Program.Utility
 
 -- | Load the single cell matrix.
 loadSSM :: Options -> FilePath -> IO SingleCells

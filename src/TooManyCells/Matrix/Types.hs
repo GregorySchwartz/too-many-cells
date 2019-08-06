@@ -17,6 +17,7 @@ Collects the types used in the program concerning the matrix.
 module TooManyCells.Matrix.Types where
 
 -- Remote
+import BirchBeer.Types
 import Control.DeepSeq (NFData (..))
 import Data.Monoid (Monoid (..), mempty)
 import Data.Colour.Palette.BrewerSet (Kolor)
@@ -49,10 +50,10 @@ newtype Cell = Cell
     { unCell :: Text
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON, A.FromJSON)
 newtype Cols            = Cols { unCols :: [Double] }
-newtype Feature            = Feature { unFeature :: Text } deriving (Eq, Ord, Read, Show, Generic)
-instance NFData Feature
 newtype FeatureColumn   = FeatureColumn { unFeatureColumn :: Int }
 newtype BinSize = BinSize { unBinSize :: Int}
+newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
+newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: Set.Set Cell
     } deriving (Eq,Ord,Read,Show)
@@ -125,20 +126,23 @@ data CellInfo = CellInfo
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 L.makeLenses ''CellInfo
 
-data Range = Range {_rangeLabel :: Text, _rangeUpperBound :: Int, _rangeLowerBound :: Int }
+-- | A range with a label, most ranges can vary with each other.
+data Range = Range { rangeIdx :: RangeIdx, _rangeLabel :: Text, _rangeLowerBound :: Int, _rangeUpperBound :: Int }
              deriving (Eq, Ord, Read, Show)
 L.makeFields ''Range
 instance TextShow Range where
-  showt (Range l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
+  showt (Range _ l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
 
-data Bin = Bin { _binLabel :: Text, _binUpperBound :: Int, _binLowerBound :: Int }
+-- | A bin with a label, bins are standard across all observations.
+data Bin = Bin { binIdx :: Maybe BinIdx, _binLabel :: Text, _binLowerBound :: Int, _binUpperBound :: Int }
              deriving (Eq, Ord, Read, Show)
 L.makeFields ''Bin
 instance TextShow Bin where
-  showt (Bin l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
+  showt (Bin _ l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
 
-newtype BinRangeMap = BinRangeMap
-  { unBinRangeMap :: Map.Map Bin Int
+-- | Map of ranges to their bins.
+newtype RangeBinMap = RangeBinMap
+  { unRangeBinMap :: Map.Map RangeIdx BinIdx
   }
 
 data NormType = TfIdfNorm
@@ -149,3 +153,6 @@ data NormType = TfIdfNorm
               | LogCPMNorm
               | NoneNorm
                 deriving (Read, Show, Eq)
+
+instance Generic Feature
+instance NFData Feature where rnf x = seq x ()

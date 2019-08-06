@@ -62,26 +62,19 @@ import qualified System.FilePath as FP
 import qualified System.ProgressBar as Progress
 
 -- Local
-import TooManyCells.Differential.Differential
-import TooManyCells.Differential.Types
-import TooManyCells.Diversity.Diversity
-import TooManyCells.Diversity.Load
-import TooManyCells.Diversity.Plot
-import TooManyCells.Diversity.Types
-import TooManyCells.File.Types
+import TooManyCells.Program.Options
 import TooManyCells.MakeTree.Clumpiness
 import TooManyCells.MakeTree.Cluster
 import TooManyCells.MakeTree.Load
 import TooManyCells.MakeTree.Plot
 import TooManyCells.MakeTree.Print
 import TooManyCells.MakeTree.Types
-import TooManyCells.Matrix.Load
-import TooManyCells.Matrix.Preprocess
 import TooManyCells.Matrix.Types
+import TooManyCells.Matrix.Load
 import TooManyCells.Matrix.Utility
-import TooManyCells.Paths.Distance
-import TooManyCells.Paths.Plot
-import TooManyCells.Paths.Types
+import TooManyCells.Program.LoadMatrix
+import TooManyCells.File.Types
+import TooManyCells.Program.Utility
 
 makeTreeMain :: Options -> IO ()
 makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
@@ -206,9 +199,6 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
     -- Load matrix once.
     processedSc <- loadAllSSM opts
-
-    -- Notify user of limitations.
-    limitationWarningsErrors opts
 
     -- Increment  progress bar.
     Progress.autoProgressBar
