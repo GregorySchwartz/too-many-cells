@@ -65,13 +65,21 @@ loadAllSSM opts = runMaybeT $ do
         cellWhitelistFile' =
             fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
         normalization'     = getNormalization opts
-        pca'               = fmap PCAVar . unHelpful . pca $ opts
+        pca'               = fmap PCADim . unHelpful . pca $ opts
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
+        shiftPositiveFlag' =
+          ShiftPositiveFlag . unHelpful . shiftPositive $ opts
         filterThresholds'  = FilterThresholds
                            . maybe (250, 1) read
                            . unHelpful
                            . filterThresholds
                            $ opts
+
+    liftIO $ when (isJust pca' && (elem normalization' [TfIdfNorm, BothNorm])) $
+      hPutStrLn stderr "\nWarning: PCA (creating negative numbers) with tf-idf\
+                       \ normalization may lead to NaNs or 0s before spectral\
+                       \ clustering (leading to svdlibc to hang or dense SVD\
+                       \ to error out)! Continuing..."
 
     mats <- MaybeT
           $ if null matrixPaths'
@@ -83,9 +91,8 @@ loadAllSSM opts = runMaybeT $ do
         whiteListFilter (Just wl) = filterWhitelistSparseMat wl
         unFilteredSc = mconcat mats
         sc           =
-            (\ x -> if unNoFilterFlag noFilterFlag'
-                        then x
-                        else filterNumSparseMat filterThresholds' x
+            ( bool (filterNumSparseMat filterThresholds') id
+            $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
                 $ unFilteredSc
@@ -95,12 +102,17 @@ loadAllSSM opts = runMaybeT $ do
         normMat TotalMedNorm = scaleSparseMat
         normMat BothNorm     = scaleSparseMat
         normMat NoneNorm     = id
-        processMat  = (\m -> maybe m (flip pcaDenseMat m) pca')
+        processMat  = ( bool id shiftPositiveMat
+                      $ unShiftPositiveFlag shiftPositiveFlag'
+                      )
+                    . (\m -> maybe m (flip pcaDenseMat m) pca')
                     . normMat normalization'
                     . _matrix
         processedSc = sc { _matrix = processMat sc }
 
     -- Check for empty matrix.
     when (V.null . getRowNames $ processedSc) $ error "Matrix is empty. Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
+
+    liftIO . mapM_ print . matrixValidity $ processedSc
 
     return processedSc

@@ -36,6 +36,7 @@ import Language.R as R
 import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
+import Math.Modularity.Types (Q (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import Text.Read (readMaybe, readEither)
@@ -104,7 +105,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
         maxProportion'    =
             fmap MaxProportion . unHelpful . maxProportion $ opts
-        minDistance'      = fmap MinDistance . unHelpful . minDistance $ opts
+        minDistance'       = fmap MinDistance . unHelpful . minDistance $ opts
+        minModularity'     = fmap Q . unHelpful . minModularity $ opts
+        minDistanceSearch' = fmap MinDistanceSearch . unHelpful . minDistanceSearch $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
         customCut'        = CustomCut . Set.fromList . unHelpful . customCut $ opts
         dendrogramOutput' = DendrogramFile
@@ -116,6 +119,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . matrixOutput
                           $ opts
+        matrixOutputTranspose' = fmap (getMatrixOutputType . (unOutputDirectory output' FP.</>))
+                               . unHelpful
+                               . matrixOutputTranspose
+                               $ opts
         drawLeaf'         =
             maybe
               (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
@@ -244,7 +251,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     originalClusterResults <- case prior' of
         Nothing -> do
             let (fullCr, _) =
-                  hSpecClust dense' eigenGroup' normalization' numEigen'
+                  hSpecClust dense' eigenGroup' normalization' numEigen' minModularity'
                     . extractSc
                     $ processedSc
 
@@ -288,6 +295,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchMaxStep = maxStep'
                     , _birchMaxProportion = maxProportion'
                     , _birchMinDistance = minDistance'
+                    , _birchMinDistanceSearch   = minDistanceSearch'
                     , _birchSmartCutoff = smartCutoff'
                     , _birchCustomCut   = customCut'
                     , _birchOrder = Just order'
@@ -352,9 +360,11 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         (unOutputDirectory output' FP.</> "cluster_info.csv")
         . printClusterInfo
         $ gr'
-    case matrixOutput' of
-        Nothing  -> return ()
-        (Just x) -> writeMatrixLike x . extractSc $ processedSc
+    -- Write matrix
+    mapM_ (\x -> writeMatrixLike (MatrixTranspose False) x . extractSc $ processedSc) matrixOutput'
+    -- Write matrix transpose
+    mapM_ (\x -> writeMatrixLike (MatrixTranspose True) x . extractSc $ processedSc) matrixOutputTranspose'
+    -- Write node info
     B.writeFile
         (unOutputDirectory output' FP.</> "node_info.csv")
         . printNodeInfo labelMap
@@ -362,6 +372,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     case labelMap of
         Nothing   -> return ()
         (Just lm) ->
+            -- Write cluster diversity
             case clusterDiversity order' lm clusterResults of
                 (Left err) -> hPutStrLn stderr
                             $ err
@@ -429,6 +440,14 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                             $ plotClumpinessHeatmapR
                                 (unOutputDirectory output' FP.</> "clumpiness.pdf")
                                 clumpList
+
+        -- View cutting location for modularity.
+        case minDistanceSearch' of
+          Nothing -> return ()
+          (Just _) -> plotRankedModularityR
+                        (unOutputDirectory output' FP.</> "modularity_rank.pdf")
+                    . L.view clusterDend
+                    $ clusterResults
 
         -- Increment  progress bar.
         H.io $ Progress.autoProgressBar
