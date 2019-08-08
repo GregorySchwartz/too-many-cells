@@ -34,6 +34,7 @@ readRange :: RangeIdx -> T.Text -> Range
 readRange idx x = either (\ a -> error $ "Error reading " <> a <> " : " <> T.unpack x <> " (did you follow the format LABEL:LOWERBOUND-UPPERBOUND ?)") id
                 . A.eitherResult
                 . A.parse (rangeParser idx)
+                . T.filter (/= ',')
                 $ x
 
 -- | How to parse a range.

@@ -20,6 +20,7 @@ import qualified Data.Text as T
 -- | Command line arguments
 data Options
     = MakeTree { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing feature row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of features in each matrix, so only cells are added."
+               , atac :: Maybe Int <?> "([Nothing] | BINSIZE) Treat input data as scATAC-seq features, where each feature is a range of the genome. BINSIZE input is required to convert ranges to fixed width bins. Example input format for features: \"chr13:28003274-28100592\"."
                , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format is \"barcode,x,y\" and matches column order in the matrix file. Useful for 10x where a TNSE projection is generated in \"projection.csv\". Cells without projections will not be plotted. If not supplied, no plot will be made."
                , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
@@ -62,6 +63,7 @@ data Options
                , dense :: Bool <?> "Whether to use dense matrix algorithms for clustering. Should be faster for dense matrices, so if batch correction, PCA, or other algorithms are applied upstream to the input matrix, consider using this option to speed up the tree generation."
                , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
     | Interactive { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing feature row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of features in each matrix, so only cells are added."
+                  , atac :: Maybe Int <?> "([Nothing] | BINSIZE) Treat input data as scATAC-seq features, where each feature is a range of the genome. BINSIZE input is required to convert ranges to fixed width bins. Example input format for features: \"chr13:28003274-28100592\"."
                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                   , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                   , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
@@ -73,6 +75,7 @@ data Options
                   , filterThresholds :: Maybe String <?> "([(250, 1)] | (DOUBLE, DOUBLE)) The minimum filter thresholds for (MINCELL, MINFEATURE) when filtering cells and features by low read counts. See also --no-filter."
                   , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."}
     | Differential { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing feature row names and cell column names. If given as a list (--matrixPath input1 --matrixPath input2 etc.) then will join all matrices together. Assumes the same number and order of features in each matrix, so only cells are added."
+                   , atac :: Maybe Int <?> "([Nothing] | BINSIZE) Treat input data as scATAC-seq features, where each feature is a range of the genome. BINSIZE input is required to convert ranges to fixed width bins. Example input format for features: \"chr13:28003274-28100592\"."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                    , featureColumn :: Maybe Int <?> "([1] | COLUMN) The column (1-indexed) in the features.tsv.gz file to use for feature names. If using matrix market format, cellranger stores multiple columns in the features file, usually the first column for the Ensembl identifier and the second column for the gene symbol. If the Ensembl identifier is not quickly accessible, use --feature-column 2 for the second column, which is usually more ubiquitous. Useful for overlaying gene expression so you can say --draw-leaf \"DrawItem (DrawContinuous \\\"CD4\\\")\") instead of --draw-leaf \"DrawItem (DrawContinuous \\\"ENSG00000010610\\\")\"). Does not affect CSV format (the column names will be the feature names)."
@@ -110,6 +113,7 @@ modifiers :: Modifiers
 modifiers = lispCaseModifiers { shortNameModifier = short }
   where
     short "aggregate"             = Nothing
+    short "atac"                  = Nothing
     short "customCut"             = Nothing
     short "clumpinessMethod"      = Just 'u'
     short "clusterNormalization"  = Just 'C'

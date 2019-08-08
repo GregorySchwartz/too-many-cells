@@ -31,6 +31,7 @@ import qualified System.FilePath as FP
 
 -- Local
 import TooManyCells.File.Types
+import TooManyCells.Matrix.AtacSeq
 import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Preprocess
 import TooManyCells.Matrix.Utility
@@ -87,6 +88,7 @@ loadAllSSM opts = runMaybeT $ do
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
         shiftPositiveFlag' =
           ShiftPositiveFlag . unHelpful . shiftPositive $ opts
+        atacBinSize' = fmap BinSize . unHelpful . atac $ opts
         filterThresholds'  = FilterThresholds
                            . maybe (250, 1) read
                            . unHelpful
@@ -113,12 +115,13 @@ loadAllSSM opts = runMaybeT $ do
             $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
+                . (maybe id rangeToBinSc atacBinSize')
                 $ unFilteredSc
         normMat TfIdfNorm    = id -- Normalize during clustering.
         normMat UQNorm       = uqScaleSparseMat
         normMat MedNorm      = medScaleSparseMat
         normMat TotalMedNorm = scaleSparseMat
-        normMat BothNorm     = scaleSparseMat
+        normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
         normMat NoneNorm     = id
         processMat  = ( bool id shiftPositiveMat
                       $ unShiftPositiveFlag shiftPositiveFlag'

@@ -17,23 +17,15 @@ module TooManyCells.Program.MakeTree where
 
 -- Remote
 import BirchBeer.ColorMap
-import BirchBeer.Interactive
 import BirchBeer.Load
 import BirchBeer.MainDiagram
-import BirchBeer.Plot
 import BirchBeer.Types
-import BirchBeer.Utility
-import Control.Monad (when, unless, join)
 import Control.Monad.Trans (liftIO)
-import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
 import Data.Colour.SRGB (sRGB24read)
-import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
-import Data.Tree (Tree (..))
 import Language.R as R
-import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Math.Modularity.Types (Q (..))
@@ -52,7 +44,6 @@ import qualified Data.GraphViz as G
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.IO as T
-import qualified Data.Vector as V
 import qualified Diagrams.Backend.Cairo as D
 import qualified Diagrams.Prelude as D
 import qualified H.Prelude as H

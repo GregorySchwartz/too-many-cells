@@ -16,49 +16,27 @@ Diversity entry point into program.
 module TooManyCells.Program.Diversity where
 
 -- Remote
-import BirchBeer.ColorMap
-import BirchBeer.Interactive
 import BirchBeer.Load
-import BirchBeer.MainDiagram
-import BirchBeer.Plot
 import BirchBeer.Types
-import BirchBeer.Utility
-import Control.Monad (when, unless, join)
 import Control.Monad.Trans (liftIO)
-import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
-import Data.Colour.SRGB (sRGB24read)
-import Data.Matrix.MatrixMarket (readMatrix, writeMatrix)
-import Data.Maybe (fromMaybe, isJust, isNothing)
+import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
-import Data.Tree (Tree (..))
 import Language.R as R
-import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
-import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Options.Generic
-import System.IO (hPutStrLn, stderr)
-import Text.Read (readMaybe, readEither)
-import TextShow (showt)
-import qualified "find-clumpiness" Types as Clump
-import qualified Control.Lens as L
-import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Colour.Palette.BrewerSet as D
 import qualified Data.Colour.Palette.Harmony as D
 import qualified Data.Csv as CSV
-import qualified Data.GraphViz as G
-import qualified Data.Set as Set
 import qualified Data.Text as T
 import qualified Data.Text.Lazy.IO as T
-import qualified Data.Vector as V
 import qualified Diagrams.Backend.Cairo as D
 import qualified Diagrams.Prelude as D
 import qualified H.Prelude as H
 import qualified Plots as D
 import qualified System.Directory as FP
 import qualified System.FilePath as FP
-import qualified System.ProgressBar as Progress
 
 -- Local
 import TooManyCells.Program.Options
@@ -67,12 +45,7 @@ import TooManyCells.Diversity.Load
 import TooManyCells.Diversity.Plot
 import TooManyCells.Diversity.Types
 import TooManyCells.File.Types
-import TooManyCells.Matrix.Types
-import TooManyCells.Matrix.Preprocess
-import TooManyCells.Matrix.Utility
-import TooManyCells.Matrix.Load
 import TooManyCells.Program.Options
-import TooManyCells.Program.Utility
 
 -- | Diversity path.
 diversityMain :: Options -> IO ()
@@ -141,15 +114,15 @@ diversityMain opts = do
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
         let divFile = unOutputDirectory output' FP.</> "diversity.pdf"
         divPlot <- plotDiversityR colors popDiversities
-        [r| suppressMessages(ggsave(divPlot_hs, file = divFile_hs)) |]
+        [H.r| suppressMessages(ggsave(divPlot_hs, file = divFile_hs)) |]
 
         -- let chao1File = unOutputDirectory output' FP.</> "chao_r.pdf"
         -- chao1Plot <- plotChao1R colors popDiversities
-        -- [r| suppressMessages(ggsave(chao1Plot_hs, file = chao1File_hs)) |]
+        -- [H.r| suppressMessages(ggsave(chao1Plot_hs, file = chao1File_hs)) |]
 
         let rarefactionFile = unOutputDirectory output' FP.</> "rarefaction.pdf"
         rarefactionPlot <- plotRarefactionR colors popDiversities
-        [r| suppressMessages(ggsave(rarefactionPlot_hs, file = rarefactionFile_hs)) |]
+        [H.r| suppressMessages(ggsave(rarefactionPlot_hs, file = rarefactionFile_hs)) |]
 
         return ()
 
