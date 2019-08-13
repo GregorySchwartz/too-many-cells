@@ -48,5 +48,7 @@ newtype OutputDirectory  = OutputDirectory { unOutputDirectory :: FilePath }
 
 -- Advanced
 data MatrixFileFolder = MatrixFile FilePath | MatrixFolder FilePath
+data FragmentsFile = FragmentsFile FilePath
 data MatrixFileType = DecompressedMatrix MatrixFileFolder
                     | CompressedMatrix MatrixFileFolder
+                    | CompressedFragments FragmentsFile

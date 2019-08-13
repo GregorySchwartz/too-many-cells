@@ -31,9 +31,8 @@ import TooManyCells.Matrix.Types
 
 -- | Read a range from a text of the form LABEL:LOWERBOUND-UPPERBOUND.
 readRange :: RangeIdx -> T.Text -> Range
-readRange idx x = either (\ a -> error $ "Error reading " <> a <> " : " <> T.unpack x <> " (did you follow the format LABEL:LOWERBOUND-UPPERBOUND ?)") id
-                . A.eitherResult
-                . A.parse (rangeParser idx)
+readRange idx x = either (\ a -> error $ "Error in readRange: " <> a <> ": " <> T.unpack x <> " (did you follow the format LABEL:LOWERBOUND-UPPERBOUND ?)") id
+                . A.parseOnly (rangeParser idx)
                 . T.filter (/= ',')
                 $ x
 
@@ -45,11 +44,11 @@ rangeParser idx = do
   lb <- A.decimal
   A.char '-'
   ub <- A.decimal
-  return $ Range idx (T.pack l) lb ub
+  return $ Range (Just idx) (T.pack l) lb ub
 
 -- | Convert an input range to a bin.
-rangeToBin :: BinSize -> Range -> Bin
-rangeToBin (BinSize b) range@(Range _ l _ _) = Bin Nothing l lb (lb + b)
+rangeToBin :: BinWidth -> Range -> Bin
+rangeToBin (BinWidth b) range@(Range _ l _ _) = Bin Nothing l lb (lb + b)
   where
     lb = (div (midpoint range) b) * b
 
@@ -58,19 +57,28 @@ midpoint :: Range -> Int
 midpoint (Range _ _ lb ub) = lb + div (ub - lb) 2
 
 -- | Get the map of ranges to their bins, keeping bin order.
-binsToRangeBinMapWithOrder :: BinSize
+binsToRangeBinMapWithOrder :: BinWidth
                            -> V.Vector Range
                            -> (RangeBinMap, V.Vector Bin)
-binsToRangeBinMapWithOrder b rs = (rangeBinMap, V.fromList bins)
+binsToRangeBinMapWithOrder b rs =
+  (rangeBinMap, V.fromList . Set.toAscList . Set.fromList $ rangeBins)
   where
     rangeBinMap = RangeBinMap
                 . Map.fromList
-                . zip (fmap rangeIdx . V.toList $ rs)
+                . zip ( fmap (fromMaybe (error "Range missing index in binsToRangeBinMapWithOrder") . rangeIdx)
+                             . V.toList
+                             $ rs
+                      )
                 . fmap (fromMaybe (error "Bin missing index in binsToRangeBinMapWithOrder") . binIdx)
-                $ bins
-    bins = zipWith (\i v -> v { binIdx = Just i }) (fmap BinIdx [0..]) -- Insert correct idx
-         . sort
-         . fmap (rangeToBin b)
+                $ rangeBins
+    rangeBins = fmap (\v -> v { binIdx = Map.lookup v binMap }) -- Insert correct idx
+              $ bins
+    binMap = Map.fromList
+           . flip zip (fmap BinIdx [0..])
+           . Set.toAscList
+           . Set.fromList
+           $ bins
+    bins = fmap (rangeToBin b)
          . V.toList
          $ rs
 
@@ -79,11 +87,15 @@ rangeToBinMat :: RangeBinMap -> MatObsRow -> MatObsRow
 rangeToBinMat (RangeBinMap bm) (MatObsRow mat) =
   MatObsRow . foldl' addToMat init . S.toListSM $ mat
   where
-    addToMat m val = S.fromListSM (S.dimSM init) [val] S.^+^ m
+    addToMat m val = S.fromListSM (S.dimSM init) [rangeToBinVal val] S.^+^ m
     init = S.zeroSM (S.nrows mat) . Set.size . Set.fromList . Map.elems $ bm
+    rangeToBinVal all@(!i, !j, !v) = (i, unBinIdx $ rangeToBinCol all, v)
+    rangeToBinCol all@(_, !j, _) = Map.findWithDefault (error $ "Missing bin index for: " <> show all)
+                                    (RangeIdx j)
+                                    bm
 
 -- | Convert a range SingleCells matrix to a bin SingleCells matrix.
-rangeToBinSc :: BinSize -> SingleCells -> SingleCells
+rangeToBinSc :: BinWidth -> SingleCells -> SingleCells
 rangeToBinSc b sc =
   SingleCells { _matrix = rangeToBinMat rangeBinMap . L.view matrix $ sc
               , _rowNames = L.view rowNames sc

@@ -21,10 +21,14 @@ import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
+import Data.List (isInfixOf)
 import Data.Maybe (fromMaybe, isJust)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
+import qualified Control.Lens as L
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import qualified Data.Vector as V
 import qualified System.Directory as FP
 import qualified System.FilePath as FP
@@ -38,6 +42,9 @@ import TooManyCells.Matrix.Utility
 import TooManyCells.Matrix.Load
 import TooManyCells.Program.Options
 import TooManyCells.Program.Utility
+import Debug.Trace
+import qualified Data.Sparse.Common as S
+import Control.Lens
 
 -- | Load the single cell matrix.
 loadSSM :: Options -> FilePath -> IO SingleCells
@@ -46,16 +53,17 @@ loadSSM opts matrixPath' = do
   directoryExist <- FP.doesDirectoryExist matrixPath'
   compressedFileExist <- FP.doesFileExist $ matrixPath' FP.</> "matrix.mtx.gz"
 
-  let matrixFile' =
-        case (fileExist, directoryExist, compressedFileExist) of
-          (False, False, False) -> error "\nMatrix path does not exist."
-          (True, False, False)  ->
-            Left . DecompressedMatrix . MatrixFile $ matrixPath'
-          (False, True, False)  ->
-            Right . DecompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
-          (False, True, True)  ->
-            Right . CompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx.gz"
-          _                     -> error "Cannot determine matrix pointed to, are there too many matrices here?"
+  let fragmentsFile = (\ (x, y) -> isInfixOf "fragments" x && y == ".tsv.gz")
+                    . FP.splitExtensions
+                    . FP.takeFileName
+                    $ matrixPath'
+      matrixFile'
+        | fileExist && not fragmentsFile = Left . DecompressedMatrix . MatrixFile $ matrixPath'
+        | fileExist && fragmentsFile = Left . CompressedFragments . FragmentsFile $ matrixPath'
+        | directoryExist && not compressedFileExist = Right . DecompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
+        | directoryExist && compressedFileExist = Right . CompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx.gz"
+        | directoryExist = error "Cannot determine matrix pointed to, are there too many matrices here?"
+        | otherwise = error "\nMatrix path does not exist."
       featuresFile'  = FeatureFile
                   $ matrixPath'
              FP.</> (bool "genes.tsv" "features.tsv.gz" compressedFileExist)
@@ -70,6 +78,8 @@ loadSSM opts matrixPath' = do
           case matrixFile' of
               (Left (DecompressedMatrix file))  ->
                 loadSparseMatrixDataStream delimiter' file
+              (Left (CompressedFragments file))  ->
+                loadFragments file
               (Right (DecompressedMatrix file)) ->
                 loadCellrangerData featureColumn' featuresFile' cellsFile' file
               (Right (CompressedMatrix file))   ->
@@ -78,7 +88,7 @@ loadSSM opts matrixPath' = do
   unFilteredSc
 
 -- | Load all single cell matrices.
-loadAllSSM :: Options -> IO (Maybe SingleCells)
+loadAllSSM :: Options -> IO (Maybe (SingleCells, Maybe LabelMap))
 loadAllSSM opts = runMaybeT $ do
     let matrixPaths'       = unHelpful . matrixPath $ opts
         cellWhitelistFile' =
@@ -88,7 +98,16 @@ loadAllSSM opts = runMaybeT $ do
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
         shiftPositiveFlag' =
           ShiftPositiveFlag . unHelpful . shiftPositive $ opts
-        atacBinSize' = fmap BinSize . unHelpful . atac $ opts
+        binWidth' = fmap BinWidth . unHelpful . binwidth $ opts
+        customLabel' = (\ xs -> bool
+                                  (fmap (Just . CustomLabel) xs)
+                                  (repeat Nothing)
+                              . null
+                              $ xs
+                        )
+                      . unHelpful
+                      . customLabel
+                      $ opts
         filterThresholds'  = FilterThresholds
                            . maybe (250, 1) read
                            . unHelpful
@@ -109,13 +128,20 @@ loadAllSSM opts = runMaybeT $ do
 
     let whiteListFilter Nothing = id
         whiteListFilter (Just wl) = filterWhitelistSparseMat wl
-        unFilteredSc = mconcat mats
-        sc           =
+        (unFilteredSc, unFilteredLM) =
+          (\ xs -> ( mconcat $ fmap fst xs
+                   , fmap mconcat . sequence . fmap snd $ xs
+                   )
+          )
+            . zipWith labelRows customLabel'
+            $ mats
+        sc           = (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) .
             ( bool (filterNumSparseMat filterThresholds') id
             $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
-                . (maybe id rangeToBinSc atacBinSize')
+                . (maybe id rangeToBinSc binWidth')
+                . (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) 
                 $ unFilteredSc
         normMat TfIdfNorm    = id -- Normalize during clustering.
         normMat UQNorm       = uqScaleSparseMat
@@ -130,10 +156,23 @@ loadAllSSM opts = runMaybeT $ do
                     . normMat normalization'
                     . _matrix
         processedSc = sc { _matrix = processMat sc }
+        -- Filter label map if necessary.
+        labelMap = (\ valid -> fmap ( LabelMap
+                                    . Map.filterWithKey (\k _ -> Set.member k valid)
+                                    . unLabelMap
+                                    )
+                                    $ unFilteredLM
+                   )
+                 . Set.fromList
+                 . fmap (Id . unCell)
+                 . V.toList
+                 . L.view rowNames
+                 $ processedSc
+
 
     -- Check for empty matrix.
-    when (V.null . getRowNames $ processedSc) $ error "Matrix is empty. Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
+    when (V.null . getRowNames $ processedSc) $ error emptyMatErr
 
     liftIO . mapM_ print . matrixValidity $ processedSc
 
-    return processedSc
+    return (processedSc, labelMap)

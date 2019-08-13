@@ -83,6 +83,7 @@ extra-deps:
   - pango-0.13.8.0
   - pipes-text-0.0.2.5
   - plots-0.1.1.0
+  - sparse-linear-algebra-0.3.1
   - streaming-cassava-0.1.0.1
   - streaming-utils-0.1.4.7
   - streaming-with-0.2.2.1

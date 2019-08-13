@@ -19,9 +19,10 @@ module TooManyCells.Program.Differential where
 import BirchBeer.Load
 import BirchBeer.Types
 import BirchBeer.Utility
+import Control.Monad (join)
 import Control.Monad.Trans (liftIO)
 import Data.Bool (bool)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid ((<>))
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
@@ -76,9 +77,13 @@ differentialMain opts = do
         (combined1, combined2) = combineNodesLabels nodes' labels'
         plotOutputR = fromMaybe "out.pdf" . unHelpful . plotOutput $ opts
 
-    processedSc <- loadAllSSM opts
+    scRes <- loadAllSSM opts
+    let processedSc = fmap fst scRes
+        customLabelMap = join . fmap snd $ scRes
 
-    labelMap <- mapM (loadLabelData delimiter') $ labelsFile'
+    labelMap <- if isJust labelsFile'
+                  then mapM (loadLabelData delimiter') $ labelsFile'
+                  else return customLabelMap
 
     let clInput = (FP.</> "cluster_list.json") . unPriorPath $ prior'
         treeInput = (FP.</> "cluster_tree.json") . unPriorPath $ prior'

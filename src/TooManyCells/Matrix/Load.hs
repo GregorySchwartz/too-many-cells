@@ -16,6 +16,7 @@ module TooManyCells.Matrix.Load
     , loadHMatrixData
     , loadSparseMatrixData
     , loadSparseMatrixDataStream
+    , loadFragments
     , loadProjectionMap
     ) where
 
@@ -33,21 +34,25 @@ import Data.Monoid ((<>))
 import Data.Vector (Vector)
 import Safe
 import System.IO.Temp (withSystemTempFile)
+import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import qualified Data.Sparse.Common as HS
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Data.Text.Read as T
 import qualified Data.Vector as V
 import qualified Numeric.LinearAlgebra as H
 import qualified Streaming as S
 import qualified Streaming.Cassava as S
 import qualified Streaming.Prelude as S
-import qualified Streaming.With.Lifted as SW
+import qualified Streaming.With.Lifted as S
+import qualified Streaming.Zip as S
 import qualified System.IO as IO
 
 -- Local
@@ -214,7 +219,7 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
 
     res <- flip with return $ do
 
-        contents <- SW.withBinaryFileContents mf
+        contents <- S.withBinaryFileContents mf
 
         (c S.:> g S.:> m S.:> _) <-
             fmap (either (error . show) id)
@@ -231,6 +236,65 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
             SingleCells { _matrix   = finalMat
                         , _rowNames = V.fromList c
                         , _colNames = V.fromList g
+                        }
+
+    return res
+
+-- | Load a range feature list streaming in TSV 10x fragments.tsv.gz format.
+loadFragments :: FragmentsFile
+              -> IO SingleCells
+loadFragments (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \tempFile h -> do
+    let csvOpts = S.defaultDecodeOptions
+                    { S.decDelimiter = fromIntegral (ord '\t') }
+        readDecimal = either error fst . T.decimal
+        readDouble = either error fst . T.double
+        mS = S.toList
+           . S.map parseLine
+        parseLine (chrom:start:end:barcode:duplicateCount:_) =
+          ( Cell barcode
+          , Range Nothing chrom (readDecimal start) (readDecimal end)
+          , readDouble duplicateCount
+          )
+        parseLine xs = error $ "Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
+
+    B.readFile mf >>= B.hPut h . decompress >> IO.hClose h
+
+    res <- flip with return $ do
+
+        contents <- S.withBinaryFileContents tempFile
+
+        (m S.:> _) <-
+            fmap (either (error . show) id)
+                . runExceptT
+                . mS
+                . S.decodeWith csvOpts S.NoHeader
+                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
+
+        let finalCells =
+              Set.toList . Set.fromList . fmap (\(c, _, _) -> c) $ m
+            finalFeatures = Set.toList
+                          . Set.fromList
+                          . fmap (\(_, r, _) -> Feature . showt $ r)
+                          $ m
+            cellMap :: Map.Map Cell Int
+            cellMap = Map.fromList . flip zip [0..] $ finalCells
+            featureMap :: Map.Map Feature Int
+            featureMap = Map.fromList . flip zip [0..] $ finalFeatures
+            findErr x = Map.findWithDefault (error $ "(loadFragments) No indices found: " <> show x) x
+            finalMat = MatObsRow
+                     . HS.fromListSM (length finalCells, length finalFeatures)
+                     . fmap (\ (c, r, v)
+                            -> ( findErr c cellMap
+                               , findErr (Feature $ showt r) featureMap
+                               , v
+                               )
+                            )
+                     $ m
+
+        return $
+            SingleCells { _matrix   = finalMat
+                        , _rowNames = V.fromList finalCells
+                        , _colNames = V.fromList finalFeatures
                         }
 
     return res

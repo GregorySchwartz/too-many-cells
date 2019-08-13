@@ -51,7 +51,9 @@ newtype Cell = Cell
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON, A.FromJSON)
 newtype Cols            = Cols { unCols :: [Double] }
 newtype FeatureColumn   = FeatureColumn { unFeatureColumn :: Int }
-newtype BinSize = BinSize { unBinSize :: Int}
+newtype CustomLabel = CustomLabel { unCustomLabel :: Text}
+                      deriving (Eq,Ord,Read,Show)
+newtype BinWidth = BinWidth { unBinWidth :: Int}
 newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype CellWhitelist = CellWhitelist
@@ -127,7 +129,11 @@ data CellInfo = CellInfo
 L.makeLenses ''CellInfo
 
 -- | A range with a label, most ranges can vary with each other.
-data Range = Range { rangeIdx :: RangeIdx, _rangeLabel :: Text, _rangeLowerBound :: Int, _rangeUpperBound :: Int }
+data Range = Range { rangeIdx :: Maybe RangeIdx
+                   , _rangeLabel :: Text
+                   , _rangeLowerBound :: Int
+                   , _rangeUpperBound :: Int
+                   }
              deriving (Eq, Ord, Read, Show)
 L.makeFields ''Range
 instance TextShow Range where
@@ -153,6 +159,11 @@ data NormType = TfIdfNorm
               | LogCPMNorm
               | NoneNorm
                 deriving (Read, Show, Eq)
+
+-- | Map of bins to their idxs in unsorted and un-uniqued list.
+newtype BinIdxMap = BinIdxMap
+  { unBinIdxMap :: Map.Map Bin BinIdx
+  }
 
 instance Generic Feature
 instance NFData Feature where rnf x = seq x ()

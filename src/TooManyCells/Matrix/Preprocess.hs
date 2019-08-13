@@ -25,9 +25,14 @@ module TooManyCells.Matrix.Preprocess
     , pcaRMat
     , pcaDenseSc
     , shiftPositiveSc
+    , pcaDenseMat
+    , shiftPositiveMat
+    , emptyMatErr
+    , labelRows
     ) where
 
 -- Remote
+import BirchBeer.Types (LabelMap (..), Id (..), Label (..))
 import Data.Bool (bool)
 import Data.List (sort)
 import Data.Monoid ((<>))
@@ -38,6 +43,7 @@ import Language.R.QQ (r)
 import Statistics.Quantile (continuousBy, s)
 import TextShow (showt)
 import qualified Control.Lens as L
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
@@ -52,6 +58,13 @@ import qualified Numeric.LinearAlgebra.HMatrix as H
 import TooManyCells.File.Types
 import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Utility
+
+-- | Empty matrix error.
+emptyMatErr :: String
+emptyMatErr = "Matrix is empty in features or cells. Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
+
+emptyMatCheckErr :: [a] -> [a]
+emptyMatCheckErr xs = bool xs (error emptyMatErr) . null $ xs
 
 -- | Scale a matrix.
 scaleRMat :: RMatObsRow s -> R s (RMatObsRow s)
@@ -188,12 +201,14 @@ filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
     colFilter = (>= colThresh) . H.sumElements
     mat            = sparseToHMat . unMatObsRow . _matrix $ sc
     validRows = Set.fromList
+              . emptyMatCheckErr
               . fmap fst
               . filter (rowFilter . snd)
               . zip [0..]
               . H.toRows
               $ mat
     validCols = Set.fromList
+              . emptyMatCheckErr
               . fmap fst
               . filter (colFilter . snd)
               . zip [0..]
@@ -224,12 +239,14 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     mat            = unMatObsRow . _matrix $ sc
     mat'           = S.transposeSM mat
     validRows = Set.fromList
+              . emptyMatCheckErr
               . fmap fst
               . filter (rowFilter . snd)
               . zip [0..]
               . S.toRowsL
               $ mat
     validCols = Set.fromList
+              . emptyMatCheckErr
               . fmap fst
               . filter (colFilter . snd)
               . zip [0..]
@@ -277,6 +294,7 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
     rowFilteredMat = S.transposeSM
                    . S.fromColsL -- fromRowsL still broken.
                    . fmap (S.extractRow mat)
+                   . emptyMatCheckErr
                    . V.toList
                    $ validIdx
     r = V.map (\x -> fromMaybe (error $ "\nWhitelist row index out of bounds (do the whitelist barcodes match the data?): " <> show x <> " out of " <> (show . length . _rowNames $ sc))
@@ -371,3 +389,18 @@ shiftPositiveMat = MatObsRow
 -- | Shift features to positive values for SingleCells.
 shiftPositiveSc :: SingleCells -> SingleCells
 shiftPositiveSc = L.over matrix shiftPositiveMat
+
+-- | Optionally give the filepath as a label to the rows.
+labelRows :: Maybe CustomLabel -> SingleCells -> (SingleCells, Maybe LabelMap)
+labelRows Nothing sc = (sc, Nothing)
+labelRows (Just (CustomLabel l)) sc =
+  (L.set rowNames newRowNames sc, Just labelMap)
+  where
+    labelMap = LabelMap
+             . Map.fromList
+             . flip zip (repeat (Label l))
+             . fmap (Id . unCell)
+             . V.toList
+             $ newRowNames
+    newRowNames = fmap labelRow . L.view rowNames $ sc
+    labelRow (Cell x) = Cell $ x <> "-" <> l

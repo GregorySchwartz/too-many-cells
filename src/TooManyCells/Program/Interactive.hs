@@ -19,9 +19,10 @@ module TooManyCells.Program.Interactive where
 import BirchBeer.Interactive
 import BirchBeer.Load
 import BirchBeer.Types
+import Control.Monad (join)
 import Control.Monad.Trans (liftIO)
 import Data.Bool (bool)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Tree (Tree (..))
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
@@ -55,8 +56,13 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         normalization'    = getNormalization opts
 
-    mat <- loadAllSSM opts
-    labelMap <- sequence . fmap (loadLabelData delimiter') $ labelsFile'
+    scRes <- loadAllSSM opts
+    let mat = fmap fst scRes
+        customLabelMap = join . fmap snd $ scRes
+
+    labelMap <- if isJust labelsFile'
+                  then mapM (loadLabelData delimiter') $ labelsFile'
+                  else return customLabelMap
 
     tree <- fmap (either error id . A.eitherDecode)
           . B.readFile

@@ -20,10 +20,11 @@ import BirchBeer.ColorMap
 import BirchBeer.Load
 import BirchBeer.MainDiagram
 import BirchBeer.Types
+import Control.Monad (join)
 import Control.Monad.Trans (liftIO)
 import Data.Bool (bool)
 import Data.Colour.SRGB (sRGB24read)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import Data.Monoid ((<>))
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
@@ -189,7 +190,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         $ Progress.Progress 0 10
 
     -- Load matrix once.
-    processedSc <- loadAllSSM opts
+    scRes <- loadAllSSM opts
+    let processedSc = fmap fst scRes
+        customLabelMap = join . fmap snd $ scRes
 
     -- Increment  progress bar.
     Progress.autoProgressBar
@@ -210,7 +213,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                                 (fmap (L.over L._1 Feature) gs)
                             . extractSc
                             $ processedSc
-                    _ -> mapM (loadLabelData delimiter') $ labelsFile'
+                    _ -> if isJust labelsFile'
+                          then mapM (loadLabelData delimiter') $ labelsFile'
+                          else return customLabelMap
 
     -- Increment  progress bar.
     Progress.autoProgressBar
