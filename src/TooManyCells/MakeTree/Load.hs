@@ -32,7 +32,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Sparse.Common as HS
 import qualified Data.Text as T
 import qualified Data.Text.Read as T

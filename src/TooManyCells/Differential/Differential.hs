@@ -40,7 +40,7 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.Graph.Inductive as G
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T

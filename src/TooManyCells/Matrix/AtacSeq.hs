@@ -20,7 +20,7 @@ import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.Attoparsec.Text as A
 import qualified Data.Foldable as F
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
