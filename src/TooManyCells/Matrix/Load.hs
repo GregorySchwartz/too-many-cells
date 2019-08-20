@@ -271,19 +271,20 @@ loadFragments (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \te
                 $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
 
         let finalCells =
-              Set.toList . Set.fromList . fmap (\(c, _, _) -> c) $ m
-            finalFeatures = Set.toList
+              V.fromList . Set.toList . Set.fromList . fmap (\(!c, _, _) -> c) $ m
+            finalFeatures = V.fromList
+                          . Set.toList
                           . Set.fromList
-                          . fmap (\(_, r, _) -> Feature . showt $ r)
+                          . fmap (\(_, !r, _) -> Feature . showt $ r)
                           $ m
             cellMap :: Map.Map Cell Int
-            cellMap = Map.fromList . flip zip [0..] $ finalCells
+            cellMap = Map.fromList . flip zip [0..] . V.toList $ finalCells
             featureMap :: Map.Map Feature Int
-            featureMap = Map.fromList . flip zip [0..] $ finalFeatures
+            featureMap = Map.fromList . flip zip [0..] . V.toList $ finalFeatures
             findErr x = Map.findWithDefault (error $ "(loadFragments) No indices found: " <> show x) x
             finalMat = MatObsRow
-                     . HS.fromListSM (length finalCells, length finalFeatures)
-                     . fmap (\ (c, r, v)
+                     . HS.fromListSM (V.length finalCells, V.length finalFeatures)
+                     . fmap (\ (!c, !r, !v)
                             -> ( findErr c cellMap
                                , findErr (Feature $ showt r) featureMap
                                , v
@@ -293,8 +294,8 @@ loadFragments (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \te
 
         return $
             SingleCells { _matrix   = finalMat
-                        , _rowNames = V.fromList finalCells
-                        , _colNames = V.fromList finalFeatures
+                        , _rowNames = finalCells
+                        , _colNames = finalFeatures
                         }
 
     return res

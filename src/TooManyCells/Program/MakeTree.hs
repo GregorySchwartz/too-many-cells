@@ -184,7 +184,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
     -- Increment  progress bar.
     Progress.autoProgressBar
-        (Progress.msg "Loading matrix")
+        (Progress.msg "Loading and processing matrix")
         Progress.percentage
         80
         $ Progress.Progress 0 10

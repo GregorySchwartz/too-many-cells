@@ -74,12 +74,15 @@ loadSSM opts matrixPath' = do
           Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
       featureColumn'  =
           FeatureColumn . fromMaybe 1 . unHelpful . featureColumn $ opts
+      noBinarizeFlag' = NoBinarizeFlag . unHelpful . noBinarize $ opts
       unFilteredSc   =
           case matrixFile' of
               (Left (DecompressedMatrix file))  ->
                 loadSparseMatrixDataStream delimiter' file
               (Left (CompressedFragments file))  ->
-                loadFragments file
+                fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
+                  . loadFragments
+                  $ file
               (Right (DecompressedMatrix file)) ->
                 loadCellrangerData featureColumn' featuresFile' cellsFile' file
               (Right (CompressedMatrix file))   ->
@@ -135,13 +138,13 @@ loadAllSSM opts = runMaybeT $ do
           )
             . zipWith labelRows customLabel'
             $ mats
-        sc           = (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) .
+        sc           = -- (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) .
             ( bool (filterNumSparseMat filterThresholds') id
             $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
                 . (maybe id rangeToBinSc binWidth')
-                . (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) 
+                -- . (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) 
                 $ unFilteredSc
         normMat TfIdfNorm    = id -- Normalize during clustering.
         normMat UQNorm       = uqScaleSparseMat
@@ -171,7 +174,7 @@ loadAllSSM opts = runMaybeT $ do
 
 
     -- Check for empty matrix.
-    when (V.null . getRowNames $ processedSc) $ error emptyMatErr
+    when (V.null . getRowNames $ processedSc) . error $ emptyMatErr "cells"
 
     liftIO . mapM_ print . matrixValidity $ processedSc
 

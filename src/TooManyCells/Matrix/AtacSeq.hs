@@ -9,6 +9,7 @@ matrix, where each feature is a bin range.
 
 module TooManyCells.Matrix.AtacSeq
     ( rangeToBinSc
+    , binarizeSc
     ) where
 
 -- Remote
@@ -87,10 +88,10 @@ rangeToBinMat :: RangeBinMap -> MatObsRow -> MatObsRow
 rangeToBinMat (RangeBinMap bm) (MatObsRow mat) =
   MatObsRow . foldl' addToMat init . S.toListSM $ mat
   where
-    addToMat m val = S.fromListSM (S.dimSM init) [rangeToBinVal val] S.^+^ m
+    addToMat !m val = m S.^+^ S.fromListSM (S.dimSM init) [rangeToBinVal val]
     init = S.zeroSM (S.nrows mat) . Set.size . Set.fromList . Map.elems $ bm
     rangeToBinVal all@(!i, !j, !v) = (i, unBinIdx $ rangeToBinCol all, v)
-    rangeToBinCol all@(_, !j, _) = Map.findWithDefault (error $ "Missing bin index for: " <> show all)
+    rangeToBinCol all@(_, !j, _) = Map.findWithDefault (error $ "Missing range index in rangeToBinMat for: " <> show all)
                                     (RangeIdx j)
                                     bm
 
@@ -110,3 +111,7 @@ rangeToBinSc b sc =
         . V.toList
         . L.view colNames
         $ sc
+
+-- | Binarize a matrix.
+binarizeSc :: SingleCells -> SingleCells
+binarizeSc = L.over matrix (MatObsRow . fmap (const 1) . unMatObsRow)

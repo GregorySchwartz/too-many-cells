@@ -114,11 +114,6 @@ instance Show LabelCompositions where
 instance TreeItem CellInfo where
     getId = Id . unCell . _barcode
 
-instance MatrixLike SingleCells where
-    getMatrix   = unMatObsRow . _matrix
-    getRowNames = fmap unCell . _rowNames
-    getColNames = fmap unFeature . _colNames
-
 instance A.ToJSON Q where
     toEncoding = A.genericToEncoding A.defaultOptions
 instance A.FromJSON Q

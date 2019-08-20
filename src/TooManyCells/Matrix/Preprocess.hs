@@ -60,11 +60,12 @@ import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Utility
 
 -- | Empty matrix error.
-emptyMatErr :: String
-emptyMatErr = "Matrix is empty in features or cells. Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
+emptyMatErr :: String -> String
+emptyMatErr checkType = "Matrix is empty in " <> checkType <> ". Check --filter-thresholds, --normalization, or the input matrix for over filtering or incorrect input format."
 
-emptyMatCheckErr :: [a] -> [a]
-emptyMatCheckErr xs = bool xs (error emptyMatErr) . null $ xs
+-- | Check if valid features or cells are empty, error if so.
+emptyMatCheckErr :: String -> [a] -> [a]
+emptyMatCheckErr checkType xs = bool xs (error $ emptyMatErr checkType) . null $ xs
 
 -- | Scale a matrix.
 scaleRMat :: RMatObsRow s -> R s (RMatObsRow s)
@@ -201,14 +202,14 @@ filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
     colFilter = (>= colThresh) . H.sumElements
     mat            = sparseToHMat . unMatObsRow . _matrix $ sc
     validRows = Set.fromList
-              . emptyMatCheckErr
+              . emptyMatCheckErr "cells"
               . fmap fst
               . filter (rowFilter . snd)
               . zip [0..]
               . H.toRows
               $ mat
     validCols = Set.fromList
-              . emptyMatCheckErr
+              . emptyMatCheckErr "features"
               . fmap fst
               . filter (colFilter . snd)
               . zip [0..]
@@ -239,14 +240,14 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     mat            = unMatObsRow . _matrix $ sc
     mat'           = S.transposeSM mat
     validRows = Set.fromList
-              . emptyMatCheckErr
+              . emptyMatCheckErr "cells"
               . fmap fst
               . filter (rowFilter . snd)
               . zip [0..]
               . S.toRowsL
               $ mat
     validCols = Set.fromList
-              . emptyMatCheckErr
+              . emptyMatCheckErr "features"
               . fmap fst
               . filter (colFilter . snd)
               . zip [0..]
@@ -294,7 +295,7 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
     rowFilteredMat = S.transposeSM
                    . S.fromColsL -- fromRowsL still broken.
                    . fmap (S.extractRow mat)
-                   . emptyMatCheckErr
+                   . emptyMatCheckErr "cells"
                    . V.toList
                    $ validIdx
     r = V.map (\x -> fromMaybe (error $ "\nWhitelist row index out of bounds (do the whitelist barcodes match the data?): " <> show x <> " out of " <> (show . length . _rowNames $ sc))

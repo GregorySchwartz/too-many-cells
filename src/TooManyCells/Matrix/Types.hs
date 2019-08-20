@@ -19,9 +19,13 @@ module TooManyCells.Matrix.Types where
 -- Remote
 import BirchBeer.Types
 import Control.DeepSeq (NFData (..))
+import Control.Monad (join)
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid (..), mempty)
 import Data.Colour.Palette.BrewerSet (Kolor)
 import Data.Colour.SRGB (Colour (..), RGB (..), toSRGB)
+import Data.Function (on)
+import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import Data.Text (Text)
 import Data.Vector (Vector)
@@ -36,6 +40,7 @@ import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
+import qualified Data.IntMap as IMap
 import qualified Data.Map as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -54,6 +59,7 @@ newtype FeatureColumn   = FeatureColumn { unFeatureColumn :: Int }
 newtype CustomLabel = CustomLabel { unCustomLabel :: Text}
                       deriving (Eq,Ord,Read,Show)
 newtype BinWidth = BinWidth { unBinWidth :: Int}
+newtype NoBinarizeFlag = NoBinarizeFlag { unNoBinarizeFlag :: Bool }
 newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype CellWhitelist = CellWhitelist
@@ -111,16 +117,66 @@ data SingleCells = SingleCells { _matrix :: MatObsRow
 L.makeLenses ''SingleCells
 
 instance Semigroup SingleCells where
-    (<>) x y =
+  (<>) x y
+    | (null . L.view colNames $ x)
+   || (null . L.view colNames $ y)
+   || (L.view colNames x == L.view colNames y) =  -- If either is null or they share features, then do a normal append
         SingleCells { _matrix      = mappend (_matrix x) (_matrix y)
                     , _rowNames    = (V.++) (_rowNames x) (_rowNames y)
                     , _colNames    = _colNames x
                     }
+    | otherwise = mergeFeaturesSingleCells x y
+
+-- | Join two SingleCells with different features.
+mergeFeaturesSingleCells :: SingleCells -> SingleCells -> SingleCells
+mergeFeaturesSingleCells sc1 sc2 =
+  SingleCells { _matrix      = mappend (newMat id sc1) (newMat lookupRow sc2)
+              , _rowNames    = (V.++) (L.view rowNames sc1) (L.view rowNames sc2)
+              , _colNames    = V.fromList
+                             . fmap fst
+                             . sortBy (compare `on` snd)
+                             . Map.toList
+                             $ newCols
+              }
+  where
+    newMat rowF sc = MatObsRow
+              . S.modifyKeysSM rowF (lookupCol (L.view colNames sc))
+              . S.SM (newNRows, Map.size newCols)
+              . S.immSM
+              $ getMatrix sc
+    newNRows = (V.length . L.view rowNames $ sc1)
+             + (V.length . L.view rowNames $ sc2)
+    lookupCol :: V.Vector Feature -> Int -> Int
+    lookupCol olds x = fromMaybe (error $ "mergeFeaturesSingleCells: No new index when joining cols: " <> show x)
+                     . (>>=) (olds V.!? x)
+                     $ flip Map.lookup newCols
+    lookupRow :: Int -> Int
+    lookupRow x = fromMaybe (error $ "mergeFeaturesSingleCells: No new index when joining rows: " <> show x)
+                $ newRows V.!? x
+    newRows :: V.Vector Int
+    newRows = V.iterateN (S.nrows . getMatrix $ sc2) (+ 1)
+            . S.nrows
+            . getMatrix
+            $ sc1
+    newCols :: Map.Map Feature Int
+    newCols = Map.fromList
+            . flip zip [0..]
+            . Set.toAscList
+            . Set.union (colToSet sc1)
+            $ colToSet sc2
+    colToSet = Set.fromList . V.toList . L.view colNames
+
 instance Monoid SingleCells where
     mempty  = SingleCells { _matrix = mempty
                           , _rowNames = V.empty
                           , _colNames = V.empty
                           }
+
+instance MatrixLike SingleCells where
+    getMatrix   = unMatObsRow . _matrix
+    getRowNames = fmap unCell . _rowNames
+    getColNames = fmap unFeature . _colNames
+
 
 data CellInfo = CellInfo
     { _barcode :: Cell
