@@ -40,6 +40,7 @@ import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
+import qualified Data.HashSet as HSet
 import qualified Data.IntMap as IMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -63,8 +64,8 @@ newtype NoBinarizeFlag = NoBinarizeFlag { unNoBinarizeFlag :: Bool }
 newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype CellWhitelist = CellWhitelist
-    { unCellWhitelist :: Set.Set Cell
-    } deriving (Eq,Ord,Read,Show)
+    { unCellWhitelist :: HSet.HashSet Text
+    } deriving (Eq,Ord,Show)
 newtype PCADim = PCADim
     { unPCADim :: Int
     } deriving (Eq,Ord,Read,Show)

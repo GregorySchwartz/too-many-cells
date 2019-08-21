@@ -43,6 +43,8 @@ import Language.R.QQ (r)
 import Statistics.Quantile (continuousBy, s)
 import TextShow (showt)
 import qualified Control.Lens as L
+import qualified Data.HashSet as HSet
+import qualified Data.IntSet as ISet
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
@@ -201,14 +203,14 @@ filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
     rowFilter = (>= rowThresh) . H.sumElements
     colFilter = (>= colThresh) . H.sumElements
     mat            = sparseToHMat . unMatObsRow . _matrix $ sc
-    validRows = Set.fromList
+    validRows = ISet.fromList
               . emptyMatCheckErr "cells"
               . fmap fst
               . filter (rowFilter . snd)
               . zip [0..]
               . H.toRows
               $ mat
-    validCols = Set.fromList
+    validCols = ISet.fromList
               . emptyMatCheckErr "features"
               . fmap fst
               . filter (colFilter . snd)
@@ -216,13 +218,13 @@ filterDenseMat (FilterThresholds (rowThresh, colThresh)) sc =
               . H.toColumns
               $ mat
     filteredMat = mat
-             H.?? ( H.Pos (H.idxs (Set.toAscList validRows))
-                  , H.Pos (H.idxs (Set.toAscList validCols))
+             H.?? ( H.Pos (H.idxs (ISet.toAscList validRows))
+                  , H.Pos (H.idxs (ISet.toAscList validCols))
                   )
-    r = V.ifilter (\i _ -> Set.member i validRows)
+    r = V.ifilter (\i _ -> ISet.member i validRows)
       . _rowNames
       $ sc
-    c = V.ifilter (\i _ -> Set.member i validCols)
+    c = V.ifilter (\i _ -> ISet.member i validCols)
       . _colNames
       $ sc
 
@@ -239,14 +241,14 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     colFilter = (>= colThresh) . sum
     mat            = unMatObsRow . _matrix $ sc
     mat'           = S.transposeSM mat
-    validRows = Set.fromList
+    validRows = ISet.fromList
               . emptyMatCheckErr "cells"
               . fmap fst
               . filter (rowFilter . snd)
               . zip [0..]
               . S.toRowsL
               $ mat
-    validCols = Set.fromList
+    validCols = ISet.fromList
               . emptyMatCheckErr "features"
               . fmap fst
               . filter (colFilter . snd)
@@ -257,21 +259,21 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     rowFilteredMat = S.transposeSM
                    . S.fromColsL -- fromRowsL still broken.
                    . fmap snd
-                   . filter (flip Set.member validRows . fst)
+                   . filter (flip ISet.member validRows . fst)
                    . zip [0..]
                    . S.toRowsL
                    $ mat
     colFilteredMat = S.fromColsL
                    . fmap snd
-                   . filter (flip Set.member validCols . fst)
+                   . filter (flip ISet.member validCols . fst)
                    . zip [0..]
                    . S.toRowsL -- Rows of transpose are faster.
                    . S.transposeSM
                    $ rowFilteredMat
-    r = V.ifilter (\i _ -> Set.member i validRows)
+    r = V.ifilter (\i _ -> ISet.member i validRows)
       . _rowNames
       $ sc
-    c = V.ifilter (\i _ -> Set.member i validCols)
+    c = V.ifilter (\i _ -> ISet.member i validCols)
       . _colNames
       $ sc
 
@@ -288,7 +290,7 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
     mat            = unMatObsRow . _matrix $ sc
     validIdx       = V.modify V.sort
                    . V.map fst
-                   . V.filter (\(_, !c) -> Set.member c wl)
+                   . V.filter (\(_, (Cell !c)) -> HSet.member c wl)
                    . V.imap (\i v -> (i, v))
                    . _rowNames
                    $ sc
@@ -310,8 +312,7 @@ getCellWhitelist (CellWhitelistFile file) = do
     contents <- T.readFile file
 
     let whiteList = CellWhitelist
-                  . Set.fromList
-                  . fmap Cell
+                  . HSet.fromList
                   . filter (not . T.null)
                   . T.lines
                   $ contents

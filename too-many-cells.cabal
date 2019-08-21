@@ -67,6 +67,7 @@ library
                      , find-clumpiness
                      , foldl
                      , graphviz
+                     , hashable
                      , hierarchical-clustering
                      , hierarchical-spectral-clustering
                      , hmatrix

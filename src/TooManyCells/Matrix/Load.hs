@@ -37,6 +37,7 @@ import Data.Vector (Vector)
 import Safe
 import System.IO.Temp (withSystemTempFile)
 import TextShow (showt)
+import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
@@ -255,9 +256,12 @@ loadFragments whitelist binWidth (FragmentsFile mf) = withSystemTempFile "temp_f
                     { S.decDelimiter = fromIntegral (ord '\t') }
         readDecimal = either error fst . T.decimal
         readDouble = either error fst . T.double
-        mS = S.toList . maybe id filterCells whitelist . S.map parseLine
+        labelsFold = Fold.purely S.fold_ ((,) <$> cellsFold <*> featuresFold)
+        cellsFold = Fold.premap (\(!c, _, _) -> c) hashNub
+        featuresFold = Fold.premap (\(_, !r, _) -> r) hashNub
+        preprocessStream = maybe id filterCells whitelist . S.map parseLine
         filterCells (CellWhitelist wl) =
-          S.filter (\(!b, _, _) -> Set.member (Cell b) wl)
+          S.filter (\(!b, _, _) -> HSet.member b wl)
         parseLine (chrom:start:end:barcode:duplicateCount:_) =
           ( barcode
           , maybe showt (\x -> showt . rangeToBin x) binWidth
@@ -272,30 +276,41 @@ loadFragments whitelist binWidth (FragmentsFile mf) = withSystemTempFile "temp_f
 
         contents <- S.withBinaryFileContents tempFile
 
-        (m S.:> _) <-
+        -- Get indices first. Streaming twice due to memory usage from the fold.
+        (cellsList, featuresList) <-
             fmap (either (error . show) id)
                 . runExceptT
-                . mS
+                . labelsFold
+                . preprocessStream
                 . S.decodeWith csvOpts S.NoHeader
                 $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
 
-        let cells = V.fromList . HSet.toList . HSet.fromList $ fmap (\(!c, _, _) -> c) $ m
-            features = V.fromList . HSet.toList . HSet.fromList . fmap (\(_, !r, _) -> r) $ m
-            cellMap = HMap.fromList . flip zip ([0..] :: [Int]) . V.toList $ cells
-            featureMap = HMap.fromList . flip zip ([0..] :: [Int]) . V.toList $ features
+        let cells = V.fromList cellsList
+            features = V.fromList featuresList
+            cellMap = HMap.fromList . flip zip ([0..] :: [Int]) $ cellsList
+            featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
             findErr x = fromMaybe (error $ "(loadFragments) No indices found: " <> show x)
                       . HMap.lookup x
+            matFold = Fold.purely S.fold_
+                    $ Fold.Fold addToMat init MatObsRow
             addToMat !m val = m HS.^+^ HS.fromListSM (HS.dimSM init) [val]
             init = HS.zeroSM (V.length cells) (V.length features)
-            finalMat = MatObsRow
-                     . foldl' addToMat init
-                     . fmap (\ (!c, !r, !v)
-                            -> (findErr c cellMap, findErr r featureMap, v)
-                            )
-                     $ m
+            getIndices (!c, !r, !v) =
+              (findErr c cellMap, findErr r featureMap, v)
+
+        -- Get map second.
+        mat <-
+            fmap (either (error . show) id)
+                . runExceptT
+                . matFold
+                . S.map getIndices
+                . preprocessStream
+                . S.decodeWith csvOpts S.NoHeader
+                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
+
 
         return $
-            SingleCells { _matrix   = finalMat
+            SingleCells { _matrix   = mat
                         , _rowNames = fmap Cell cells
                         , _colNames = fmap Feature features
                         }

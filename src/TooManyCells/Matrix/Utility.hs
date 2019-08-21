@@ -23,6 +23,7 @@ module TooManyCells.Matrix.Utility
     , isCsvFile
     , getMatrixOutputType
     , matrixValidity
+    , hashNub
     ) where
 
 -- Remote
@@ -32,6 +33,7 @@ import Control.Monad.State (MonadState (..), State (..), evalState, execState, m
 import Data.Bool (bool)
 import Data.Char (toUpper)
 import Data.Function (on)
+import Data.Hashable (Hashable)
 import Data.List (maximumBy)
 import Data.Maybe (fromMaybe)
 import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix)
@@ -40,11 +42,13 @@ import Language.R as R
 import Language.R.QQ (r)
 import System.FilePath ((</>))
 import TextShow (showt)
+import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
+import qualified Data.HashSet as HSet
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
@@ -254,3 +258,14 @@ matrixValidity mat
     (rows, cols) = S.dimSM . getMatrix $ mat
     numCells = V.length . getRowNames $ mat
     numFeatures = V.length . getColNames $ mat
+
+-- | Same as Control.Foldl.nub but using HashSet.
+hashNub :: (Hashable a, Eq a) => Fold.Fold a [a]
+hashNub = Fold.Fold step (HSet.empty, id) fin
+  where
+    step (!s, !r) a =
+      if HSet.member a s
+        then (s, r)
+        else (HSet.insert a s, r . (a :))
+    fin (_, !r) = r []
+{-# INLINABLE hashNub #-}
