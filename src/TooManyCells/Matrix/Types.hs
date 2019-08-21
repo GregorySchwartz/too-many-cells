@@ -204,7 +204,7 @@ instance TextShow Bin where
 
 -- | Map of ranges to their bins.
 newtype RangeBinMap = RangeBinMap
-  { unRangeBinMap :: Map.Map RangeIdx BinIdx
+  { unRangeBinMap :: IMap.IntMap BinIdx
   }
 
 data NormType = TfIdfNorm

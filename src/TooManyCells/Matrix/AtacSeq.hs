@@ -20,6 +20,7 @@ import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.Attoparsec.Text as A
 import qualified Data.Foldable as F
+import qualified Data.IntMap as IMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -65,8 +66,8 @@ binsToRangeBinMapWithOrder b rs =
   (rangeBinMap, V.fromList . Set.toAscList . Set.fromList $ rangeBins)
   where
     rangeBinMap = RangeBinMap
-                . Map.fromList
-                . zip ( fmap (fromMaybe (error "Range missing index in binsToRangeBinMapWithOrder") . rangeIdx)
+                . IMap.fromList
+                . zip ( fmap (maybe (error "Range missing index in binsToRangeBinMapWithOrder") unRangeIdx . rangeIdx)
                              . V.toList
                              $ rs
                       )
@@ -89,10 +90,10 @@ rangeToBinMat (RangeBinMap bm) (MatObsRow mat) =
   MatObsRow . foldl' addToMat init . S.toListSM $ mat
   where
     addToMat !m val = m S.^+^ S.fromListSM (S.dimSM init) [rangeToBinVal val]
-    init = S.zeroSM (S.nrows mat) . Set.size . Set.fromList . Map.elems $ bm
+    init = S.zeroSM (S.nrows mat) . Set.size . Set.fromList . IMap.elems $ bm
     rangeToBinVal all@(!i, !j, !v) = (i, unBinIdx $ rangeToBinCol all, v)
-    rangeToBinCol all@(_, !j, _) = Map.findWithDefault (error $ "Missing range index in rangeToBinMat for: " <> show all)
-                                    (RangeIdx j)
+    rangeToBinCol all@(_, !j, _) = IMap.findWithDefault (error $ "Missing range index in rangeToBinMat for: " <> show all)
+                                    j
                                     bm
 
 -- | Convert a range SingleCells matrix to a bin SingleCells matrix.

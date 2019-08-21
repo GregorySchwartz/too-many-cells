@@ -67,6 +67,7 @@ library
                      , find-clumpiness
                      , foldl
                      , graphviz
+                     --, hashtables
                      , hierarchical-clustering
                      , hierarchical-spectral-clustering
                      , hmatrix
@@ -96,6 +97,7 @@ library
                      , text
                      , text-show
                      , transformers
+                     , unordered-containers
                      , vector
                      , vector-algorithms
                      , zlib

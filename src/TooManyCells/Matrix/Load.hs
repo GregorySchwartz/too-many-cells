@@ -28,6 +28,8 @@ import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
 import Control.Monad.Managed (with, liftIO, Managed (..))
 import Data.Char (ord)
+import Data.Function (on)
+import Data.List (sortBy, sort, foldl')
 import Data.Matrix.MatrixMarket (readMatrix)
 import Data.Maybe (fromMaybe, maybe)
 import Data.Monoid ((<>))
@@ -40,6 +42,9 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
+-- import qualified Data.HashTable.IO as HMap
+import qualified Data.HashMap.Strict as HMap
+import qualified Data.HashSet as HSet
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as HS
@@ -251,8 +256,9 @@ loadFragments (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \te
         mS = S.toList
            . S.map parseLine
         parseLine (chrom:start:end:barcode:duplicateCount:_) =
-          ( Cell barcode
-          , Range Nothing chrom (readDecimal start) (readDecimal end)
+          ( barcode
+          , showt
+          $ Range Nothing chrom (readDecimal start) (readDecimal end)
           , readDouble duplicateCount
           )
         parseLine xs = error $ "Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
@@ -270,32 +276,48 @@ loadFragments (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \te
                 . S.decodeWith csvOpts S.NoHeader
                 $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
 
-        let finalCells =
-              V.fromList . Set.toList . Set.fromList . fmap (\(!c, _, _) -> c) $ m
-            finalFeatures = V.fromList
-                          . Set.toList
-                          . Set.fromList
-                          . fmap (\(_, !r, _) -> Feature . showt $ r)
-                          $ m
-            cellMap :: Map.Map Cell Int
-            cellMap = Map.fromList . flip zip [0..] . V.toList $ finalCells
-            featureMap :: Map.Map Feature Int
-            featureMap = Map.fromList . flip zip [0..] . V.toList $ finalFeatures
-            findErr x = Map.findWithDefault (error $ "(loadFragments) No indices found: " <> show x) x
+        -- let finalCells =
+        --       V.fromList . HSet.toList . HSet.fromList . fmap (\(!c, _, _) -> c) $ m
+        --     finalFeatures = V.fromList
+        --                   . HSet.toList
+        --                   . HSet.fromList
+        --                   . fmap (\(_, !r, _) -> r)
+        --                   $ m
+            -- findErr x = fmap (fromMaybe (error $ "(loadFragments) No indices found: " <> show x))
+            --           . flip HMap.lookup x
+
+        -- cellMap <- liftIO (HMap.fromList . flip zip [0..] . V.toList $ finalCells
+        --         :: IO (HMap.CuckooHashTable T.Text Int))
+        -- featureMap <- liftIO (HMap.fromList . flip zip [0..] . V.toList $ finalFeatures
+        --            :: IO (HMap.CuckooHashTable T.Text Int))
+        -- finalMat <- liftIO
+        --           . fmap (MatObsRow . HS.fromListSM (V.length finalCells, V.length finalFeatures))
+        --           . mapM (\ (!c, !r, !v) -> do
+        --               c' <- findErr c cellMap
+        --               r' <- findErr r featureMap
+        --               return (c', r', v)
+        --                  )
+        --           $ m
+
+        let cells = V.fromList . Set.toList . Set.fromList $ fmap (\(!c, _, _) -> c) $ m
+            features = V.fromList . Set.toList . Set.fromList . fmap (\(_, !r, _) -> r) $ m
+            cellMap = HMap.fromList . flip zip ([0..] :: [Int]) . V.toList $ cells
+            featureMap = HMap.fromList . flip zip ([0..] :: [Int]) . V.toList $ features
+            findErr x = fromMaybe (error $ "(loadFragments) No indices found: " <> show x)
+                      . HMap.lookup x
+            addToMat !m val = m HS.^+^ HS.fromListSM (HS.dimSM init) [val]
+            init = HS.zeroSM (V.length cells) (V.length features)
             finalMat = MatObsRow
-                     . HS.fromListSM (V.length finalCells, V.length finalFeatures)
+                     . foldl' addToMat init
                      . fmap (\ (!c, !r, !v)
-                            -> ( findErr c cellMap
-                               , findErr (Feature $ showt r) featureMap
-                               , v
-                               )
+                            -> (findErr c cellMap, findErr r featureMap, v)
                             )
                      $ m
 
         return $
             SingleCells { _matrix   = finalMat
-                        , _rowNames = finalCells
-                        , _colNames = finalFeatures
+                        , _rowNames = fmap Cell cells
+                        , _colNames = fmap Feature features
                         }
 
     return res

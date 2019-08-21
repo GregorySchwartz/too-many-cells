@@ -138,13 +138,12 @@ loadAllSSM opts = runMaybeT $ do
           )
             . zipWith labelRows customLabel'
             $ mats
-        sc           = -- (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) .
+        sc           =
             ( bool (filterNumSparseMat filterThresholds') id
             $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
                 . (maybe id rangeToBinSc binWidth')
-                -- . (\x -> traceShow (S.dimSM . unMatObsRow . view matrix $ x) x) 
                 $ unFilteredSc
         normMat TfIdfNorm    = id -- Normalize during clustering.
         normMat UQNorm       = uqScaleSparseMat
