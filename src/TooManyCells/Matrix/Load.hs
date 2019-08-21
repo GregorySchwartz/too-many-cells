@@ -42,7 +42,6 @@ import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
--- import qualified Data.HashTable.IO as HMap
 import qualified Data.HashMap.Strict as HMap
 import qualified Data.HashSet as HSet
 import qualified Data.Map.Strict as Map
@@ -62,6 +61,7 @@ import qualified System.IO as IO
 
 -- Local
 import TooManyCells.File.Types
+import TooManyCells.Matrix.AtacSeq
 import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Utility
 
@@ -246,18 +246,21 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
     return res
 
 -- | Load a range feature list streaming in TSV 10x fragments.tsv.gz format.
-loadFragments :: FragmentsFile
+loadFragments :: Maybe CellWhitelist
+              -> Maybe BinWidth
+              -> FragmentsFile
               -> IO SingleCells
-loadFragments (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \tempFile h -> do
+loadFragments whitelist binWidth (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \tempFile h -> do
     let csvOpts = S.defaultDecodeOptions
                     { S.decDelimiter = fromIntegral (ord '\t') }
         readDecimal = either error fst . T.decimal
         readDouble = either error fst . T.double
-        mS = S.toList
-           . S.map parseLine
+        mS = S.toList . maybe id filterCells whitelist . S.map parseLine
+        filterCells (CellWhitelist wl) =
+          S.filter (\(!b, _, _) -> Set.member (Cell b) wl)
         parseLine (chrom:start:end:barcode:duplicateCount:_) =
           ( barcode
-          , showt
+          , maybe showt (\x -> showt . rangeToBin x) binWidth
           $ Range Nothing chrom (readDecimal start) (readDecimal end)
           , readDouble duplicateCount
           )
@@ -276,31 +279,8 @@ loadFragments (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \te
                 . S.decodeWith csvOpts S.NoHeader
                 $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
 
-        -- let finalCells =
-        --       V.fromList . HSet.toList . HSet.fromList . fmap (\(!c, _, _) -> c) $ m
-        --     finalFeatures = V.fromList
-        --                   . HSet.toList
-        --                   . HSet.fromList
-        --                   . fmap (\(_, !r, _) -> r)
-        --                   $ m
-            -- findErr x = fmap (fromMaybe (error $ "(loadFragments) No indices found: " <> show x))
-            --           . flip HMap.lookup x
-
-        -- cellMap <- liftIO (HMap.fromList . flip zip [0..] . V.toList $ finalCells
-        --         :: IO (HMap.CuckooHashTable T.Text Int))
-        -- featureMap <- liftIO (HMap.fromList . flip zip [0..] . V.toList $ finalFeatures
-        --            :: IO (HMap.CuckooHashTable T.Text Int))
-        -- finalMat <- liftIO
-        --           . fmap (MatObsRow . HS.fromListSM (V.length finalCells, V.length finalFeatures))
-        --           . mapM (\ (!c, !r, !v) -> do
-        --               c' <- findErr c cellMap
-        --               r' <- findErr r featureMap
-        --               return (c', r', v)
-        --                  )
-        --           $ m
-
-        let cells = V.fromList . Set.toList . Set.fromList $ fmap (\(!c, _, _) -> c) $ m
-            features = V.fromList . Set.toList . Set.fromList . fmap (\(_, !r, _) -> r) $ m
+        let cells = V.fromList . HSet.toList . HSet.fromList $ fmap (\(!c, _, _) -> c) $ m
+            features = V.fromList . HSet.toList . HSet.fromList . fmap (\(_, !r, _) -> r) $ m
             cellMap = HMap.fromList . flip zip ([0..] :: [Int]) . V.toList $ cells
             featureMap = HMap.fromList . flip zip ([0..] :: [Int]) . V.toList $ features
             findErr x = fromMaybe (error $ "(loadFragments) No indices found: " <> show x)

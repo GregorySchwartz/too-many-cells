@@ -22,7 +22,7 @@ import Control.Monad.Trans (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
 import Data.List (isInfixOf)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
@@ -75,14 +75,28 @@ loadSSM opts matrixPath' = do
       featureColumn'  =
           FeatureColumn . fromMaybe 1 . unHelpful . featureColumn $ opts
       noBinarizeFlag' = NoBinarizeFlag . unHelpful . noBinarize $ opts
+      cellWhitelistFile' =
+            fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
+      binWidth' = fmap BinWidth . unHelpful . binwidth $ opts
       unFilteredSc   =
           case matrixFile' of
               (Left (DecompressedMatrix file))  ->
                 loadSparseMatrixDataStream delimiter' file
-              (Left (CompressedFragments file))  ->
+              (Left (CompressedFragments file))  -> do
+                liftIO $ when (isNothing binWidth') $
+                  hPutStrLn stderr "\nWarning: No binwidth specified for fragments file\
+                                   \ input. This will make the feature list extremely large\
+                                   \ and may result in many outliers. Please see --binwidth.\
+                                   \ Continuing..."
+                liftIO $ when (isNothing cellWhitelistFile') $
+                  hPutStrLn stderr "\nWarning: No cell whitelist specified for fragments file\
+                                   \ input. This will use all barcodes in the file. Most times\
+                                   \ this file contains barcodes that are not cells. Please see\
+                                   \ --cell-whitelist-file. Continuing..."
+                cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
                 fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
-                  . loadFragments
-                  $ file
+                  . loadFragments cellWhitelist binWidth'
+                    $ file
               (Right (DecompressedMatrix file)) ->
                 loadCellrangerData featureColumn' featuresFile' cellsFile' file
               (Right (CompressedMatrix file))   ->
@@ -101,7 +115,6 @@ loadAllSSM opts = runMaybeT $ do
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
         shiftPositiveFlag' =
           ShiftPositiveFlag . unHelpful . shiftPositive $ opts
-        binWidth' = fmap BinWidth . unHelpful . binwidth $ opts
         customLabel' = (\ xs -> bool
                                   (fmap (Just . CustomLabel) xs)
                                   (repeat Nothing)
@@ -143,7 +156,6 @@ loadAllSSM opts = runMaybeT $ do
             $ unNoFilterFlag noFilterFlag'
             )
                 . whiteListFilter cellWhitelist
-                . (maybe id rangeToBinSc binWidth')
                 $ unFilteredSc
         normMat TfIdfNorm    = id -- Normalize during clustering.
         normMat UQNorm       = uqScaleSparseMat

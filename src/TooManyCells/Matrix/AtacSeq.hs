@@ -8,7 +8,8 @@ matrix, where each feature is a bin range.
 {-# LANGUAGE BangPatterns #-}
 
 module TooManyCells.Matrix.AtacSeq
-    ( rangeToBinSc
+    ( rangeToBin
+    , rangeToBinSc
     , binarizeSc
     ) where
 
