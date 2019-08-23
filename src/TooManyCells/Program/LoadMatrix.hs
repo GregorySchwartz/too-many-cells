@@ -17,12 +17,14 @@ module TooManyCells.Program.LoadMatrix where
 
 -- Remote
 import BirchBeer.Types
+import Control.Concurrent.Async.Pool (withTaskGroup, mapTasks)
 import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
 import Data.List (isInfixOf)
 import Data.Maybe (fromMaybe, isJust, isNothing)
+import GHC.Conc (getNumCapabilities)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
@@ -42,7 +44,6 @@ import TooManyCells.Matrix.Utility
 import TooManyCells.Matrix.Load
 import TooManyCells.Program.Options
 import TooManyCells.Program.Utility
-import Debug.Trace
 import qualified Data.Sparse.Common as S
 import Control.Lens
 
@@ -136,10 +137,15 @@ loadAllSSM opts = runMaybeT $ do
                        \ clustering (leading to svdlibc to hang or dense SVD\
                        \ to error out)! Continuing..."
 
+    cores <- MaybeT . fmap Just $ getNumCapabilities
     mats <- MaybeT
           $ if null matrixPaths'
               then return Nothing
-              else fmap Just . mapM (loadSSM opts) $ matrixPaths'
+              else
+                withTaskGroup cores $ \workers -> fmap Just
+                                                . mapTasks workers
+                                                . fmap (loadSSM opts)
+                                                $ matrixPaths'
     cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
 
     let whiteListFilter Nothing = id

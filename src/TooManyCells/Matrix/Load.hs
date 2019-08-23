@@ -251,7 +251,8 @@ loadFragments :: Maybe CellWhitelist
               -> Maybe BinWidth
               -> FragmentsFile
               -> IO SingleCells
-loadFragments whitelist binWidth (FragmentsFile mf) = withSystemTempFile "temp_fragments.tsv" $ \tempFile h -> do
+loadFragments whitelist binWidth (FragmentsFile mf) =
+  withSystemTempFile "temp_fragments.tsv" $ \tempFile h -> do
     let csvOpts = S.defaultDecodeOptions
                     { S.decDelimiter = fromIntegral (ord '\t') }
         readDecimal = either error fst . T.decimal
@@ -298,6 +299,8 @@ loadFragments whitelist binWidth (FragmentsFile mf) = withSystemTempFile "temp_f
             getIndices (!c, !r, !v) =
               (findErr c cellMap, findErr r featureMap, v)
 
+        contentsMat <- S.withBinaryFileContents tempFile
+
         -- Get map second.
         mat <-
             fmap (either (error . show) id)
@@ -306,7 +309,7 @@ loadFragments whitelist binWidth (FragmentsFile mf) = withSystemTempFile "temp_f
                 . S.map getIndices
                 . preprocessStream
                 . S.decodeWith csvOpts S.NoHeader
-                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
+                $ (contentsMat :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
 
 
         return $

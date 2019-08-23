@@ -15,6 +15,7 @@ module TooManyCells.Matrix.AtacSeq
 
 -- Remote
 import BirchBeer.Types
+import Data.Bool (bool)
 import Data.Maybe (fromMaybe)
 import Data.List (sort, foldl')
 import TextShow (showt)
@@ -116,4 +117,4 @@ rangeToBinSc b sc =
 
 -- | Binarize a matrix.
 binarizeSc :: SingleCells -> SingleCells
-binarizeSc = L.over matrix (MatObsRow . fmap (const 1) . unMatObsRow)
+binarizeSc = L.over matrix (MatObsRow . fmap (bool 0 1 . (> 0)) . unMatObsRow)
