@@ -94,12 +94,10 @@ extra-deps:
   # #   commit: b92d8cc9b5275df38198ede27b58f7e35aaf69d1
 
   - /home/gw/git_repos/sparse-linear-algebra
-  - BiobaseNewick-0.0.0.2@sha256:4006ede0492b50cf0ab8ec49166e0ca3553891e61a86841feabc35c914cc2bb5
-  - ForestStructures-0.0.0.2@sha256:7d839c625c2390c1a95ae578dd422b1da05ccf2830c4f43d5b8df75681dc26fd
-  - birch-beer-0.2.2.0
-  - cairo-0.13.6.0@sha256:a9122d48957a2dbb5a177e5068b850efa1e99bb22c68eb2571165c3c945a8dd6
-  - clustering-0.4.1@sha256:78d8e077f27526ff03b3879d951e09e040ca7dc23dd0e6044970be9d40ea37e2
+  - /home/gw/code/utility/spectral-clustering
   - containers-0.6.2.1
+  - async-pool-0.9.0.2@sha256:3aca5861a7b839d02a3f5c52ad6d1ce368631003f68c3d9cb6d711c29e9618db
+  - birch-beer-0.1.4.5@sha256:b7183750ce1f161c261f194cc2412b16ce7dfee752da7249fe90ce70711871ff
   - diagrams-cairo-1.4.1@sha256:e08f15a15146da9222344fbc433ccd6103c0a7f1e9dfe21bb1e3d3e36ad83947
   - diagrams-graphviz-1.4.1@sha256:072c531d69822421cf318d80731c4f7b5e1b6e4d228db3507f84e9057e7a1f12
   - diagrams-gtk-1.4@sha256:154b71b093958a82ab8c05c2c7e63cf5ce70b219fba4c894d6eb86c937ce7441
@@ -119,7 +117,7 @@ extra-deps:
   - pango-0.13.6.0@sha256:ed8d300945bea97ccb652efc73d159634aefebff8c64f60eef6b6ac5ecebc4ae
   - pipes-text-0.0.2.5@sha256:16cfd1927817a1c757b15c37ad95c67e819c28b1c4a6ce9757ab15276ec36ac7
   - plots-0.1.1.2@sha256:01f2ba7ca0c1e00b5231a81b44a3b8b9fd21b49bc333ff4cef880e31c5332935
-  - spectral-clustering-0.3.1.1@sha256:01d832c3f4d15ba702531df9a3381966d72aab713b9633f3dfff0d507e4201f5
+  # - spectral-clustering-0.3.1.3
   - streaming-utils-0.2.0.0@sha256:a2bd9144b336393122ffed2d3a1c747c186b8fdb9734c54d8b5874ed6166a85b
   - streaming-with-0.2.2.1@sha256:f5f354c9d1ed9358bf91792a2804c897544b170b2891b6c0ee61120605f0327c
   - terminal-progress-bar-0.2

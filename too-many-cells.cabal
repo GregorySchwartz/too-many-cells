@@ -48,6 +48,7 @@ library
   build-depends:       base >= 4.7 && < 5
                      , SVGFonts
                      , aeson
+                     , async-pool
                      , attoparsec
                      , birch-beer
                      , bytestring

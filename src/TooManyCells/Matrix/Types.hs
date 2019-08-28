@@ -47,6 +47,7 @@ import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed as U
 import qualified Numeric.LinearAlgebra as H
 
 -- Local
@@ -122,8 +123,8 @@ instance Semigroup SingleCells where
     | (null . L.view colNames $ x)
    || (null . L.view colNames $ y)
    || (L.view colNames x == L.view colNames y) =  -- If either is null or they share features, then do a normal append
-        SingleCells { _matrix      = mappend (_matrix x) (_matrix y)
-                    , _rowNames    = (V.++) (_rowNames x) (_rowNames y)
+        SingleCells { _matrix      = mappend (L.view matrix x) (L.view matrix y)
+                    , _rowNames    = (V.++) (L.view rowNames x) (L.view rowNames y)
                     , _colNames    = _colNames x
                     }
     | otherwise = mergeFeaturesSingleCells x y
@@ -131,7 +132,8 @@ instance Semigroup SingleCells where
 -- | Join two SingleCells with different features.
 mergeFeaturesSingleCells :: SingleCells -> SingleCells -> SingleCells
 mergeFeaturesSingleCells sc1 sc2 =
-  SingleCells { _matrix      = mappend (newMat id sc1) (newMat lookupRow sc2)
+  SingleCells { _matrix      = MatObsRow $ (newMat id sc1)
+                         S.^+^ (newMat (+ sc1NRows) sc2)
               , _rowNames    = (V.++) (L.view rowNames sc1) (L.view rowNames sc2)
               , _colNames    = V.fromList
                              . fmap fst
@@ -140,25 +142,17 @@ mergeFeaturesSingleCells sc1 sc2 =
                              $ newCols
               }
   where
-    newMat rowF sc = MatObsRow
-              . S.modifyKeysSM rowF (lookupCol (L.view colNames sc))
-              . S.SM (newNRows, Map.size newCols)
-              . S.immSM
-              $ getMatrix sc
+    newMat rowF sc = S.modifyKeysSM rowF (lookupCol (L.view colNames sc))
+                   . S.SM (newNRows, Map.size newCols)
+                   . S.immSM
+                   $ getMatrix sc
     newNRows = (V.length . L.view rowNames $ sc1)
              + (V.length . L.view rowNames $ sc2)
+    sc1NRows = S.nrows . getMatrix $ sc1
     lookupCol :: V.Vector Feature -> Int -> Int
     lookupCol olds x = fromMaybe (error $ "mergeFeaturesSingleCells: No new index when joining cols: " <> show x)
                      . (>>=) (olds V.!? x)
                      $ flip Map.lookup newCols
-    lookupRow :: Int -> Int
-    lookupRow x = fromMaybe (error $ "mergeFeaturesSingleCells: No new index when joining rows: " <> show x)
-                $ newRows V.!? x
-    newRows :: V.Vector Int
-    newRows = V.iterateN (S.nrows . getMatrix $ sc2) (+ 1)
-            . S.nrows
-            . getMatrix
-            $ sc1
     newCols :: Map.Map Feature Int
     newCols = Map.fromList
             . flip zip [0..]

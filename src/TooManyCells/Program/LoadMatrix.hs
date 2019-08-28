@@ -46,6 +46,7 @@ import TooManyCells.Program.Options
 import TooManyCells.Program.Utility
 import qualified Data.Sparse.Common as S
 import Control.Lens
+import Debug.Trace
 
 -- | Load the single cell matrix.
 loadSSM :: Options -> FilePath -> IO SingleCells
