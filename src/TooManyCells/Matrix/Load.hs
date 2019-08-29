@@ -270,16 +270,17 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
         , readDouble duplicateCount
         )
       parseLine xs = error $ "Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
+      stream = preprocessStream
+             . S.map (T.splitOn "\t" . T.decodeUtf8)
+             . S.mapped BS.toStrict
+             . BS.lines
+             . S.gunzip
+             . BS.readFile
+             $ mf
 
   (cellsList, featuresList) <- runResourceT
                              . labelsFold
-                             . preprocessStream
-                             . S.map (T.splitOn "\t" . T.decodeUtf8)
-                             . S.mapped BS.toStrict
-                             . BS.lines
-                             . S.gunzip
-                             . BS.readFile
-                             $ mf
+                             $ stream
 
   let cells = V.fromList cellsList
       features = V.fromList featuresList
@@ -298,13 +299,7 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
   mat <- runResourceT
        . matFold
        . S.map getIndices
-       . preprocessStream
-       . S.map (T.splitOn "\t" . T.decodeUtf8)
-       . S.mapped BS.toStrict
-       . BS.lines
-       . S.gunzip
-       . BS.readFile
-       $ mf
+       $ stream
 
   return $
       SingleCells { _matrix   = mat
