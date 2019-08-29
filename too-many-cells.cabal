@@ -82,6 +82,7 @@ library
                      , palette
                      , parallel
                      , plots
+                     , resourcet
                      , safe
                      , scientific
                      , sparse-linear-algebra

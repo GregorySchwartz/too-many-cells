@@ -27,6 +27,7 @@ import Control.DeepSeq (force)
 import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
 import Control.Monad.Managed (with, liftIO, Managed (..))
+import Control.Monad.Trans.Resource (runResourceT)
 import Data.Char (ord)
 import Data.Function (on)
 import Data.List (sortBy, sort, foldl')
@@ -251,74 +252,65 @@ loadFragments :: Maybe CellWhitelist
               -> Maybe BinWidth
               -> FragmentsFile
               -> IO SingleCells
-loadFragments whitelist binWidth (FragmentsFile mf) =
-  withSystemTempFile "temp_fragments.tsv" $ \tempFile h -> do
-    let csvOpts = S.defaultDecodeOptions
-                    { S.decDelimiter = fromIntegral (ord '\t') }
-        readDecimal = either error fst . T.decimal
-        readDouble = either error fst . T.double
-        labelsFold = Fold.purely S.fold_ ((,) <$> cellsFold <*> featuresFold)
-        cellsFold = Fold.premap (\(!c, _, _) -> c) hashNub
-        featuresFold = Fold.premap (\(_, !r, _) -> r) hashNub
-        preprocessStream = maybe id filterCells whitelist . S.map parseLine
-        filterCells (CellWhitelist wl) =
-          S.filter (\(!b, _, _) -> HSet.member b wl)
-        parseLine (chrom:start:end:barcode:duplicateCount:_) =
-          ( barcode
-          , maybe showt (\x -> showt . rangeToBin x) binWidth
-          $ Range Nothing chrom (readDecimal start) (readDecimal end)
-          , readDouble duplicateCount
-          )
-        parseLine xs = error $ "Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
+loadFragments whitelist binWidth (FragmentsFile mf) = do
+  let csvOpts = S.defaultDecodeOptions
+                  { S.decDelimiter = fromIntegral (ord '\t') }
+      readDecimal = either error fst . T.decimal
+      readDouble = either error fst . T.double
+      labelsFold = Fold.purely S.fold_ ((,) <$> cellsFold <*> featuresFold)
+      cellsFold = Fold.premap (\(!c, _, _) -> c) hashNub
+      featuresFold = Fold.premap (\(_, !r, _) -> r) hashNub
+      preprocessStream = maybe id filterCells whitelist . S.map parseLine
+      filterCells (CellWhitelist wl) =
+        S.filter (\(!b, _, _) -> HSet.member b wl)
+      parseLine (chrom:start:end:barcode:duplicateCount:_) =
+        ( barcode
+        , maybe showt (\x -> showt . rangeToBin x) binWidth
+        $ Range Nothing chrom (readDecimal start) (readDecimal end)
+        , readDouble duplicateCount
+        )
+      parseLine xs = error $ "Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
 
-    B.readFile mf >>= B.hPut h . decompress >> IO.hClose h
+  (cellsList, featuresList) <- runResourceT
+                             . labelsFold
+                             . preprocessStream
+                             . S.map (T.splitOn "\t" . T.decodeUtf8)
+                             . S.mapped BS.toStrict
+                             . BS.lines
+                             . S.gunzip
+                             . BS.readFile
+                             $ mf
 
-    res <- flip with return $ do
+  let cells = V.fromList cellsList
+      features = V.fromList featuresList
+      cellMap = HMap.fromList . flip zip ([0..] :: [Int]) $ cellsList
+      featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
+      findErr x = fromMaybe (error $ "(loadFragments) No indices found: " <> show x)
+                . HMap.lookup x
+      matFold = Fold.purely S.fold_
+              $ Fold.Fold addToMat init MatObsRow
+      addToMat !m val = m HS.^+^ HS.fromListSM (HS.dimSM init) [val]
+      init = HS.zeroSM (V.length cells) (V.length features)
+      getIndices (!c, !r, !v) =
+        (findErr c cellMap, findErr r featureMap, v)
 
-        contents <- S.withBinaryFileContents tempFile
+  -- Get map second.
+  mat <- runResourceT
+       . matFold
+       . S.map getIndices
+       . preprocessStream
+       . S.map (T.splitOn "\t" . T.decodeUtf8)
+       . S.mapped BS.toStrict
+       . BS.lines
+       . S.gunzip
+       . BS.readFile
+       $ mf
 
-        -- Get indices first. Streaming twice due to memory usage from the fold.
-        (cellsList, featuresList) <-
-            fmap (either (error . show) id)
-                . runExceptT
-                . labelsFold
-                . preprocessStream
-                . S.decodeWith csvOpts S.NoHeader
-                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
-
-        let cells = V.fromList cellsList
-            features = V.fromList featuresList
-            cellMap = HMap.fromList . flip zip ([0..] :: [Int]) $ cellsList
-            featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
-            findErr x = fromMaybe (error $ "(loadFragments) No indices found: " <> show x)
-                      . HMap.lookup x
-            matFold = Fold.purely S.fold_
-                    $ Fold.Fold addToMat init MatObsRow
-            addToMat !m val = m HS.^+^ HS.fromListSM (HS.dimSM init) [val]
-            init = HS.zeroSM (V.length cells) (V.length features)
-            getIndices (!c, !r, !v) =
-              (findErr c cellMap, findErr r featureMap, v)
-
-        contentsMat <- S.withBinaryFileContents tempFile
-
-        -- Get map second.
-        mat <-
-            fmap (either (error . show) id)
-                . runExceptT
-                . matFold
-                . S.map getIndices
-                . preprocessStream
-                . S.decodeWith csvOpts S.NoHeader
-                $ (contentsMat :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
-
-
-        return $
-            SingleCells { _matrix   = mat
-                        , _rowNames = fmap Cell cells
-                        , _colNames = fmap Feature features
-                        }
-
-    return res
+  return $
+      SingleCells { _matrix   = mat
+                  , _rowNames = fmap Cell cells
+                  , _colNames = fmap Feature features
+                  }
 
 -- | Load a projection file to get a vector of projections.
 loadProjectionFile :: ProjectionFile -> IO (Vector (X, Y))
