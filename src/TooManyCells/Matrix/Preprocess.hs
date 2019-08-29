@@ -393,10 +393,10 @@ shiftPositiveSc :: SingleCells -> SingleCells
 shiftPositiveSc = L.over matrix shiftPositiveMat
 
 -- | Optionally give the filepath as a label to the rows.
-labelRows :: Maybe CustomLabel -> SingleCells -> (SingleCells, Maybe LabelMap)
-labelRows Nothing sc = (sc, Nothing)
+labelRows :: Maybe CustomLabel -> SingleCells -> LabelMat
+labelRows Nothing sc = LabelMat (sc, Nothing)
 labelRows (Just (CustomLabel l)) sc =
-  (L.set rowNames newRowNames sc, Just labelMap)
+  LabelMat (L.set rowNames newRowNames sc, Just labelMap)
   where
     labelMap = LabelMap
              . Map.fromList

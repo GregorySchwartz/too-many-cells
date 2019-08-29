@@ -17,8 +17,9 @@ module TooManyCells.Program.LoadMatrix where
 
 -- Remote
 import BirchBeer.Types
-import Control.Concurrent.Async.Pool (withTaskGroup, mapTasks)
-import Control.Monad (when)
+import Control.Concurrent.Async.Pool (withTaskGroup, mapReduce, wait)
+import Control.Monad (when, join)
+import Control.Monad.STM (atomically)
 import Control.Monad.Trans (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
@@ -138,27 +139,27 @@ loadAllSSM opts = runMaybeT $ do
                        \ clustering (leading to svdlibc to hang or dense SVD\
                        \ to error out)! Continuing..."
 
+    let whiteListFilter Nothing = id
+        whiteListFilter (Just wl) = filterWhitelistSparseMat wl
+
+    cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
+
     cores <- MaybeT . fmap Just $ getNumCapabilities
-    mats <- MaybeT
+    (unFilteredSc, unFilteredLM) <- MaybeT
           $ if null matrixPaths'
               then return Nothing
               else
-                withTaskGroup cores $ \workers -> fmap Just
-                                                . mapTasks workers
-                                                . fmap (loadSSM opts)
-                                                $ matrixPaths'
-    cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
+                withTaskGroup cores $ \workers ->
+                  fmap (Just . unLabelMat)
+                    . join
+                    . atomically
+                    . fmap wait
+                    . mapReduce workers
+                    . zipWith (\l -> fmap (labelRows l)) customLabel'
+                    . fmap (loadSSM opts)
+                    $ matrixPaths'
 
-    let whiteListFilter Nothing = id
-        whiteListFilter (Just wl) = filterWhitelistSparseMat wl
-        (unFilteredSc, unFilteredLM) =
-          (\ xs -> ( mconcat $ fmap fst xs
-                   , fmap mconcat . sequence . fmap snd $ xs
-                   )
-          )
-            . zipWith labelRows customLabel'
-            $ mats
-        sc           =
+    let sc           =
             ( bool (filterNumSparseMat filterThresholds') id
             $ unNoFilterFlag noFilterFlag'
             )

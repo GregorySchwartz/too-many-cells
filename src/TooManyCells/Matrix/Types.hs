@@ -4,6 +4,7 @@ Gregory W. Schwartz
 Collects the types used in the program concerning the matrix.
 -}
 
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -100,6 +101,13 @@ newtype Row = Row
     } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
 newtype Rows            = Rows { unRows :: [Double] }
 newtype Vals            = Vals { unVals :: [Double] }
+
+newtype LabelMat = LabelMat { unLabelMat :: (SingleCells, Maybe LabelMap) }
+instance Semigroup LabelMat where
+  (<>) (LabelMat (!m1, !l1)) (LabelMat (!m2, !l2)) =
+    LabelMat (mappend m1 m2, mappend l1 l2)
+instance Monoid LabelMat where
+  mempty = LabelMat (mempty, mempty)
 
 newtype MatObsRow = MatObsRow
     { unMatObsRow :: S.SpMatrix Double

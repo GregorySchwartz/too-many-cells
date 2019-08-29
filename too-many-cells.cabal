@@ -88,6 +88,7 @@ library
                      , spectral-clustering >= 0.3.0.2
                      , split
                      , statistics
+                     , stm
                      , streaming
                      , streaming-bytestring
                      , streaming-cassava
