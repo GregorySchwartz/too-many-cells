@@ -93,6 +93,7 @@ library
                      , streaming
                      , streaming-bytestring
                      , streaming-cassava
+                     , streaming-commons
                      , streaming-utils
                      , streaming-with
                      , temporary

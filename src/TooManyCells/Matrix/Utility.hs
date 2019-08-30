@@ -24,12 +24,14 @@ module TooManyCells.Matrix.Utility
     , getMatrixOutputType
     , matrixValidity
     , hashNub
+    , decompressStreamAll
     ) where
 
 -- Remote
 import BirchBeer.Types
 import Control.Monad.Managed (runManaged)
 import Control.Monad.State (MonadState (..), State (..), evalState, execState, modify)
+import Control.Monad.IO.Class (MonadIO)
 import Data.Bool (bool)
 import Data.Char (toUpper)
 import Data.Function (on)
@@ -38,6 +40,7 @@ import Data.List (maximumBy)
 import Data.Maybe (fromMaybe)
 import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix)
 import Data.Scientific (toRealFloat, Scientific)
+import Data.Streaming.Zlib (WindowBits)
 import Language.R as R
 import Language.R.QQ (r)
 import System.FilePath ((</>))
@@ -64,6 +67,7 @@ import qualified Streaming as Stream
 import qualified Streaming.Cassava as Stream
 import qualified Streaming.Prelude as Stream
 import qualified Streaming.With.Lifted as SW
+import qualified Streaming.Zip as S
 import qualified System.Directory as FP
 
 -- Local
@@ -269,3 +273,11 @@ hashNub = Fold.Fold step (HSet.empty, id) fin
         else (HSet.insert a s, r . (a :))
     fin (_, !r) = r []
 {-# INLINABLE hashNub #-}
+
+-- | Keep decompressing a compressed bytestream until exhaused.
+decompressStreamAll :: (MonadIO m) => WindowBits -> BS.ByteString m r -> BS.ByteString m r
+decompressStreamAll w bs = S.decompress' w bs >>= go
+  where
+    go (Left bs) = S.decompress' w bs >>= go
+    go (Right r) = return r
+{-# INLINABLE decompressStreamAll #-}

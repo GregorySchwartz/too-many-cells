@@ -34,6 +34,7 @@ import Data.List (sortBy, sort, foldl')
 import Data.Matrix.MatrixMarket (readMatrix)
 import Data.Maybe (fromMaybe, maybe)
 import Data.Monoid ((<>))
+import Data.Streaming.Zlib (WindowBits (..))
 import Data.Vector (Vector)
 import Safe
 import System.IO.Temp (withSystemTempFile)
@@ -263,7 +264,7 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
       preprocessStream = maybe id filterCells whitelist . S.map parseLine
       filterCells (CellWhitelist wl) =
         S.filter (\(!b, _, _) -> HSet.member b wl)
-      parseLine (chrom:start:end:barcode:duplicateCount:_) =
+      parseLine all@(chrom:start:end:barcode:duplicateCount:_) =
         ( barcode
         , maybe showt (\x -> showt . rangeToBin x) binWidth
         $ Range Nothing chrom (readDecimal start) (readDecimal end)
@@ -274,7 +275,7 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
              . S.map (T.splitOn "\t" . T.decodeUtf8)
              . S.mapped BS.toStrict
              . BS.lines
-             . S.gunzip
+             . decompressStreamAll (WindowBits 31) -- For gunzip
              . BS.readFile
              $ mf
 
