@@ -113,6 +113,9 @@ data Options
             , bandwidth :: Maybe Double <?> "([1] | DOUBLE) Bandwidth of the density plot."
             , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the csv file if using a normal csv rather than cellranger output and for --labels-file."
             , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
+    | Peaks { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing feature row names and cell column names. scATAC-seq is supported if input file contains \"fragments\" and ends with \".tsv.gz\" (such as \"fragments.tsv.gz\" or \"sample1_fragments.tsv.gz\") and is in the 10x fragments format (see also --binwidth, --no-binarize). If given as a list (--matrix-path input1 --matrix-path input2 etc.) then will join all matrices together. Assumes the same number and order of features in each matrix, so only cells are added."
+            , prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
+            , output :: Maybe String <?> "([out] | STRING) The folder containing output." }
     deriving (Generic)
 
 modifiers :: Modifiers

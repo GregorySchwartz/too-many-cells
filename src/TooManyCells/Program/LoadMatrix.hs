@@ -23,7 +23,6 @@ import Control.Monad.STM (atomically)
 import Control.Monad.Trans (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
-import Data.List (isInfixOf)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import GHC.Conc (getNumCapabilities)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
@@ -55,18 +54,9 @@ loadSSM opts matrixPath' = do
   directoryExist <- FP.doesDirectoryExist matrixPath'
   compressedFileExist <- FP.doesFileExist $ matrixPath' FP.</> "matrix.mtx.gz"
 
-  let fragmentsFile = (\ (x, y) -> isInfixOf "fragments" x && y == ".tsv.gz")
-                    . FP.splitExtensions
-                    . FP.takeFileName
-                    $ matrixPath'
-      matrixFile'
-        | fileExist && not fragmentsFile = Left . DecompressedMatrix . MatrixFile $ matrixPath'
-        | fileExist && fragmentsFile = Left . CompressedFragments . FragmentsFile $ matrixPath'
-        | directoryExist && not compressedFileExist = Right . DecompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx"
-        | directoryExist && compressedFileExist = Right . CompressedMatrix . MatrixFile $ matrixPath' FP.</> "matrix.mtx.gz"
-        | directoryExist = error "Cannot determine matrix pointed to, are there too many matrices here?"
-        | otherwise = error "\nMatrix path does not exist."
-      featuresFile'  = FeatureFile
+  matrixFile' <- getMatrixFileType matrixPath'
+
+  let featuresFile'  = FeatureFile
                   $ matrixPath'
              FP.</> (bool "genes.tsv" "features.tsv.gz" compressedFileExist)
       cellsFile'  = CellFile

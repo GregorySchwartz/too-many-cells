@@ -37,6 +37,7 @@ library
                      , TooManyCells.Paths.Distance
                      , TooManyCells.Paths.Plot
                      , TooManyCells.Paths.Types
+                     , TooManyCells.Peaks.ClusterPeaks
                      , TooManyCells.Program.Options
                      , TooManyCells.Program.LoadMatrix
                      , TooManyCells.Program.MakeTree
@@ -44,6 +45,7 @@ library
                      , TooManyCells.Program.Differential
                      , TooManyCells.Program.Diversity
                      , TooManyCells.Program.Paths
+                     , TooManyCells.Program.Peaks
                      , TooManyCells.Program.Utility
   build-depends:       base >= 4.7 && < 5
                      , SVGFonts

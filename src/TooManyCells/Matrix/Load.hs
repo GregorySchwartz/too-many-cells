@@ -36,7 +36,7 @@ import Data.Maybe (fromMaybe, maybe)
 import Data.Monoid ((<>))
 import Data.Streaming.Zlib (WindowBits (..))
 import Data.Vector (Vector)
-import Safe
+import Safe (atMay, headMay)
 import System.IO.Temp (withSystemTempFile)
 import TextShow (showt)
 import qualified Control.Foldl as Fold
@@ -287,7 +287,7 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
       features = V.fromList featuresList
       cellMap = HMap.fromList . flip zip ([0..] :: [Int]) $ cellsList
       featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
-      findErr x = fromMaybe (error $ "(loadFragments) No indices found: " <> show x)
+      findErr x = fromMaybe (error $ "loadFragments: No indices found: " <> show x)
                 . HMap.lookup x
       matFold = Fold.purely S.fold_
               $ Fold.Fold addToMat init MatObsRow

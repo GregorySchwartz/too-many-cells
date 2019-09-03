@@ -41,12 +41,14 @@ import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
+import qualified Data.HashMap.Strict as HMap
 import qualified Data.HashSet as HSet
 import qualified Data.IntMap as IMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
 import qualified Numeric.LinearAlgebra as H
@@ -143,30 +145,25 @@ mergeFeaturesSingleCells sc1 sc2 =
   SingleCells { _matrix      = MatObsRow $ (newMat id sc1)
                          S.^+^ (newMat (+ sc1NRows) sc2)
               , _rowNames    = (V.++) (L.view rowNames sc1) (L.view rowNames sc2)
-              , _colNames    = V.fromList
-                             . fmap fst
-                             . sortBy (compare `on` snd)
-                             . Map.toList
-                             $ newCols
+              , _colNames    = V.fromList newCols
               }
   where
-    newMat rowF sc = S.modifyKeysSM rowF (lookupCol (L.view colNames sc))
-                   . S.SM (newNRows, Map.size newCols)
+    newMat rowF sc = S.modifyKeysSM
+                      rowF
+                      (lookupCol (fmap unFeature $ L.view colNames sc))
+                   . S.SM (newNRows, HMap.size newColMap)
                    . S.immSM
                    $ getMatrix sc
     newNRows = (V.length . L.view rowNames $ sc1)
              + (V.length . L.view rowNames $ sc2)
     sc1NRows = S.nrows . getMatrix $ sc1
-    lookupCol :: V.Vector Feature -> Int -> Int
+    lookupCol :: V.Vector T.Text -> Int -> Int
     lookupCol olds x = fromMaybe (error $ "mergeFeaturesSingleCells: No new index when joining cols: " <> show x)
                      . (>>=) (olds V.!? x)
-                     $ flip Map.lookup newCols
-    newCols :: Map.Map Feature Int
-    newCols = Map.fromList
-            . flip zip [0..]
-            . Set.toAscList
-            . Set.union (colToSet sc1)
-            $ colToSet sc2
+                     $ flip HMap.lookup newColMap
+    newColMap :: HMap.HashMap T.Text Int
+    newColMap = HMap.fromList . flip zip [0..] . fmap unFeature $ newCols
+    newCols = Set.toAscList . Set.union (colToSet sc1) $ colToSet sc2
     colToSet = Set.fromList . V.toList . L.view colNames
 
 instance Monoid SingleCells where
