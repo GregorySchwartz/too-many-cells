@@ -15,6 +15,7 @@ module TooManyCells.Matrix.Preprocess
     , logCPMSparseMat
     , uqScaleSparseMat
     , medScaleSparseMat
+    , centerScaleSparseCell
     , filterRMat
     , filterDenseMat
     , filterNumSparseMat
@@ -26,13 +27,15 @@ module TooManyCells.Matrix.Preprocess
     , pcaDenseSc
     , shiftPositiveSc
     , pcaDenseMat
+    , svdMat
     , shiftPositiveMat
     , emptyMatErr
     , labelRows
+    , labelCols
     ) where
 
 -- Remote
-import BirchBeer.Types (LabelMap (..), Id (..), Label (..))
+import BirchBeer.Types (LabelMap (..), Id (..), Label (..), Feature (..))
 import Data.Bool (bool)
 import Data.List (sort)
 import Data.Monoid ((<>))
@@ -40,7 +43,8 @@ import Data.Maybe (fromMaybe)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
-import Statistics.Quantile (continuousBy, s)
+import Statistics.Quantile (quantile, s)
+import Statistics.Sample (mean, stdDev)
 import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.HashSet as HSet
@@ -53,6 +57,7 @@ import qualified Data.Text.IO as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Algorithms.Radix as V
 import qualified Data.Vector.Storable as VS
+import qualified Math.Clustering.Spectral.Sparse as S
 import qualified Numeric.LinearAlgebra as H
 import qualified Numeric.LinearAlgebra.HMatrix as H
 
@@ -107,8 +112,7 @@ scaleSparseMat (MatObsRow mat) = MatObsRow
 uqScaleSparseMat :: MatObsRow -> MatObsRow
 uqScaleSparseMat (MatObsRow mat) = MatObsRow
                                  . S.sparsifySM
-                                 . S.transposeSM
-                                 . S.fromColsL
+                                 . S.fromRowsL
                                  . fmap uqScaleSparseCell
                                  . S.toRowsL
                                  $ mat
@@ -127,8 +131,7 @@ logCPMSparseMat (MatObsRow mat) = MatObsRow
 medScaleSparseMat :: MatObsRow -> MatObsRow
 medScaleSparseMat (MatObsRow mat) = MatObsRow
                                  . S.sparsifySM
-                                 . S.transposeSM
-                                 . S.fromColsL
+                                 . S.fromRowsL
                                  . fmap medScaleSparseCell
                                  . S.toRowsL
                                  $ mat
@@ -156,7 +159,7 @@ logCPMSparseCell xs = fmap (logBase 2 . (+ 1) . cpm) xs
 uqScaleSparseCell :: S.SpVector Double -> S.SpVector Double
 uqScaleSparseCell xs = fmap (/ uq) xs
   where
-    uq = continuousBy s 3 4
+    uq = quantile s 3 4
        . VS.fromList
        . filter (/= 0)
        . fmap snd
@@ -167,24 +170,33 @@ uqScaleSparseCell xs = fmap (/ uq) xs
 medScaleSparseCell :: S.SpVector Double -> S.SpVector Double
 medScaleSparseCell xs = fmap (/ med) xs
   where
-    med = continuousBy s 2 4
+    med = quantile s 2 4
         . VS.fromList
         . filter (/= 0)
         . fmap snd
         . S.toListSV
         $ xs
 
+-- | Center and scale a cell.
+centerScaleSparseCell :: S.SpVector Double -> S.SpVector Double
+centerScaleSparseCell xs = fmap standard xs
+  where
+    standard x = (x - mu) / sigma
+    mu = mean v
+    sigma = stdDev v
+    v = S.toVector xs
+
 -- | Median scale molecules across cells.
 scaleDenseMol :: H.Vector H.R -> H.Vector H.R
 scaleDenseMol xs = H.cmap (/ med) xs
   where
-    med = continuousBy s 2 4 . VS.filter (/= 0) $ xs
+    med = quantile s 2 4 . VS.filter (/= 0) $ xs
 
 -- | Median scale molecules across cells.
 scaleSparseMol :: S.SpVector Double -> S.SpVector Double
 scaleSparseMol xs = fmap (/ med) xs
   where
-    med = continuousBy s 2 4
+    med = quantile s 2 4
         . VS.fromList
         . filter (/= 0)
         . fmap snd
@@ -240,7 +252,6 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
     rowFilter = (>= rowThresh) . sum
     colFilter = (>= colThresh) . sum
     mat            = unMatObsRow . _matrix $ sc
-    mat'           = S.transposeSM mat
     validRows = ISet.fromList
               . emptyMatCheckErr "cells"
               . fmap fst
@@ -256,8 +267,7 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
               . S.toRowsL
               . S.transposeSM -- toRowsL is much faster.
               $ mat
-    rowFilteredMat = S.transposeSM
-                   . S.fromColsL -- fromRowsL still broken.
+    rowFilteredMat = S.fromRowsL -- fromRowsL fixed.
                    . fmap snd
                    . filter (flip ISet.member validRows . fst)
                    . zip [0..]
@@ -294,8 +304,7 @@ filterWhitelistSparseMat (CellWhitelist wl) sc =
                    . V.imap (\i v -> (i, v))
                    . _rowNames
                    $ sc
-    rowFilteredMat = S.transposeSM
-                   . S.fromColsL -- fromRowsL still broken.
+    rowFilteredMat = S.fromRowsL -- fromRowsL fixed.
                    . fmap (S.extractRow mat)
                    . emptyMatCheckErr "cells"
                    . V.toList
@@ -352,7 +361,7 @@ pcaRMat (RMatObsRow mat) = do
         [r| mat = prcomp(t(mat_hs), tol = 0.95)$x
         |]
 
--- | Conduct PCA on a matrix, taking the first principal components.
+-- | Conduct PCA on a matrix, retaining the specified number of dimensions.
 pcaDenseMat :: PCADim -> MatObsRow -> MatObsRow
 pcaDenseMat (PCADim pcaDim) (MatObsRow matObs) =
   MatObsRow
@@ -373,6 +382,17 @@ pcaDenseSc :: PCADim -> SingleCells -> SingleCells
 pcaDenseSc p@(PCADim n) =
   L.set colNames (V.fromList . fmap (\x -> Gene $ "PCA " <> showt x) $ [1..n])
     . L.over matrix (pcaDenseMat p)
+
+-- | Conduct SVD on a matrix, retaining the specified number of dimensions.
+svdMat :: SVDDim -> MatObsRow -> MatObsRow
+svdMat (SVDDim svdDim) =
+  MatObsRow
+    . S.fromRowsL
+    . S.secondLeft 1 svdDim
+    . S.fromRowsL
+    . fmap centerScaleSparseCell
+    . S.toRowsL
+    . unMatObsRow
 
 -- | Shift features to positive values.
 shiftPositiveMat :: MatObsRow -> MatObsRow
@@ -406,3 +426,19 @@ labelRows (Just (CustomLabel l)) sc =
              $ newRowNames
     newRowNames = fmap labelRow . L.view rowNames $ sc
     labelRow (Cell x) = Cell $ x <> "-" <> l
+
+-- | Optionally give the filepath as a label to the columns when transposing
+-- matrix.
+labelCols :: Maybe CustomLabel -> SingleCells -> LabelMat
+labelCols Nothing sc = LabelMat (sc, Nothing)
+labelCols (Just (CustomLabel l)) sc =
+  LabelMat (L.set colNames newColNames sc, Just labelMap)
+  where
+    labelMap = LabelMap
+             . Map.fromList
+             . flip zip (repeat (Label l))
+             . fmap (Id . unFeature)
+             . V.toList
+             $ newColNames
+    newColNames = fmap labelCol . L.view colNames $ sc
+    labelCol (Feature x) = Feature $ x <> "-" <> l

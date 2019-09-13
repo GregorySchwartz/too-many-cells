@@ -91,7 +91,7 @@ rangeToBinMat :: RangeBinMap -> MatObsRow -> MatObsRow
 rangeToBinMat (RangeBinMap bm) (MatObsRow mat) =
   MatObsRow . foldl' addToMat init . S.toListSM $ mat
   where
-    addToMat !m val = m S.^+^ S.fromListSM (S.dimSM init) [rangeToBinVal val]
+    addToMat !m val = m S.^+^ S.fromListSM (S.dimSM init) [rangeToBinVal val] -- Possible space leak with ^+^
     init = S.zeroSM (S.nrows mat) . Set.size . Set.fromList . IMap.elems $ bm
     rangeToBinVal all@(!i, !j, !v) = (i, unBinIdx $ rangeToBinCol all, v)
     rangeToBinCol all@(_, !j, _) = IMap.findWithDefault (error $ "Missing range index in rangeToBinMat for: " <> show all)

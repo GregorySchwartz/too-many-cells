@@ -38,6 +38,7 @@ library
                      , TooManyCells.Paths.Plot
                      , TooManyCells.Paths.Types
                      , TooManyCells.Peaks.ClusterPeaks
+                     , TooManyCells.Peaks.Types
                      , TooManyCells.Program.Options
                      , TooManyCells.Program.LoadMatrix
                      , TooManyCells.Program.MakeTree
@@ -84,6 +85,7 @@ library
                      , palette
                      , parallel
                      , plots
+                     , process
                      , resourcet
                      , safe
                      , scientific

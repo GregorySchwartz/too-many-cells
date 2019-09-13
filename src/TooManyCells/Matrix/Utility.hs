@@ -25,6 +25,7 @@ module TooManyCells.Matrix.Utility
     , matrixValidity
     , hashNub
     , decompressStreamAll
+    , transposeSC
     ) where
 
 -- Remote
@@ -281,3 +282,11 @@ decompressStreamAll w bs = S.decompress' w bs >>= go
     go (Left bs) = S.decompress' w bs >>= go
     go (Right r) = return r
 {-# INLINABLE decompressStreamAll #-}
+
+-- | Transpose a SingleCells type.
+transposeSC :: SingleCells -> SingleCells
+transposeSC (SingleCells (MatObsRow mat) rows cols) =
+  SingleCells
+    (MatObsRow . S.transposeSM $ mat)
+    (fmap (Cell . unFeature) cols)
+    (fmap (Feature . unCell) rows)

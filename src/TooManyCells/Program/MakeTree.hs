@@ -104,10 +104,6 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . matrixOutput
                           $ opts
-        matrixOutputTranspose' = fmap (getMatrixOutputType . (unOutputDirectory output' FP.</>))
-                               . unHelpful
-                               . matrixOutputTranspose
-                               $ opts
         drawLeaf'         =
             maybe
               (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
@@ -348,8 +344,6 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         $ gr'
     -- Write matrix
     mapM_ (\x -> writeMatrixLike (MatrixTranspose False) x . extractSc $ processedSc) matrixOutput'
-    -- Write matrix transpose
-    mapM_ (\x -> writeMatrixLike (MatrixTranspose True) x . extractSc $ processedSc) matrixOutputTranspose'
     -- Write node info
     B.writeFile
         (unOutputDirectory output' FP.</> "node_info.csv")

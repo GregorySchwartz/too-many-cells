@@ -19,7 +19,7 @@ module TooManyCells.Matrix.Types where
 
 -- Remote
 import BirchBeer.Types
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), force)
 import Control.Monad (join)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid (..), mempty)
@@ -37,8 +37,10 @@ import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
 import Math.Modularity.Types (Q (..))
 import TextShow (TextShow (..))
+import qualified Control.DeepSeq as DS
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
+import qualified Data.ByteString as B
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
 import qualified Data.HashMap.Strict as HMap
@@ -48,6 +50,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
+import qualified Data.Sparse.SpMatrix as S
 import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
@@ -65,13 +68,18 @@ newtype CustomLabel = CustomLabel { unCustomLabel :: Text}
                       deriving (Eq,Ord,Read,Show)
 newtype BinWidth = BinWidth { unBinWidth :: Int}
 newtype NoBinarizeFlag = NoBinarizeFlag { unNoBinarizeFlag :: Bool }
+newtype TransposeFlag = TransposeFlag { unTransposeFlag :: Bool }
 newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: HSet.HashSet Text
     } deriving (Eq,Ord,Show)
+newtype ExcludeFragments = ExcludeFragments { unExcludeFragments :: B.ByteString }
 newtype PCADim = PCADim
     { unPCADim :: Int
+    } deriving (Eq,Ord,Read,Show)
+newtype SVDDim = SVDDim
+    { unSVDDim :: Int
     } deriving (Eq,Ord,Read,Show)
 newtype NoFilterFlag = NoFilterFlag
     { unNoFilterFlag :: Bool
@@ -142,7 +150,9 @@ instance Semigroup SingleCells where
 -- | Join two SingleCells with different features.
 mergeFeaturesSingleCells :: SingleCells -> SingleCells -> SingleCells
 mergeFeaturesSingleCells sc1 sc2 =
-  SingleCells { _matrix      = MatObsRow $ (newMat id sc1)
+  SingleCells { _matrix      = MatObsRow
+                             . force
+                             $ (newMat id sc1)
                          S.^+^ (newMat (+ sc1NRows) sc2)
               , _rowNames    = (V.++) (L.view rowNames sc1) (L.view rowNames sc2)
               , _colNames    = V.fromList newCols
@@ -223,3 +233,9 @@ newtype BinIdxMap = BinIdxMap
 
 instance Generic Feature
 instance NFData Feature where rnf x = seq x ()
+
+instance Generic Double
+
+instance Generic a => Generic (S.SpMatrix a)
+instance (Generic a, NFData a) => NFData (S.SpMatrix a) where
+  rnf all@(S.SM (!x, !y) !m) = seq all ()

@@ -29,6 +29,7 @@ import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGr
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import qualified Control.Lens as L
+import qualified Data.ByteString.Char8 as B
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Vector as V
@@ -70,6 +71,10 @@ loadSSM opts matrixPath' = do
       cellWhitelistFile' =
             fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
       binWidth' = fmap BinWidth . unHelpful . binwidth $ opts
+      excludeFragments' = fmap (ExcludeFragments . B.pack)
+                        . unHelpful
+                        . excludeMatchFragments
+                        $ opts
       unFilteredSc   =
           case matrixFile' of
               (Left (DecompressedMatrix file))  ->
@@ -87,7 +92,7 @@ loadSSM opts matrixPath' = do
                                    \ --cell-whitelist-file. Continuing..."
                 cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
                 fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
-                  . loadFragments cellWhitelist binWidth'
+                  . loadFragments cellWhitelist excludeFragments' binWidth'
                     $ file
               (Right (DecompressedMatrix file)) ->
                 loadCellrangerData featureColumn' featuresFile' cellsFile' file
@@ -104,7 +109,9 @@ loadAllSSM opts = runMaybeT $ do
             fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
         normalization'     = getNormalization opts
         pca'               = fmap PCADim . unHelpful . pca $ opts
+        svd'               = fmap SVDDim . unHelpful . svd $ opts
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
+        transpose' = TransposeFlag . unHelpful . matrixTranspose $ opts
         shiftPositiveFlag' =
           ShiftPositiveFlag . unHelpful . shiftPositive $ opts
         customLabel' = (\ xs -> bool
@@ -122,14 +129,16 @@ loadAllSSM opts = runMaybeT $ do
                            . filterThresholds
                            $ opts
 
-    liftIO $ when (isJust pca' && (elem normalization' [TfIdfNorm, BothNorm])) $
-      hPutStrLn stderr "\nWarning: PCA (creating negative numbers) with tf-idf\
+    liftIO $ when ((isJust pca' || isJust svd') && (elem normalization' [TfIdfNorm, BothNorm])) $
+      hPutStrLn stderr "\nWarning: PCA or SVD (creating negative numbers) with tf-idf\
                        \ normalization may lead to NaNs or 0s before spectral\
                        \ clustering (leading to svdlibc to hang or dense SVD\
                        \ to error out)! Continuing..."
 
     let whiteListFilter Nothing = id
         whiteListFilter (Just wl) = filterWhitelistSparseMat wl
+        labelAxis (TransposeFlag False) = labelRows
+        labelAxis (TransposeFlag True) = labelCols
 
     cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
 
@@ -139,12 +148,15 @@ loadAllSSM opts = runMaybeT $ do
               then return Nothing
               else
                 withTaskGroup cores $ \workers ->
-                  fmap (Just . unLabelMat)
+                  fmap ( Just
+                       . (L.over L._1 (\x -> bool x (transposeSC x) . unTransposeFlag $ transpose'))  -- Whether to transpose the matrix.
+                       . unLabelMat
+                       )
                     . join
                     . atomically
                     . fmap wait
                     . mapReduce workers
-                    . zipWith (\l -> fmap (labelRows l)) customLabel'
+                    . zipWith (\l -> fmap (labelAxis transpose' l)) customLabel'  -- Depending on which axis to label from transpose.
                     . fmap (loadSSM opts)
                     $ matrixPaths'
 
@@ -164,6 +176,7 @@ loadAllSSM opts = runMaybeT $ do
                       $ unShiftPositiveFlag shiftPositiveFlag'
                       )
                     . (\m -> maybe m (flip pcaDenseMat m) pca')
+                    . (\m -> maybe m (flip svdMat m) svd')
                     . normMat normalization'
                     . _matrix
         processedSc = sc { _matrix = processMat sc }

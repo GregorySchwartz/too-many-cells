@@ -23,11 +23,11 @@ module TooManyCells.Matrix.Load
 -- Remote
 import BirchBeer.Types
 import Codec.Compression.GZip (decompress)
-import Control.DeepSeq (force)
+import Control.DeepSeq (force, deepseq)
 import Control.Exception (evaluate)
 import Control.Monad.Except (runExceptT, ExceptT (..))
 import Control.Monad.Managed (with, liftIO, Managed (..))
-import Control.Monad.Trans.Resource (runResourceT)
+import Control.Monad.Trans.Resource (runResourceT, MonadResource)
 import Data.Char (ord)
 import Data.Function (on)
 import Data.List (sortBy, sort, foldl')
@@ -41,12 +41,14 @@ import System.IO.Temp (withSystemTempFile)
 import TextShow (showt)
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
-import qualified Data.ByteString.Lazy.Char8 as B
+import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HMap
 import qualified Data.HashSet as HSet
+import qualified Data.IntMap.Strict as IMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as HS
@@ -92,14 +94,14 @@ loadCellrangerData fc gf cf (MatrixFile mf) = do
                                        :: Either String (Vector [T.Text])
                                         )
               )
-       . B.readFile
+       . BL.readFile
        . unFeatureFile
        $ gf
     c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader x
                                        :: Either String (Vector [T.Text])
                                         )
               )
-       . B.readFile
+       . BL.readFile
        . unCellFile
        $ cf
 
@@ -120,7 +122,7 @@ loadCellrangerDataFeatures _ _ _ (MatrixFolder mf) = error "Expected matrix.mtx.
 loadCellrangerDataFeatures fc gf cf (MatrixFile mf) = withSystemTempFile "temp_mat.mtx" $ \tempMatFile h -> do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
-    B.readFile mf >>= B.hPut h . decompress >> IO.hClose h
+    BL.readFile mf >>= BL.hPut h . decompress >> IO.hClose h
 
     m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
        . readMatrix
@@ -129,14 +131,14 @@ loadCellrangerDataFeatures fc gf cf (MatrixFile mf) = withSystemTempFile "temp_m
                                        :: Either String (Vector [T.Text])
                                         )
               )
-       . B.readFile
+       . BL.readFile
        . unFeatureFile
        $ gf
     c <- fmap (\ x -> either error (fmap (Cell . head)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
                                        :: Either String (Vector [T.Text])
                                         )
               )
-       . B.readFile
+       . BL.readFile
        . unCellFile
        $ cf
 
@@ -159,7 +161,7 @@ loadHMatrixData (Delimiter delim) (MatrixFile mf) = do
                                        :: Either String (Vector (Vector T.Text))
                                         )
                 )
-         . B.readFile
+         . BL.readFile
          $ mf
 
     let c = fmap Cell . V.drop 1 . V.head $ all
@@ -188,7 +190,7 @@ loadSparseMatrixData _ (MatrixFolder mf) = error $ mf <> " must be a csv for den
 loadSparseMatrixData (Delimiter delim) (MatrixFile mf) = do
     let csvOpts = CSV.defaultDecodeOptions
                     { CSV.decDelimiter = fromIntegral (ord delim) }
-        strictRead path = (evaluate . force) =<< B.readFile path
+        strictRead path = (evaluate . force) =<< BL.readFile path
 
     all <- fmap (\x -> either error id $ (CSV.decodeWith csvOpts CSV.NoHeader x :: Either String (V.Vector [T.Text])))
          . strictRead
@@ -250,10 +252,11 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
 
 -- | Load a range feature list streaming in TSV 10x fragments.tsv.gz format.
 loadFragments :: Maybe CellWhitelist
+              -> Maybe ExcludeFragments
               -> Maybe BinWidth
               -> FragmentsFile
               -> IO SingleCells
-loadFragments whitelist binWidth (FragmentsFile mf) = do
+loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
   let csvOpts = S.defaultDecodeOptions
                   { S.decDelimiter = fromIntegral (ord '\t') }
       readDecimal = either error fst . T.decimal
@@ -264,7 +267,8 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
       preprocessStream = maybe id filterCells whitelist . S.map parseLine
       filterCells (CellWhitelist wl) =
         S.filter (\(!b, _, _) -> HSet.member b wl)
-      parseLine all@(chrom:start:end:barcode:duplicateCount:_) =
+      filterFragments (ExcludeFragments ef) = S.filter (B.isInfixOf ef)
+      parseLine all@(chrom:start:end:barcode:duplicateCount:_) = force $
         ( barcode
         , maybe showt (\x -> showt . rangeToBin x) binWidth
         $ Range Nothing chrom (readDecimal start) (readDecimal end)
@@ -273,6 +277,7 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
       parseLine xs = error $ "Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
       stream = preprocessStream
              . S.map (T.splitOn "\t" . T.decodeUtf8)
+             . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments
              . S.mapped BS.toStrict
              . BS.lines
              . decompressStreamAll (WindowBits 31) -- For gunzip
@@ -289,10 +294,22 @@ loadFragments whitelist binWidth (FragmentsFile mf) = do
       featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
       findErr x = fromMaybe (error $ "loadFragments: No indices found: " <> show x)
                 . HMap.lookup x
-      matFold = Fold.purely S.fold_
-              $ Fold.Fold addToMat init MatObsRow
-      addToMat !m val = m HS.^+^ HS.fromListSM (HS.dimSM init) [val]
+      matFold = S.fold_ addToMat init MatObsRow
+      addToMat m (!i, !j, !x) = HS.insertSpMatrix i j x m
       init = HS.zeroSM (V.length cells) (V.length features)
+      matFold' :: (MonadResource m) => S.Stream (S.Of (Int, Int, Double)) m r
+               -> m MatObsRow
+      matFold' = S.fold_
+                  addToMat'
+                  init'
+                  ( MatObsRow
+                  . HS.unsafeFromImmSM (V.length cells, V.length features)
+                  )
+      addToMat' :: IMap.IntMap (IMap.IntMap Double)
+                -> (Int, Int, Double)
+                -> IMap.IntMap (IMap.IntMap Double)
+      addToMat' m (!i, !j, !v) = IMap.insertWith (IMap.unionWith (+)) i (IMap.singleton j v) m
+      init' = mempty
       getIndices (!c, !r, !v) =
         (findErr c cellMap, findErr r featureMap, v)
 
@@ -316,7 +333,7 @@ loadProjectionFile =
                                 (fmap getProjection . V.drop 1)
                                 (CSV.decode CSV.NoHeader x :: Either String (Vector [T.Text]))
          )
-        . B.readFile
+        . BL.readFile
         . unProjectionFile
   where
     getProjection [_, x, y] = ( X . either error fst . T.double $ x
@@ -336,7 +353,7 @@ loadProjectionMap =
                   (fmap getProjection . V.drop 1)
                $ (CSV.decode CSV.NoHeader x :: Either String (Vector [T.Text]))
          )
-        . B.readFile
+        . BL.readFile
         . unProjectionFile
   where
     getProjection [b, x, y] = ( Cell b
