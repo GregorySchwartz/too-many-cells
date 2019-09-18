@@ -100,11 +100,13 @@ library
                      , streaming-commons
                      , streaming-utils
                      , streaming-with
+                     , system-filepath
                      , temporary
                      , terminal-progress-bar
                      , text
                      , text-show
                      , transformers
+                     , turtle
                      , unordered-containers
                      , vector
                      , vector-algorithms

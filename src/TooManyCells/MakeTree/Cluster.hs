@@ -37,7 +37,7 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (hierarchicalSpectralCluster, B (..))
 import Math.Clustering.Hierarchical.Spectral.Types (clusteringTreeToDendrogram, getClusterItemsDend, EigenGroup (..))
 import Math.Diversity.Diversity (diversity)
-import Statistics.Quantile (continuousBy, s)
+import Statistics.Quantile (quantile, s)
 import System.IO (hPutStrLn, stderr)
 import Safe (headMay)
 import TextShow (showt)
@@ -113,7 +113,7 @@ assignClusters =
 
 -- | Find cut value.
 findCut :: HC.Dendrogram a -> HC.Distance
-findCut = continuousBy s 9 10 . VU.fromList . F.toList . flattenDist
+findCut = quantile s 9 10 . VU.fromList . F.toList . flattenDist
   where
     flattenDist (HC.Leaf _)          = Seq.empty
     flattenDist (HC.Branch !d !l !r) =

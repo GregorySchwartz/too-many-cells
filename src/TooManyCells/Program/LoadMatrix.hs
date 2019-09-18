@@ -48,7 +48,7 @@ import TooManyCells.Program.Utility
 import qualified Data.Sparse.Common as S
 import Control.Lens
 
--- | Load the single cell matrix.
+-- | Load the single cell matrix, post-whitelist-filtered cells.
 loadSSM :: Options -> FilePath -> IO SingleCells
 loadSSM opts matrixPath' = do
   fileExist      <- FP.doesFileExist matrixPath'
@@ -68,45 +68,49 @@ loadSSM opts matrixPath' = do
       featureColumn'  =
           FeatureColumn . fromMaybe 1 . unHelpful . featureColumn $ opts
       noBinarizeFlag' = NoBinarizeFlag . unHelpful . noBinarize $ opts
-      cellWhitelistFile' =
-            fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
       binWidth' = fmap BinWidth . unHelpful . binwidth $ opts
       excludeFragments' = fmap (ExcludeFragments . B.pack)
                         . unHelpful
                         . excludeMatchFragments
                         $ opts
-      unFilteredSc   =
-          case matrixFile' of
-              (Left (DecompressedMatrix file))  ->
-                loadSparseMatrixDataStream delimiter' file
-              (Left (CompressedFragments file))  -> do
-                liftIO $ when (isNothing binWidth') $
-                  hPutStrLn stderr "\nWarning: No binwidth specified for fragments file\
-                                   \ input. This will make the feature list extremely large\
-                                   \ and may result in many outliers. Please see --binwidth.\
-                                   \ Continuing..."
-                liftIO $ when (isNothing cellWhitelistFile') $
-                  hPutStrLn stderr "\nWarning: No cell whitelist specified for fragments file\
-                                   \ input. This will use all barcodes in the file. Most times\
-                                   \ this file contains barcodes that are not cells. Please see\
-                                   \ --cell-whitelist-file. Continuing..."
-                cellWhitelist <- sequence $ fmap getCellWhitelist cellWhitelistFile'
-                fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
-                  . loadFragments cellWhitelist excludeFragments' binWidth'
-                    $ file
-              (Right (DecompressedMatrix file)) ->
-                loadCellrangerData featureColumn' featuresFile' cellsFile' file
-              (Right (CompressedMatrix file))   ->
-                loadCellrangerDataFeatures featureColumn' featuresFile' cellsFile' file
-              _ -> error "Does not supported this matrix type. See too-many-cells -h for each entry point for more information"
-  unFilteredSc
+      cellWhitelistFile' =
+            fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
+
+  cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
+
+  let unFilteredSc   =
+        case matrixFile' of
+            (Left (DecompressedMatrix file))  ->
+              loadSparseMatrixDataStream delimiter' file
+            (Left (CompressedFragments file))  -> do
+              liftIO $ when (isNothing binWidth') $
+                hPutStrLn stderr "\nWarning: No binwidth specified for fragments file\
+                                  \ input. This will make the feature list extremely large\
+                                  \ and may result in many outliers. Please see --binwidth.\
+                                  \ Continuing..."
+              liftIO $ when (isNothing cellWhitelist) $
+                hPutStrLn stderr "\nWarning: No cell whitelist specified for fragments file\
+                                  \ input. This will use all barcodes in the file. Most times\
+                                  \ this file contains barcodes that are not cells. Please see\
+                                  \ --cell-whitelist-file. Continuing..."
+              fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
+                . loadFragments cellWhitelist excludeFragments' binWidth'
+                  $ file
+            (Right (DecompressedMatrix file)) ->
+              loadCellrangerData featureColumn' featuresFile' cellsFile' file
+            (Right (CompressedMatrix file))   ->
+              loadCellrangerDataFeatures featureColumn' featuresFile' cellsFile' file
+            _ -> error "Does not supported this matrix type. See too-many-cells -h for each entry point for more information"
+
+  let whiteListFilter Nothing = id
+      whiteListFilter (Just wl) = filterWhitelistSparseMat wl
+
+  fmap (whiteListFilter cellWhitelist) unFilteredSc
 
 -- | Load all single cell matrices.
 loadAllSSM :: Options -> IO (Maybe (SingleCells, Maybe LabelMap))
 loadAllSSM opts = runMaybeT $ do
     let matrixPaths'       = unHelpful . matrixPath $ opts
-        cellWhitelistFile' =
-            fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
         normalization'     = getNormalization opts
         pca'               = fmap PCADim . unHelpful . pca $ opts
         svd'               = fmap SVDDim . unHelpful . svd $ opts
@@ -135,15 +139,11 @@ loadAllSSM opts = runMaybeT $ do
                        \ clustering (leading to svdlibc to hang or dense SVD\
                        \ to error out)! Continuing..."
 
-    let whiteListFilter Nothing = id
-        whiteListFilter (Just wl) = filterWhitelistSparseMat wl
-        labelAxis (TransposeFlag False) = labelRows
+    let labelAxis (TransposeFlag False) = labelRows
         labelAxis (TransposeFlag True) = labelCols
 
-    cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
-
     cores <- MaybeT . fmap Just $ getNumCapabilities
-    (unFilteredSc, unFilteredLM) <- MaybeT
+    (whitelistSc, whitelistLM) <- MaybeT
           $ if null matrixPaths'
               then return Nothing
               else
@@ -161,11 +161,10 @@ loadAllSSM opts = runMaybeT $ do
                     $ matrixPaths'
 
     let sc           =
-            ( bool (filterNumSparseMat filterThresholds') id
-            $ unNoFilterFlag noFilterFlag'
-            )
-                . whiteListFilter cellWhitelist
-                $ unFilteredSc
+          ( bool (filterNumSparseMat filterThresholds') id
+          $ unNoFilterFlag noFilterFlag'
+          )
+            $ whitelistSc
         normMat TfIdfNorm    = id -- Normalize during clustering.
         normMat UQNorm       = uqScaleSparseMat
         normMat MedNorm      = medScaleSparseMat
@@ -185,7 +184,7 @@ loadAllSSM opts = runMaybeT $ do
                                     . Map.filterWithKey (\k _ -> Set.member k valid)
                                     . unLabelMap
                                     )
-                                    $ unFilteredLM
+                                    $ whitelistLM
                    )
                  . Set.fromList
                  . fmap (Id . unCell)

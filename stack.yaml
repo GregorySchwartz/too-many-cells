@@ -117,11 +117,17 @@ extra-deps:
   - pango-0.13.6.0@sha256:ed8d300945bea97ccb652efc73d159634aefebff8c64f60eef6b6ac5ecebc4ae
   - pipes-text-0.0.2.5@sha256:16cfd1927817a1c757b15c37ad95c67e819c28b1c4a6ce9757ab15276ec36ac7
   - plots-0.1.1.2@sha256:01f2ba7ca0c1e00b5231a81b44a3b8b9fd21b49bc333ff4cef880e31c5332935
-  # - spectral-clustering-0.3.1.3
   - streaming-utils-0.2.0.0@sha256:a2bd9144b336393122ffed2d3a1c747c186b8fdb9734c54d8b5874ed6166a85b
   - streaming-with-0.2.2.1@sha256:f5f354c9d1ed9358bf91792a2804c897544b170b2891b6c0ee61120605f0327c
   - terminal-progress-bar-0.2
   - typed-spreadsheet-1.1.4@sha256:98e05083609a206f33f44bdd9bab26fe1d5e5619f17b8ec8da251f0d0b64e992
+  - ForestStructures-0.0.0.2@sha256:7d839c625c2390c1a95ae578dd422b1da05ccf2830c4f43d5b8df75681dc26fd
+  - gio-0.13.6.0@sha256:00fce1b49c902ba82433cc018fb5d4651797464342a9cbc66df2c62bb8884650
+  - glib-0.13.7.0@sha256:25f62eb48d104342537dd1c724f07355d56226ca595ce6f1848415fbb7f59fa7
+  - gtk2hs-buildtools-0.13.5.0@sha256:a765766c4208a3e4def319ebf280fbb9e7d0a3f28d15922db36970404fb1daee
+  - pipes-text-0.0.2.5@sha256:16cfd1927817a1c757b15c37ad95c67e819c28b1c4a6ce9757ab15276ec36ac7
+  - git: https://github.com/Gabriel439/Haskell-Turtle-Library.git
+    commit: 014e1909c2874234545c8d4db18baf10ccca382e
 
 # Override default flag values for local packages and extra-deps
 flags: {}

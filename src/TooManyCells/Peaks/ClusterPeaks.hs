@@ -15,7 +15,7 @@ module TooManyCells.Peaks.ClusterPeaks
     ) where
 
 -- Remote
-import BirchBeer.Types (Cluster (..))
+import BirchBeer.Types (Cluster (..), Label, LabelMap)
 import Codec.Compression.GZip (compress, decompress)
 import Control.Concurrent.Async.Pool (withTaskGroup, mapTasks)
 import Control.Monad (unless, when, void)
@@ -26,27 +26,32 @@ import Data.List (intercalate)
 import Data.List.Split (splitOn)
 import Data.Maybe (mapMaybe, fromMaybe)
 import Data.Streaming.Zlib (WindowBits (..))
+import Data.Tuple (swap)
 import GHC.Conc (getNumCapabilities)
 import Safe (headMay, atMay)
 import System.IO.Temp (withSystemTempFile)
 import System.Process (callCommand)
-import Text.Printf (printf)
 import Text.Read (readMaybe)
 import TextShow (showt)
-import Data.Tuple (swap)
+import Turtle
+import Turtle.Line
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.HashMap.Strict as HMap
 import qualified Data.IntMap.Strict as IMap
 import qualified Data.IntSet as ISet
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import qualified Text.Printf as TP
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import qualified System.Directory as FP
-import qualified System.FilePath as FP
 import qualified Streaming as S
 import qualified Streaming.Prelude as S
+import qualified System.Directory as FP
+import qualified System.FilePath as FP
 import qualified System.IO as IO
+import qualified Turtle.Bytes as TB
 
 -- Local
 import TooManyCells.File.Types
@@ -72,8 +77,8 @@ getClusterTotalMap cellClusterMap =
 toGenomecov :: GenomecovCommand
             -> GenomeFile
             -> IMap.IntMap Double
-            -> FilePath
-            -> FilePath
+            -> IO.FilePath
+            -> IO.FilePath
             -> IO (Maybe ())
 toGenomecov (GenomecovCommand gcc) (GenomeFile gf) clusterTotalMap outputPath file = runMaybeT $ do
   output <- MaybeT
@@ -99,15 +104,15 @@ toGenomecov (GenomecovCommand gcc) (GenomeFile gf) clusterTotalMap outputPath fi
   scale <-
     MaybeT . return . fmap (1000000 /) $ IMap.lookup cluster clusterTotalMap
 
-  _ <- MaybeT . fmap Just . callCommand $ printf gcc file gf scale output
-  _ <- MaybeT . fmap Just . callCommand $ printf  "sort -k1,1 -k2,2n -o %s %s" output output
-  _ <- MaybeT . fmap Just . callCommand $ printf "bedGraphToBigWig %s %s %s" output gf wigOut
+  _ <- MaybeT . fmap Just . callCommand $ TP.printf gcc file gf scale output
+  _ <- MaybeT . fmap Just . callCommand $ TP.printf  "sort -k1,1 -k2,2n -o %s %s" output output
+  _ <- MaybeT . fmap Just . callCommand $ TP.printf "bedGraphToBigWig %s %s %s" output gf wigOut
   return ()
 
 -- | Write the line of the Fragment or BedGraph file, depending on
 -- normalization.
 writeLine :: (MonadResource m) => HMap.HashMap T.Text [Int]
-                               -> FilePath
+                               -> IO.FilePath
                                -> [T.Text]
                                -> m (Maybe ())
 writeLine cellClusterMap outputPath all@(chrom:start:end:barcode:duplicateCount:_) = S.liftIO . runMaybeT $ do
@@ -224,7 +229,7 @@ saveClusterFragments _ _ _ _ _ _ _ _ = error "Does not supported this matrix typ
 -- | Run the specified command on a file. Command should have \"%s\" where the
 -- output file and then input file (order is important) should be.
 -- For instance: `command --output %s --other --args --input %s`.
-peakCallFile :: PeakCommand -> GenomeFile -> FilePath -> FilePath -> IO ()
+peakCallFile :: PeakCommand -> GenomeFile -> IO.FilePath -> IO.FilePath -> IO ()
 peakCallFile (PeakCommand c) (GenomeFile gf) outputDir file =
   withSystemTempFile "temp_fragments.tsv" $ \temp h -> do
     let output = (FP.</>) outputDir
@@ -242,9 +247,9 @@ peakCallFile (PeakCommand c) (GenomeFile gf) outputDir file =
              . FP.takeFileName
              $ file
     B.readFile file >>= B.hPut h . decompress >> IO.hClose h  -- Decompress file in temporary directory
-    _ <- callCommand $ printf c temp name output
-    _ <- callCommand $ printf "sort -k1,1 -k2,2n -o %s %s" wigIn wigIn
-    -- _ <- callCommand $ printf "bedGraphToBigWig %s %s %s" wigIn gf wigOut
+    _ <- callCommand $ TP.printf c temp name output
+    _ <- callCommand $ TP.printf "sort -k1,1 -k2,2n -o %s %s" wigIn wigIn
+    -- _ <- callCommand $ TP.printf "bedGraphToBigWig %s %s %s" wigIn gf wigOut
     return ()
 
 -- | Run a specified command on all cluster files asynchronously.
@@ -262,9 +267,33 @@ peakCallFiles pc gf (OutputDirectory path) = do
     void . mapTasks workers . fmap (peakCallFile pc gf output) $ files -- mapTasks_ not working
 
 -- | Delete a directory if it exists.
-restartDir :: FilePath -> IO ()
+restartDir :: IO.FilePath -> IO ()
 restartDir dir = do
   dirExists <- FP.doesDirectoryExist dir
   when dirExists $ FP.removeDirectoryRecursive dir
   FP.createDirectoryIfMissing True dir
   return ()
+
+-- -- | Filter a BED file by labels.
+-- labelFilterBed :: LabelMap
+--                -> Set.Set Label
+--                -> Either MatrixFileType MatrixFileType
+--                -> FP.FilePath
+--                -> IO FP.FilePath
+-- labelFilterBed lm labels (Left (CompressedFragments (FragmentsFile file))) inFile = sh $ do
+--   let validCells = Set.fromList
+--                  . fmap fst
+--                  . filter (flip Set.member labels . snd)
+--                  . Map.toAscList
+--                  . unLabelMap
+--                  $ lm
+
+--   out <- mktempfile ".temp" "temp.bed"
+
+--   output out
+--     . inproc "bedtools" ["intersect", "-a", "stdin", "-b", inFile]
+--     . mfilter (maybe False (flip Set.member validCells) . atMay 3 . T.splitOn "\t")
+--     . toLines
+--     . TB.decompress (WindowBits 31)
+--     . TB.input
+--     $ file

@@ -20,7 +20,7 @@ import BirchBeer.ColorMap
 import BirchBeer.Load
 import BirchBeer.MainDiagram
 import BirchBeer.Types
-import Control.Monad (join)
+import Control.Monad (join, when)
 import Control.Monad.Trans (liftIO)
 import Data.Bool (bool)
 import Data.Colour.SRGB (sRGB24read)
@@ -104,6 +104,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           . unHelpful
                           . matrixOutput
                           $ opts
+        labelMapOutputFlag' =
+            LabelMapOutputFlag . unHelpful . labelsOutput $ opts
+        fragmentsOutputFlag' =
+            FragmentsOutputFlag . unHelpful . fragmentsOutput $ opts
         drawLeaf'         =
             maybe
               (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
@@ -344,6 +348,22 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         $ gr'
     -- Write matrix
     mapM_ (\x -> writeMatrixLike (MatrixTranspose False) x . extractSc $ processedSc) matrixOutput'
+    -- Write label map
+    mapM_
+      ( bool
+          (const (return ()))
+          ( B.writeFile (unOutputDirectory output' FP.</> "labels.csv")
+          . printLabelMap
+          )
+      . unLabelMapOutputFlag
+      $ labelMapOutputFlag'
+      )
+      labelMap
+    -- Write fragments.tsv.gz
+    when (unFragmentsOutputFlag fragmentsOutputFlag')
+      $ mapM_
+          (\x -> saveFragments output' x =<< mapM getMatrixFileType matrixPaths')
+          processedSc
     -- Write node info
     B.writeFile
         (unOutputDirectory output' FP.</> "node_info.csv")

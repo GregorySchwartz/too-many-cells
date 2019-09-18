@@ -12,6 +12,8 @@ module TooManyCells.MakeTree.Print
     ( printClusterDiversity
     , printClusterInfo
     , printNodeInfo
+    , printLabelMap
+    , saveFragments
     ) where
 
 -- Remote
@@ -19,24 +21,33 @@ import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents)
 import Control.Monad (join)
 import Data.List (genericLength, intercalate)
-import Data.Maybe (fromMaybe, mapMaybe, catMaybes)
+import Data.Maybe (fromMaybe, mapMaybe, catMaybes, isJust)
 import Data.Monoid ((<>))
+import Data.Streaming.Zlib (WindowBits (..))
 import Safe (headMay)
 import TextShow (showt)
+import Turtle hiding (Size)
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.Graph.Inductive as G
+import qualified Data.HashMap.Strict as HMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
+import qualified Data.Vector as V
+import qualified Filesystem.Path as FP
+import qualified Turtle.Bytes as TB
 
 -- Local
 import TooManyCells.Diversity.Types
+import TooManyCells.File.Types
 import TooManyCells.MakeTree.Types
 import TooManyCells.MakeTree.Cluster
+import TooManyCells.Matrix.Types
 
 -- | Print the diversity of each leaf cluster.
 printClusterDiversity :: [(Cluster, Diversity, Size)] -> B.ByteString
@@ -141,3 +152,49 @@ printNodeInfo lm =
                   )
                )
         . nodeInfo lm
+
+-- | Print the label map to a string.
+printLabelMap :: LabelMap -> B.ByteString
+printLabelMap = (<>) "item,label\n" . CSV.encode 
+              . fmap ( L.over L._2 unLabel
+                     . L.over L._1 unId
+                     )
+              . Map.toAscList
+              . unLabelMap
+
+-- | Print the fragments to a file. Will reassign original barcodes from the
+-- original file to those in the single cell matrix by splitting the barcode on
+-- "BARCODE-LABEL". Mainly for use with --custom-label.
+saveFragments :: OutputDirectory
+              -> SingleCells
+              -> [Either MatrixFileType MatrixFileType]
+              -> IO ()
+saveFragments (OutputDirectory output') sc files = sh $ do
+  let out = (fromText . T.pack $ output') FP.</> "fragments.tsv.gz"
+      newBarcodes = HMap.fromList
+                  . fmap (\ (Cell !x) -> (fst . T.breakOn "-" $ x, x))
+                  . V.toList
+                  . L.view rowNames
+                  $ sc
+      assignRow :: T.Text -> Maybe T.Text
+      assignRow = fmap ((<> "\n") . T.intercalate "\t")
+                . ( (L.ix 3)
+              L.%%~ (flip HMap.lookup newBarcodes . fst . T.breakOn "-")
+                  )
+                . T.splitOn "\t"
+      getFile (Left (CompressedFragments (FragmentsFile file))) = file
+      getFile x = error $ "saveFragments: Not a fragments.tsv.gz file: "
+               <> show x
+      loadFile =
+        TB.decompress (WindowBits 31) . TB.input . fromText . T.pack . getFile
+
+  TB.output out
+    . TB.compress 6 (WindowBits 31)
+    . fmap (maybe "" T.encodeUtf8)
+    . mfilter isJust
+    . fmap (assignRow . lineToText)
+    . toLines
+    . TB.toUTF8
+    . msum
+    . fmap loadFile
+    $ files
