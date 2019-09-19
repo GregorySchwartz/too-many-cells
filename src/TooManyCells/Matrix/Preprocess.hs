@@ -121,8 +121,7 @@ uqScaleSparseMat (MatObsRow mat) = MatObsRow
 logCPMSparseMat :: MatObsRow -> MatObsRow
 logCPMSparseMat (MatObsRow mat) = MatObsRow
                                 . S.sparsifySM
-                                . S.transposeSM
-                                . S.fromColsL
+                                . S.fromRowsL
                                 . fmap logCPMSparseCell
                                 . S.toRowsL
                                 $ mat

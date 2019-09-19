@@ -170,6 +170,7 @@ loadAllSSM opts = runMaybeT $ do
         normMat MedNorm      = medScaleSparseMat
         normMat TotalMedNorm = scaleSparseMat
         normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
+        normMat LogCPMNorm   = logCPMSparseMat
         normMat NoneNorm     = id
         processMat  = ( bool id shiftPositiveMat
                       $ unShiftPositiveFlag shiftPositiveFlag'

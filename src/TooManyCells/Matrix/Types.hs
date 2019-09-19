@@ -231,6 +231,9 @@ newtype BinIdxMap = BinIdxMap
   { unBinIdxMap :: Map.Map Bin BinIdx
   }
 
+data NormType = TfIdfNorm | UQNorm | MedNorm | TotalMedNorm | BothNorm | LogCPMNorm | NoneNorm
+                deriving (Read, Show, Eq)
+
 instance Generic Feature
 instance NFData Feature where rnf x = seq x ()
 
