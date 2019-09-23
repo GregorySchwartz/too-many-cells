@@ -6,11 +6,13 @@ Collects functions pertaining to preprocessing the data.
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module TooManyCells.Matrix.Preprocess
     ( scaleRMat
     , scaleDenseMat
     , scaleSparseMat
+    , logCPMSparseMat
     , uqScaleSparseMat
     , medScaleSparseMat
     , filterRMat
@@ -21,8 +23,8 @@ module TooManyCells.Matrix.Preprocess
     , featureSelectionRandomForest
     , removeCorrelated
     , pcaRMat
-    , pcaDenseMat
-    , shiftPositiveMat
+    , pcaDenseSc
+    , shiftPositiveSc
     ) where
 
 -- Remote
@@ -34,6 +36,7 @@ import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
 import Statistics.Quantile (continuousBy, s)
+import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
@@ -94,6 +97,16 @@ uqScaleSparseMat (MatObsRow mat) = MatObsRow
                                  . S.toRowsL
                                  $ mat
 
+-- | Scale a matrix based on log(CPM + 1).
+logCPMSparseMat :: MatObsRow -> MatObsRow
+logCPMSparseMat (MatObsRow mat) = MatObsRow
+                                . S.sparsifySM
+                                . S.transposeSM
+                                . S.fromColsL
+                                . fmap logCPMSparseCell
+                                . S.toRowsL
+                                $ mat
+
 -- | Scale a matrix based on the median.
 medScaleSparseMat :: MatObsRow -> MatObsRow
 medScaleSparseMat (MatObsRow mat) = MatObsRow
@@ -115,6 +128,13 @@ scaleSparseCell :: S.SpVector Double -> S.SpVector Double
 scaleSparseCell xs = fmap (/ total) xs
   where
     total = sum xs
+
+-- | log(CPM + 1) normalization for cell.
+logCPMSparseCell :: S.SpVector Double -> S.SpVector Double
+logCPMSparseCell xs = fmap (logBase 2 . (+ 1) . cpm) xs
+  where
+    cpm x = x / tpm
+    tpm = sum xs / 1000000
 
 -- | Upper quartile scale cells.
 uqScaleSparseCell :: S.SpVector Double -> S.SpVector Double
@@ -312,7 +332,7 @@ pcaRMat (RMatObsRow mat) = do
         [r| mat = prcomp(t(mat_hs), tol = 0.95)$x
         |]
 
--- | Conduct PCA on a matrix, retaining a percentage of variance.
+-- | Conduct PCA on a matrix, taking the first principal components.
 pcaDenseMat :: PCADim -> MatObsRow -> MatObsRow
 pcaDenseMat (PCADim pcaDim) (MatObsRow matObs) =
   MatObsRow
@@ -328,6 +348,12 @@ pcaDenseMat (PCADim pcaDim) (MatObsRow matObs) =
   where
     mat = sparseToHMat matObs
 
+-- | Conduct PCA on a SingleCells, taking the first principal components.
+pcaDenseSc :: PCADim -> SingleCells -> SingleCells
+pcaDenseSc p@(PCADim n) =
+  L.set colNames (V.fromList . fmap (\x -> Gene $ "PCA " <> showt x) $ [1..n])
+    . L.over matrix (pcaDenseMat p)
+
 -- | Shift features to positive values.
 shiftPositiveMat :: MatObsRow -> MatObsRow
 shiftPositiveMat = MatObsRow
@@ -341,3 +367,7 @@ shiftPositiveMat = MatObsRow
               . unMatObsRow
   where
     shift xs = S.sparsifySV . S.vr . fmap (\x -> x + minimum xs + 1) $ xs
+
+-- | Shift features to positive values for SingleCells.
+shiftPositiveSc :: SingleCells -> SingleCells
+shiftPositiveSc = L.over matrix shiftPositiveMat
