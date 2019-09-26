@@ -145,7 +145,7 @@ docker pull gregoryschwartz/too-many-cells:0.1.5.0
 To run =too-many-cells= in a docker container:
 
 #+BEGIN_SRC sh
-sudo docker run gregoryschwartz/too-many-cells:0.1.5.0 -h
+sudo docker run -it --rm gregoryschwartz/too-many-cells:0.1.5.0 -h
 #+END_SRC
 
 Docker won't be able to find your files by default. You need to mount the
