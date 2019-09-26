@@ -62,6 +62,9 @@ newtype LabelCompositions = LabelCompositions
 newtype NumEigen = NumEigen
   { unNumEigen :: Int
   } deriving (Read, Show)
+newtype NumRuns = NumRuns
+  { unNumRuns :: Int
+  } deriving (Read, Show)
 newtype L = L Double
 newtype C = C Double
 newtype H = H Double
@@ -90,6 +93,7 @@ data NodeInfo = NodeInfo
     , _nodeSize :: Int
     , _nodeSplitProportion :: Maybe Double
     , _nodeModularity :: Maybe Double
+    , _nodeSignificance :: Maybe Double
     , _nodeLabelComposition :: Maybe LabelCompositions
     , _nodeChildren :: [G.Node]
     }

@@ -17,6 +17,7 @@ module TooManyCells.MakeTree.Print
 -- Remote
 import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents)
+import Control.Monad (join)
 import Data.List (genericLength, intercalate)
 import Data.Maybe (fromMaybe, mapMaybe, catMaybes)
 import Data.Monoid ((<>))
@@ -62,7 +63,7 @@ clusterInfo (ClusterGraph gr) =
     getQs :: ([G.Node], a) -> [Double]
     getQs = mapMaybe getQ . fst
     getQ :: G.Node -> Maybe Double
-    getQ  = fmap snd . headMay . G.lsuc gr
+    getQ  = join . fmap (L.view (L._2. edgeDistance)) . headMay . G.lsuc gr
 
 -- | Get the information of each leaf cluster path. Modularity
 -- starts from the parent of the cluster to the root for modularity.
@@ -102,12 +103,16 @@ nodeInfo lm (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
                         (getSize x)
                         (getProportion x)
                         (getQ x)
+                        (getSignificance x)
                         (fmap (\a -> getComposition a (ClusterGraph gr) x) lm)
                         (getNodeChildren gr x)
     getSize :: G.Node -> Int
     getSize = sum . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
     getQ :: G.Node -> Maybe Double
-    getQ  = fmap snd . headMay . G.lsuc gr
+    getQ  = join . fmap (L.view edgeDistance . snd) . headMay . G.lsuc gr
+    getSignificance :: G.Node -> Maybe Double
+    getSignificance =
+      join . fmap (L.view edgeSignificance . snd) . headMay . G.lsuc gr
     getProportion :: G.Node -> Maybe Double
     getProportion n =
         case fmap fst $ G.lsuc gr n of
@@ -123,13 +128,14 @@ nodeInfo lm (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
 printNodeInfo ::
      (TreeItem a) => Maybe LabelMap -> ClusterGraph a -> B.ByteString
 printNodeInfo lm =
-    (<>) "node,size,proportion,modularity,composition,subtree\n"
+    (<>) "node,size,proportion,modularity,significance,composition,subtree\n"
         . CSV.encode
-        . fmap (\ (NodeInfo n s p m c ch)
+        . fmap (\ (NodeInfo n s p m sig c ch)
                -> ( n
                   , s
                   , maybe "" show p
                   , maybe "" show m
+                  , maybe "" show sig
                   , maybe "" show c
                   , intercalate "/" . fmap show $ ch
                   )

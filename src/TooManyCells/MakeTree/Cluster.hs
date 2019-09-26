@@ -21,7 +21,7 @@ module TooManyCells.MakeTree.Cluster
 
 -- Remote
 import BirchBeer.Types
-import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents, dendrogramToGraph, dendToTree, treeToGraph)
+import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents, dendrogramToGraph, dendToTree, clusteringTreeToTree, treeToGraph)
 import Control.Monad (join)
 import Data.Function (on)
 import Data.List (sortBy, groupBy, zip4, genericLength)
@@ -137,17 +137,82 @@ hSpecClust :: DenseFlag
            -> NormType
            -> Maybe NumEigen
            -> Maybe Q
+           -> Maybe NumRuns
            -> SingleCells
-           -> (ClusterResults, ClusterGraph CellInfo)
-hSpecClust (DenseFlag isDense) eigenGroup norm numEigen minModMay sc =
-    ( ClusterResults { _clusterList = clustering
-                     , _clusterDend = dendToTree dend
-                     }
-    , gr
-    )
-  where
-    clustering :: [(CellInfo, [Cluster])]
-    clustering =
+           -> IO (ClusterResults, ClusterGraph CellInfo)
+hSpecClust (DenseFlag isDense) eigenGroup norm numEigen minModMay runsMay sc = do
+  let items      = V.zipWith
+                      (\x y -> CellInfo x y)
+                      (_rowNames sc)
+                      (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
+      hSpecCommand TfIdfNorm False =
+          hierarchicalSpectralCluster
+            eigenGroup
+            True
+            (fmap unNumEigen numEigen)
+            Nothing
+            minModMay
+            (fmap unNumRuns runsMay)
+            items
+          . Left
+      hSpecCommand BothNorm False =
+          hierarchicalSpectralCluster
+            eigenGroup
+            True
+            (fmap unNumEigen numEigen)
+            Nothing
+            minModMay
+            (fmap unNumRuns runsMay)
+            items
+          . Left
+      hSpecCommand _ False =
+          hierarchicalSpectralCluster
+            eigenGroup
+            False
+            (fmap unNumEigen numEigen)
+            Nothing
+            minModMay
+            (fmap unNumRuns runsMay)
+            items
+          . Left
+      hSpecCommand TfIdfNorm True =
+          HSD.hierarchicalSpectralCluster
+            eigenGroup
+            True
+            (fmap unNumEigen numEigen)
+            Nothing
+            minModMay
+            (fmap unNumRuns runsMay)
+            items
+          . Left
+          . sparseToHMat
+      hSpecCommand BothNorm True =
+          HSD.hierarchicalSpectralCluster
+            eigenGroup
+            True
+            (fmap unNumEigen numEigen)
+            Nothing
+            minModMay
+            (fmap unNumRuns runsMay)
+            items
+          . Left
+          . sparseToHMat
+      hSpecCommand _ True =
+          HSD.hierarchicalSpectralCluster
+            eigenGroup
+            False
+            (fmap unNumEigen numEigen)
+            Nothing
+            minModMay
+            (fmap unNumRuns runsMay)
+            items
+          . Left
+          . sparseToHMat
+
+  tree <- hSpecCommand norm isDense . unMatObsRow . _matrix $ sc
+
+  let clustering :: [(CellInfo, [Cluster])]
+      clustering =
         concatMap (\ (!ns, (_, !xs))
                   -> zip (maybe [] F.toList xs) . repeat . fmap Cluster $ ns
                   )
@@ -155,73 +220,14 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen minModMay sc =
             . flip getGraphLeavesWithParents 0
             . unClusterGraph
             $ gr
-    gr         = dendrogramToGraph dend
-    dend       = clusteringTreeToDendrogram tree
-    tree       = hSpecCommand norm isDense
-               . unMatObsRow
-               . _matrix
-               $ sc
-    items      = V.zipWith
-                    (\x y -> CellInfo x y)
-                    (_rowNames sc)
-                    (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
-    hSpecCommand TfIdfNorm False =
-        hierarchicalSpectralCluster
-          eigenGroup
-          True
-          (fmap unNumEigen numEigen)
-          Nothing
-          minModMay
-          items
-        . Left
-    hSpecCommand BothNorm False =
-        hierarchicalSpectralCluster
-          eigenGroup
-          True
-          (fmap unNumEigen numEigen)
-          Nothing
-          minModMay
-          items
-        . Left
-    hSpecCommand _ False =
-        hierarchicalSpectralCluster
-          eigenGroup
-          False
-          (fmap unNumEigen numEigen)
-          Nothing
-          minModMay
-          items
-        . Left
-    hSpecCommand TfIdfNorm True =
-        HSD.hierarchicalSpectralCluster
-          eigenGroup
-          True
-          (fmap unNumEigen numEigen)
-          Nothing
-          minModMay
-          items
-        . Left
-        . sparseToHMat
-    hSpecCommand BothNorm True =
-        HSD.hierarchicalSpectralCluster
-          eigenGroup
-          True
-          (fmap unNumEigen numEigen)
-          Nothing
-          minModMay
-          items
-        . Left
-        . sparseToHMat
-    hSpecCommand _ True =
-        HSD.hierarchicalSpectralCluster
-          eigenGroup
-          False
-          (fmap unNumEigen numEigen)
-          Nothing
-          minModMay
-          items
-        . Left
-        . sparseToHMat
+      dend = clusteringTreeToTree tree
+      gr = treeToGraph dend
+
+  return ( ClusterResults { _clusterList = clustering
+                          , _clusterDend = dend
+                          }
+         , gr
+         )
 
 dendrogramToClusterList :: HC.Dendrogram (V.Vector CellInfo)
                         -> [(CellInfo, [Cluster])]

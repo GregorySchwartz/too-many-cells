@@ -85,6 +85,7 @@ linearItemDistance direction pd (ClusterGraph gr) =
     concatMap (uncurry assignItems)
         . linearNodeDistance direction pd
         . G.undir
+        . G.emap (fromMaybe 0 . L.view edgeDistance)
         $ gr
   where
     assignItems n v =
