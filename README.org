@@ -208,7 +208,8 @@ system =R=. Then to every =stack= and =too-many-cells= command, prepend
 
 If your shared libraries are abnormal and use =libR.so= from non-system
 locations, be sure to also have =LD_LIBRARY_PATH=/usr/lib/:$LD_LIBRARY_PATH=
-when installing.
+when installing (and / or the location of R libraries, such as
+=/usr/local/lib/R/lib/=).
 
 ** I am still having issues with installation
 

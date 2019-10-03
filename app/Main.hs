@@ -120,6 +120,7 @@ data Options
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, gray]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , drawDiscretize :: Maybe String <?> "([Nothing] | COLORS | INT) Discretize colors by finding the nearest color for each item and node. For instance, --draw-discretize \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\" will change all node and item colors to one of those two colors, based on Euclidean distance. If using \"--draw-discretize INT\", will instead take the default map and segment (or interpolate) it into INT colors, rather than a more continuous color scheme. May have unintended results when used with --draw-scale-saturation."
                , drawScaleSaturation :: Maybe Double <?> "([Nothing] | DOUBLE) Multiply the saturation value all nodes by this number in the HSV model. Useful for seeing more visibly the continuous colors by making the colors deeper against a gray scale."
+               , drawFont :: Maybe String <?> "([Arial] | FONT) Specify the font to use for the labels when plotting."
                , pca :: Maybe Int <?> "([Nothing] | INT) Not recommended, as it makes cosine similarity less meaningful (therefore less accurate -- instead, consider making your own similarity matrix and using cluster-tree, our sister algorithm, to cluster the matrix and plot with birch-beer). The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information. Should use with --shift-positive to ensure no negative values."
                , noFilter :: Bool <?> "Whether to bypass filtering genes and cells by low counts."
                , shiftPositive :: Bool <?> "Shift features to positive values. Positive values are shifted to allow modularity to work correctly."
@@ -186,6 +187,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawColors"           = Just 'R'
     short "drawDendrogram"       = Just 'D'
     short "drawDiscretize"       = Nothing
+    short "drawFont"             = Nothing
     short "drawLeaf"             = Just 'L'
     short "drawLegendAllLabels"  = Just 'J'
     short "drawLegendSep"        = Just 'Q'
@@ -458,6 +460,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             finalError err x = "Error in draw-discretize: " <> err <> " " <> x
         drawScaleSaturation' =
             fmap DrawScaleSaturation . unHelpful . drawScaleSaturation $ opts
+        drawFont' = fmap DrawFont . unHelpful . drawFont $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
         clumpinessMethod' =
             maybe Clump.Majority (readOrErr "Cannot read clumpiness-method.")
@@ -584,6 +587,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawColors = drawColors'
                     , _birchDrawDiscretize      = drawDiscretize'
                     , _birchDrawScaleSaturation = drawScaleSaturation'
+                    , _birchDrawFont            = drawFont'
                     , _birchTree = _clusterDend originalClusterResults
                     , _birchMat = birchMat
                     , _birchSimMat = birchSimMat
