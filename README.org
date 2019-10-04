@@ -145,17 +145,20 @@ docker pull gregoryschwartz/too-many-cells:0.1.5.0
 To run =too-many-cells= in a docker container:
 
 #+BEGIN_SRC sh
-sudo docker run -it --rm gregoryschwartz/too-many-cells:0.1.5.0 -h
+sudo docker run -it --rm -v "/home/username:/home/username" gregoryschwartz/too-many-cells:0.1.5.0 -h
 #+END_SRC
 
-Docker won't be able to find your files by default. You need to mount the
-folders with =-v= in order to have docker read and write from and to the
-filesystem, respectively. Read the [[https://docs.docker.com/storage/volumes/][documentation]] about volumes for more
-information. Essentially, =-v /path/to/matrix/on/host:/input_matrix= with =-m
-/input_matrix= is what you want, where before the =:= is on the host filesystem
-while after the =:= is what the docker program sees. Then you can write the
-output in the same way: =-v /path/to/output/on/host:/output= will write the
-output to the folder before the =:=.
+Make sure to [[https://docs.docker.com/config/containers/resource_constraints/][increase the memory]] that can be used by docker containers if you
+use macOS or Windows. Also, docker won't be able to find your files by default.
+You need to mount the folders with =-v= in order to have docker read and write
+from and to the filesystem, respectively. Read the [[https://docs.docker.com/storage/volumes/][documentation]] about volumes
+for more information. You can simply mount your entire relevant path as in the
+above example to handle both input and output. Specifically, =-v
+/path/to/matrix/on/host:/input_matrix= with =-m /input_matrix= is what you want,
+where before the =:= is on the host filesystem while after the =:= is what the
+docker program sees. Then you can write the output in the same way: =-v
+/path/to/output/on/host:/output= will write the output to the folder before the
+=:=.
 
 To build the =too-many-cells= image yourself if you want:
 
@@ -215,6 +218,12 @@ when installing (and / or the location of R libraries, such as
 
 [[https://github.com/GregorySchwartz/too-many-cells/issues][Open an issue]]! While working on the issue, try out the docker for
 =too-many-cells=, it requires no installation at all (other than docker).
+
+** I am on macOS/Windows with docker and =too-many-cells= silently crashes.
+
+Docker containers may run into this issue if the memory given to the containers
+is insufficient. Make sure to [[https://docs.docker.com/config/containers/resource_constraints/][increase the memory]] that can be used by docker
+containers.
 
 * Included projects
 
