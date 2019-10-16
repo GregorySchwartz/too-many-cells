@@ -104,6 +104,7 @@ data Options
                , minDistanceSearch :: Maybe Double <?> "([Nothing] | DOUBLE) Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, keep that path, otherwise prune it. This argument assists in finding distant nodes."
                , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the four arguments to an arbitrary number, whichever cutoff type you want to use. --min-proportion distribution is log2 transformed."
                , customCut :: [Int] <?> "([Nothing] | NODE) List of nodes to prune (make these nodes leaves). Invoked by --custom-cut 34 --custom-cut 65 etc."
+               , rootCut :: Maybe Int <?> "([Nothing] | NODE) Assign a new root to the tree, removing all nodes outside of the subtree."
                , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
                , matrixOutput :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder under the --output directory in matrix market format or, if a csv file is specified, a dense csv format. Like input, features are rows. See --matrix-output-transpose."
                , matrixOutputTranspose :: Maybe String <?> "([Nothing] | FOLDER | FILE.csv) Output the filtered and normalized (not including TfIdfNorm) matrix in this folder under the --output directory in matrix market format or, if a csv file is specified, a dense csv format. Differs from --matrix-output in that features are columns.columns."
@@ -220,7 +221,8 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "plotOutput"           = Nothing
     short "priors"               = Just 'P'
     short "projectionFile"       = Just 'j'
-    short "shiftPositive"      = Nothing
+    short "rootCut"              = Nothing
+    short "shiftPositive"        = Nothing
     short x                      = firstLetter x
 
 instance ParseRecord Options where
@@ -384,6 +386,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         minDistanceSearch' = fmap MinDistanceSearch . unHelpful . minDistanceSearch $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
         customCut'        = CustomCut . Set.fromList . unHelpful . customCut $ opts
+        rootCut'          = fmap RootCut . unHelpful . rootCut $ opts
         dendrogramOutput' = DendrogramFile
                           . fromMaybe "dendrogram.svg"
                           . unHelpful
@@ -573,6 +576,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchMinDistanceSearch   = minDistanceSearch'
                     , _birchSmartCutoff = smartCutoff'
                     , _birchCustomCut   = customCut'
+                    , _birchRootCut     = rootCut'
                     , _birchOrder = Just order'
                     , _birchDrawLeaf = drawLeaf'
                     , _birchDrawCollection = drawCollection'
