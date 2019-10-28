@@ -95,9 +95,12 @@ extra-deps:
 
   - /home/gw/git_repos/sparse-linear-algebra
   - /home/gw/code/utility/spectral-clustering
+  - BiobaseNewick-0.0.0.2@sha256:4006ede0492b50cf0ab8ec49166e0ca3553891e61a86841feabc35c914cc2bb5
+  - cairo-0.13.6.1@sha256:6ec483dc48865d55e903aacb8740aee2d4831b8c0f34eebbf7a323edafdabb37
+  - clustering-0.4.1@sha256:78d8e077f27526ff03b3879d951e09e040ca7dc23dd0e6044970be9d40ea37e2
   - containers-0.6.2.1
   - async-pool-0.9.0.2@sha256:3aca5861a7b839d02a3f5c52ad6d1ce368631003f68c3d9cb6d711c29e9618db
-  - birch-beer-0.1.4.5@sha256:b7183750ce1f161c261f194cc2412b16ce7dfee752da7249fe90ce70711871ff
+  - birch-beer-0.2.2.0
   - diagrams-cairo-1.4.1@sha256:e08f15a15146da9222344fbc433ccd6103c0a7f1e9dfe21bb1e3d3e36ad83947
   - diagrams-graphviz-1.4.1@sha256:072c531d69822421cf318d80731c4f7b5e1b6e4d228db3507f84e9057e7a1f12
   - diagrams-gtk-1.4@sha256:154b71b093958a82ab8c05c2c7e63cf5ce70b219fba4c894d6eb86c937ce7441
@@ -105,17 +108,13 @@ extra-deps:
   - diversity-0.8.1.0@sha256:90ceaafb8343c442091b9cd3c2b7bdb9e2ba90d36c168030f0a00c50787effea
   - fasta-0.10.4.2@sha256:006295e2ab35d083a7a8c916f13ac4bdc532b1ccbbc081b8fe1d0220170987ab
   - find-clumpiness-0.2.3.2@sha256:d87ff3f11960a8a4b97c13cc254d906af89a54bd2da0f537d959437ea3422df7
-  - gio-0.13.6.0@sha256:00fce1b49c902ba82433cc018fb5d4651797464342a9cbc66df2c62bb8884650
-  - glib-0.13.7.0@sha256:25f62eb48d104342537dd1c724f07355d56226ca595ce6f1848415fbb7f59fa7
   - gtk-0.15.2@sha256:1d968e6231bfc34c7b454eec826626bcffc81f2d0116be507a44b40d6a441b73
-  - gtk2hs-buildtools-0.13.5.0@sha256:a765766c4208a3e4def319ebf280fbb9e7d0a3f28d15922db36970404fb1daee
   - hierarchical-clustering-0.4.6@sha256:97695be95370eebd3b2fb83717482b66d8bbc2589cd5a692950fbea36c8427f8
   - hierarchical-spectral-clustering-0.5.0.1
   - hmatrix-svdlibc-0.5.0.1@sha256:b0ad29ae6fdaafe2e9d3facc9f29e1779dc87fce674ae07df428e0b7ec4ab13b
   - json-stream-0.4.2.4@sha256:8b7f17d54a6e1e6311756270f8bcf51e91bab4300945400de66118470dcf51b9
   - modularity-0.2.1.1@sha256:147e93b5c593e6070c390ce0ca850e83c13a23f6f7b6d38536acdc46ee2e8196
   - pango-0.13.6.0@sha256:ed8d300945bea97ccb652efc73d159634aefebff8c64f60eef6b6ac5ecebc4ae
-  - pipes-text-0.0.2.5@sha256:16cfd1927817a1c757b15c37ad95c67e819c28b1c4a6ce9757ab15276ec36ac7
   - plots-0.1.1.2@sha256:01f2ba7ca0c1e00b5231a81b44a3b8b9fd21b49bc333ff4cef880e31c5332935
   - streaming-utils-0.2.0.0@sha256:a2bd9144b336393122ffed2d3a1c747c186b8fdb9734c54d8b5874ed6166a85b
   - streaming-with-0.2.2.1@sha256:f5f354c9d1ed9358bf91792a2804c897544b170b2891b6c0ee61120605f0327c
@@ -126,8 +125,7 @@ extra-deps:
   - glib-0.13.7.0@sha256:25f62eb48d104342537dd1c724f07355d56226ca595ce6f1848415fbb7f59fa7
   - gtk2hs-buildtools-0.13.5.0@sha256:a765766c4208a3e4def319ebf280fbb9e7d0a3f28d15922db36970404fb1daee
   - pipes-text-0.0.2.5@sha256:16cfd1927817a1c757b15c37ad95c67e819c28b1c4a6ce9757ab15276ec36ac7
-  - git: https://github.com/Gabriel439/Haskell-Turtle-Library.git
-    commit: 014e1909c2874234545c8d4db18baf10ccca382e
+  - turtle-1.5.15
 
 # Override default flag values for local packages and extra-deps
 flags: {}

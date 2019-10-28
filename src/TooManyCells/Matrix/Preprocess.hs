@@ -379,7 +379,7 @@ pcaDenseMat (PCADim pcaDim) (MatObsRow matObs) =
 -- | Conduct PCA on a SingleCells, taking the first principal components.
 pcaDenseSc :: PCADim -> SingleCells -> SingleCells
 pcaDenseSc p@(PCADim n) =
-  L.set colNames (V.fromList . fmap (\x -> Gene $ "PCA " <> showt x) $ [1..n])
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "PCA " <> showt x) $ [1..n])
     . L.over matrix (pcaDenseMat p)
 
 -- | Conduct SVD on a matrix, retaining the specified number of dimensions.

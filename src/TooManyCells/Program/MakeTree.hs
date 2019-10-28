@@ -16,12 +16,17 @@ MakeTree entrypoint into the program.
 module TooManyCells.Program.MakeTree where
 
 -- Remote
+import Control.Concurrent
 import BirchBeer.ColorMap
+import BirchBeer.Interactive
 import BirchBeer.Load
 import BirchBeer.MainDiagram
+import BirchBeer.Plot
 import BirchBeer.Types
-import Control.Monad (join, when)
+import BirchBeer.Utility
+import Control.Monad (when, unless, join)
 import Control.Monad.Trans (liftIO)
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
 import Data.Colour.SRGB (sRGB24read)
 import Data.Maybe (fromMaybe, isJust)
@@ -86,6 +91,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         dense'            = DenseFlag . unHelpful . dense $ opts
         normalization'    = getNormalization opts
         numEigen'         = fmap NumEigen . unHelpful . numEigen $ opts
+        numRuns'          = fmap NumRuns . unHelpful . numRuns $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
         maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
         maxProportion'    =
@@ -95,6 +101,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         minDistanceSearch' = fmap MinDistanceSearch . unHelpful . minDistanceSearch $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
         customCut'        = CustomCut . Set.fromList . unHelpful . customCut $ opts
+        rootCut'          = fmap RootCut . unHelpful . rootCut $ opts
         dendrogramOutput' = DendrogramFile
                           . fromMaybe "dendrogram.svg"
                           . unHelpful
@@ -171,6 +178,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             finalError err x = "Error in draw-discretize: " <> err <> " " <> x
         drawScaleSaturation' =
             fmap DrawScaleSaturation . unHelpful . drawScaleSaturation $ opts
+        drawFont' = fmap DrawFont . unHelpful . drawFont $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
         clumpinessMethod' =
             maybe Clump.Majority (readOrErr "Cannot read clumpiness-method.")
@@ -236,8 +244,8 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Load previous results or calculate results if first run.
     originalClusterResults <- case prior' of
         Nothing -> do
-            let (fullCr, _) =
-                  hSpecClust dense' eigenGroup' normalization' numEigen' minModularity'
+            (fullCr, _) <-
+                  hSpecClust dense' eigenGroup' normalization' numEigen' minModularity' numRuns'
                     . extractSc
                     $ processedSc
 
@@ -284,6 +292,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchMinDistanceSearch   = minDistanceSearch'
                     , _birchSmartCutoff = smartCutoff'
                     , _birchCustomCut   = customCut'
+                    , _birchRootCut     = rootCut'
                     , _birchOrder = Just order'
                     , _birchDrawLeaf = drawLeaf'
                     , _birchDrawCollection = drawCollection'
@@ -298,6 +307,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawColors = drawColors'
                     , _birchDrawDiscretize      = drawDiscretize'
                     , _birchDrawScaleSaturation = drawScaleSaturation'
+                    , _birchDrawFont            = drawFont'
                     , _birchTree = _clusterDend originalClusterResults
                     , _birchMat = birchMat
                     , _birchSimMat = birchSimMat
