@@ -87,6 +87,7 @@ loadSSM opts matrixPath' = do
                 hPutStrLn stderr "\nWarning: No binwidth specified for fragments file\
                                   \ input. This will make the feature list extremely large\
                                   \ and may result in many outliers. Please see --binwidth.\
+                                  \ Ignore this message if using peaks.\
                                   \ Continuing..."
               liftIO $ when (isNothing cellWhitelist) $
                 hPutStrLn stderr "\nWarning: No cell whitelist specified for fragments file\

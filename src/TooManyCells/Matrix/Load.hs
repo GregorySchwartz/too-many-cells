@@ -232,7 +232,7 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
         contents <- S.withBinaryFileContents mf
 
         (c S.:> g S.:> m S.:> _) <-
-            fmap (either (error . show) id)
+            fmap (either (\x -> error $ show x <> " Expecting matrix market format. Is this the correct file name and file format?") id)
                 . runExceptT
                 . cS
                 . (S.store gS)
@@ -274,7 +274,7 @@ loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
         $ Range Nothing chrom (readDecimal start) (readDecimal end)
         , readDouble duplicateCount
         )
-      parseLine xs = error $ "Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
+      parseLine xs = error $ "loadFragments: Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
       stream = preprocessStream
              . S.map (T.splitOn "\t" . T.decodeUtf8)
              . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments

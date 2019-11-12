@@ -40,6 +40,7 @@ import TooManyCells.Program.Options
 import TooManyCells.Differential.Differential
 import TooManyCells.Differential.Types
 import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
 import TooManyCells.File.Types
 import TooManyCells.Matrix.Utility
 import TooManyCells.Program.Options
@@ -64,6 +65,7 @@ differentialMain opts = do
         topN'     = TopN . fromMaybe 100 . unHelpful . topN $ opts
         features'    = fmap Feature . unHelpful . features $ opts
         aggregate' = Aggregate . unHelpful . aggregate $ opts
+        updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
         labels'   = fmap ( DiffLabels
                          . L.over L.both ( (\x -> bool (Just x) Nothing . Set.null $ x)
                                          . Set.fromList
@@ -91,7 +93,10 @@ differentialMain opts = do
         cr :: IO ClusterResults
         cr = loadClusterResultsFiles clInput treeInput
 
-    gr <- fmap (treeToGraph . _clusterDend) cr
+    gr <- treeToGraph
+        . updateTreeRowBool updateTreeRows' processedSc
+        . _clusterDend
+      <$> cr
 
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
       case features' of

@@ -58,6 +58,8 @@ newtype LabelMapOutputFlag = LabelMapOutputFlag { unLabelMapOutputFlag :: Bool }
 newtype FragmentsOutputFlag =
   FragmentsOutputFlag { unFragmentsOutputFlag :: Bool }
   deriving (Eq, Ord, Read, Show)
+newtype UpdateTreeRowsFlag = UpdateTreeRowsFlag { unUpdateTreeRowsFlag :: Bool }
+                             deriving (Read, Show)
 newtype AdjacencyMat = AdjacencyMat
     { unAdjacencyMat :: H.Matrix H.R
     } deriving (Read,Show)

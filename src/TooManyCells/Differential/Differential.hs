@@ -64,6 +64,7 @@ scToTwoD cellGroups sc =
     nCols    = S.ncols filteredMat
     filteredMat = S.fromColsL -- Here the columns should be observations.
                 . fmap (S.extractRow (unMatObsRow . _matrix $ sc) . L.view L._1)
+                . filter ((>) (S.nrows . unMatObsRow $ _matrix sc) . L.view L._1)
                 $ cellGroups
 
 -- | Get the indices and statuses for two lists of nodes.

@@ -59,18 +59,19 @@ import qualified System.FilePath as FP
 import qualified System.ProgressBar as Progress
 
 -- Local
-import TooManyCells.Program.Options
+import TooManyCells.File.Types
 import TooManyCells.MakeTree.Clumpiness
 import TooManyCells.MakeTree.Cluster
 import TooManyCells.MakeTree.Load
 import TooManyCells.MakeTree.Plot
 import TooManyCells.MakeTree.Print
 import TooManyCells.MakeTree.Types
-import TooManyCells.Matrix.Types
+import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Load
+import TooManyCells.Matrix.Types
 import TooManyCells.Matrix.Utility
 import TooManyCells.Program.LoadMatrix
-import TooManyCells.File.Types
+import TooManyCells.Program.Options
 import TooManyCells.Program.Utility
 
 makeTreeMain :: Options -> IO ()
@@ -81,10 +82,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             fmap LabelFile . unHelpful . labelsFile $ opts
         prior'            =
             fmap PriorPath . unHelpful . prior $ opts
+        updateTreeRows'   =
+          UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
         delimiter'        =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         eigenGroup'       =
-            maybe SignGroup (readOrErr "Cannot read eigen-group.")
+            maybe SignGroup (readOrErr "Cannot read --eigen-group.")
               . unHelpful
               . eigenGroup
               $ opts
@@ -118,16 +121,16 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         drawLeaf'         =
             maybe
               (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
-              (readOrErr "Cannot read draw-leaf. If using DrawContinuous, remember to put features in a list: DrawItem (DrawContinuous [\\\"FEATURE\\\"])")
+              (readOrErr "Cannot read --draw-leaf. If using DrawContinuous, remember to put features in a list: DrawItem (DrawContinuous [\\\"FEATURE\\\"])")
                 . unHelpful
                 . drawLeaf
                 $ opts
         drawCollection'   =
-            maybe PieChart (readOrErr "Cannot read draw-collection.")
+            maybe PieChart (readOrErr "Cannot read --draw-collection.")
               . unHelpful
               . drawCollection
               $ opts
-        drawMark'         = maybe MarkNone (readOrErr "Cannot read draw-mark.")
+        drawMark'         = maybe MarkNone (readOrErr "Cannot read --draw-mark.")
                           . unHelpful
                           . drawMark
                           $ opts
@@ -150,13 +153,13 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             DrawLegendAllLabels . unHelpful . drawLegendAllLabels $ opts
         drawPalette' = maybe
                         Set1
-                        (fromMaybe (error "Cannot read palette.") . readMaybe)
+                        (fromMaybe (error "Cannot read --palette.") . readMaybe)
                      . unHelpful
                      . drawPalette
                      $ opts
         drawColors'       = fmap ( CustomColors
                                  . fmap sRGB24read
-                                 . (\x -> readOrErr "Cannot read draw-colors." x :: [String])
+                                 . (\x -> readOrErr "Cannot read --draw-colors." x :: [String])
                                  )
                           . unHelpful
                           . drawColors
@@ -181,7 +184,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         drawFont' = fmap DrawFont . unHelpful . drawFont $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
         clumpinessMethod' =
-            maybe Clump.Majority (readOrErr "Cannot read clumpiness-method.")
+            maybe Clump.Majority (readOrErr "Cannot read --clumpiness-method.")
               . unHelpful
               . clumpinessMethod
               $ opts
@@ -222,7 +225,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                             . extractSc
                             $ processedSc
                     _ -> if isJust labelsFile'
-                          then mapM (loadLabelData delimiter') $ labelsFile'
+                          then mapM (loadLabelData delimiter') labelsFile'
                           else return customLabelMap
 
     -- Increment  progress bar.
@@ -255,7 +258,8 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 treeInput = unPriorPath x FP.</> "cluster_tree.json"
 
             -- Strict loading in order to avoid locked file.
-            loadClusterResultsFiles clInput treeInput
+            fmap (L.over clusterDend (updateTreeRowBool updateTreeRows' processedSc))
+              $ loadClusterResultsFiles clInput treeInput
 
     -- Increment  progress bar.
     Progress.autoProgressBar
@@ -386,7 +390,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             case clusterDiversity order' lm clusterResults of
                 (Left err) -> hPutStrLn stderr
                             $ err
-                           <> "\nError in diversity, skipping cluster_diversity.csv output."
+                           <> "\nError in diversity, skipping cluster_diversity.csv output ..."
                 (Right result) ->
                     B.writeFile
                         ( unOutputDirectory output'
@@ -430,14 +434,14 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         -- Calculations with plotting the label map (clumpiness).
         case labelMap of
             Nothing ->
-                H.io $ hPutStrLn stderr "\nClumpiness requires labels for cells, skipping..."
+                H.io $ hPutStrLn stderr "\nClumpiness requires labels for cells, skipping ..."
             (Just lm) -> do
                 -- Get clumpiness.
                 case treeToClumpList clumpinessMethod' lm . _clusterDend $ clusterResults of
                     (Left err) -> H.io
                                 . hPutStrLn stderr
                                 $ err
-                               <> "\nError in clumpiness, skipping clumpiness.* output."
+                               <> "\nError in clumpiness, skipping clumpiness.* output ..."
                     (Right clumpList) -> do
                         -- Save clumpiness to a file.
                         H.io

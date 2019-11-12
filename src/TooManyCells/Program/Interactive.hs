@@ -38,10 +38,12 @@ import qualified System.FilePath as FP
 
 -- Local
 import TooManyCells.File.Types
+import TooManyCells.MakeTree.Types
+import TooManyCells.MakeTree.Utility
 import TooManyCells.Matrix.Types
+import TooManyCells.Program.LoadMatrix
 import TooManyCells.Program.Options
 import TooManyCells.Program.Utility
-import TooManyCells.Program.LoadMatrix
 
 -- | Interactive tree interface.
 interactiveMain :: Options -> IO ()
@@ -52,6 +54,7 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
                        . unHelpful
                        . prior
                        $ opts
+        updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
         delimiter'     =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         normalization'    = getNormalization opts
@@ -64,7 +67,10 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
                   then mapM (loadLabelData delimiter') $ labelsFile'
                   else return customLabelMap
 
-    tree <- fmap (either error id . A.eitherDecode)
+    tree <- fmap ( updateTreeRowBool updateTreeRows' mat
+                 . either error id
+                 . A.eitherDecode
+                 )
           . B.readFile
           . (FP.</> "cluster_tree.json")
           . unPriorPath

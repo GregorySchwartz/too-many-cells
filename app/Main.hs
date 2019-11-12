@@ -12,10 +12,11 @@ module Main where
 import Options.Generic
 
 -- Local
-import TooManyCells.Program.MakeTree
-import TooManyCells.Program.Diversity
 import TooManyCells.Program.Differential
+import TooManyCells.Program.Diversity
 import TooManyCells.Program.Interactive
+import TooManyCells.Program.MakeTree
+import TooManyCells.Program.MatrixOutput
 import TooManyCells.Program.Options
 import TooManyCells.Program.Paths
 import TooManyCells.Program.Peaks
@@ -32,3 +33,4 @@ main = do
         Diversity{}    -> diversityMain opts
         Paths{}        -> pathsMain opts
         Peaks{}        -> peaksMain opts
+        MatrixOutput{} -> matrixOutputMain opts
