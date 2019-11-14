@@ -423,9 +423,9 @@ pcaSparseMat (PCADim pcaDim) (MatObsRow mat) =
     . sparseRightSVD 1 pcaDim
     $ scaled
   where
-    scaled = S.fromRowsL
+    scaled = S.fromColsL
            . fmap centerScaleSparseCell
-           . S.toRowsL
+           . S.toColsL -- Scale features for PCA
            $ mat
 
 -- | Shift features to positive values.
