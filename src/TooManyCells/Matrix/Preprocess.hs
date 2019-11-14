@@ -27,6 +27,7 @@ module TooManyCells.Matrix.Preprocess
     , pcaDenseSc
     , shiftPositiveSc
     , pcaDenseMat
+    , pcaSparseMat
     , svdMat
     , shiftPositiveMat
     , emptyMatErr
@@ -59,7 +60,9 @@ import qualified Data.Vector.Algorithms.Radix as V
 import qualified Data.Vector.Storable as VS
 import qualified Math.Clustering.Spectral.Sparse as S
 import qualified Numeric.LinearAlgebra as H
+import qualified Numeric.LinearAlgebra.Devel as H
 import qualified Numeric.LinearAlgebra.HMatrix as H
+import qualified Numeric.LinearAlgebra.SVD.SVDLIBC as SVD
 
 -- Local
 import TooManyCells.File.Types
@@ -392,6 +395,38 @@ svdMat (SVDDim svdDim) =
     . fmap centerScaleSparseCell
     . S.toRowsL
     . unMatObsRow
+
+-- | Conduct PCA on a SingleCells, taking the first principal components.
+pcaSparseSc :: PCADim -> SingleCells -> SingleCells
+pcaSparseSc p@(PCADim n) =
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "PCA " <> showt x) $ [1..n])
+    . L.over matrix (pcaSparseMat p)
+
+-- | Obtain the right singular vectors from N to E on of a sparse
+-- matrix.
+sparseRightSVD :: Int -> Int -> S.SpMatrix Double -> [S.SpVector Double]
+sparseRightSVD n e =
+  fmap (S.sparsifySV . S.fromListDenseSV e . drop (n - 1) . H.toList)
+    . H.toColumns
+    . (\(_, _, !z) -> z)
+    . SVD.sparseSvd (e + (n - 1))
+    . H.mkCSR
+    . fmap (\(!i, !j, !x) -> ((i, j), x))
+    . S.toListSM
+
+-- | Conduct SVD on a matrix, retaining the specified number of dimensions.
+pcaSparseMat :: PCADim -> MatObsRow -> MatObsRow
+pcaSparseMat (PCADim pcaDim) (MatObsRow mat) =
+  MatObsRow
+    . (S.#~#) scaled
+    . S.fromRowsL
+    . sparseRightSVD 1 pcaDim
+    $ scaled
+  where
+    scaled = S.fromRowsL
+           . fmap centerScaleSparseCell
+           . S.toRowsL
+           $ mat
 
 -- | Shift features to positive values.
 shiftPositiveMat :: MatObsRow -> MatObsRow
