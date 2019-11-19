@@ -176,7 +176,7 @@ loadAllSSM opts = runMaybeT $ do
         processMat  = ( bool id shiftPositiveMat
                       $ unShiftPositiveFlag shiftPositiveFlag'
                       )
-                    . (\m -> maybe m (flip pcaSparseMat m) pca')
+                    . (\m -> maybe m (flip pcaDenseMat m) pca')
                     . (\m -> maybe m (flip svdMat m) svd')
                     . normMat normalization'
                     . _matrix

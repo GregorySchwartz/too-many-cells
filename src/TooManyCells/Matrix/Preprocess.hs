@@ -63,6 +63,7 @@ import qualified Numeric.LinearAlgebra as H
 import qualified Numeric.LinearAlgebra.Devel as H
 import qualified Numeric.LinearAlgebra.HMatrix as H
 import qualified Numeric.LinearAlgebra.SVD.SVDLIBC as SVD
+import Debug.Trace
 
 -- Local
 import TooManyCells.File.Types
@@ -183,10 +184,19 @@ medScaleSparseCell xs = fmap (/ med) xs
 centerScaleSparseCell :: S.SpVector Double -> S.SpVector Double
 centerScaleSparseCell xs = fmap standard xs
   where
-    standard x = (x - mu) / sigma
+    standard x
+      | sigma == 0 = 0
+      | otherwise  = (x - mu) / sigma
     mu = mean v
     sigma = stdDev v
     v = S.toVector xs
+
+-- | Center a sparse vector.
+centerSparseVector :: S.SpVector Double -> S.SpVector Double
+centerSparseVector xs = fmap center xs
+  where
+    center x = x - mu
+    mu = mean $ S.toVector xs
 
 -- | Median scale molecules across cells.
 scaleDenseMol :: H.Vector H.R -> H.Vector H.R
@@ -418,14 +428,19 @@ sparseRightSVD n e =
 pcaSparseMat :: PCADim -> MatObsRow -> MatObsRow
 pcaSparseMat (PCADim pcaDim) (MatObsRow mat) =
   MatObsRow
+    . (\x -> traceShow ("mul", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
     . (S.#~#) scaled
+    . (\x -> traceShow ("svd", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
     . S.fromRowsL
     . sparseRightSVD 1 pcaDim
+    . (\x -> traceShow ("scale", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
     $ scaled
   where
     scaled = S.fromColsL
            . fmap centerScaleSparseCell
-           . S.toColsL -- Scale features for PCA
+           . S.toRowsL -- Scale features for PCA
+           . S.transpose
+           . (\x -> traceShow ("input", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
            $ mat
 
 -- | Shift features to positive values.
@@ -437,7 +452,8 @@ shiftPositiveMat = MatObsRow
                             . S.toDenseListSV
                             $ xs
                      )
-              . S.toColsL
+              . S.toRowsL -- toRowsL much faster than toColsL
+              . S.transpose
               . unMatObsRow
   where
     shift xs = S.sparsifySV . S.vr . fmap (+ (abs $ minimum xs)) $ xs
