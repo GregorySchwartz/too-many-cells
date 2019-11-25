@@ -290,3 +290,12 @@ transposeSC (SingleCells (MatObsRow mat) rows cols) =
     (MatObsRow . S.transposeSM $ mat)
     (fmap (Cell . unFeature) cols)
     (fmap (Feature . unCell) rows)
+
+-- | Read a file locally or remotely as a streaming bytestring.
+streamLocalOrRemote :: FilePath -> IO (BS.ByteString m r)
+streamLocalOrRemote path
+  | isInfixOf "http://" path = do
+      req <- parseRequest path
+      m <- newManager tlsManagerSettings 
+      withHTTP req m responseBody
+  | otherwise = BS.readFile path

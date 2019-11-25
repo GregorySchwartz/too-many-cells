@@ -277,7 +277,7 @@ loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
       parseLine xs = error $ "loadFragments: Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
       stream = preprocessStream
              . S.map (T.splitOn "\t" . T.decodeUtf8)
-             . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments
+             . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments by name match
              . S.mapped BS.toStrict
              . BS.lines
              . decompressStreamAll (WindowBits 31) -- For gunzip
