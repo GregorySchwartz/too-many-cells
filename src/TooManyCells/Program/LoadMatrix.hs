@@ -74,6 +74,10 @@ loadSSM opts matrixPath' = do
                         . unHelpful
                         . excludeMatchFragments
                         $ opts
+      blacklistRegionsFile' = fmap BlacklistRegions
+                            . unHelpful
+                            . blacklistRegionsFile
+                            $ opts
       cellWhitelistFile' =
             fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
 
@@ -96,7 +100,7 @@ loadSSM opts matrixPath' = do
                                   \ this file contains barcodes that are not cells. Please see\
                                   \ --cell-whitelist-file. Continuing..."
               fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
-                . loadFragments cellWhitelist excludeFragments' binWidth'
+                . loadFragments cellWhitelist blacklistRegionsFile' excludeFragments' binWidth'
                   $ file
             (Right (DecompressedMatrix file)) ->
               loadCellrangerData featureColumn' featuresFile' cellsFile' file

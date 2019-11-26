@@ -23,6 +23,7 @@ data Options
                , binwidth :: Maybe Int <?> "([5000] | BINSIZE) If input data is comprised of scATAC-seq features, where each feature is a range of the genome, BINSIZE input is required to convert ranges to fixed width bins."
                , noBinarize :: Bool <?> "If a fragments.tsv.gz file, do not binarize data."
                , excludeMatchFragments :: Maybe String <?> "([Nothing] | STRING) Exclude fragments from fragments.tsv.gz file if STRING is infix of fragment row. For instance, exclude all chrY fragments with \"--exclude-match-fragments chrY\"."
+               , blacklistRegionsFile :: Maybe T.Text <?> "([Nothing] | FILE) Bed file containing regions to ignore. Any fragments overlapping these regions are ignored if the input is a fragments file."
                , projectionFile :: Maybe String <?> "([Nothing] | FILE) The input file containing positions of each cell for plotting. Format with header is \"barcode,x,y\". Useful for 10x where a TNSE projection is generated in \"projection.csv\". Cells without projections will not be plotted. If not supplied, no plot will be made."
                , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
@@ -77,6 +78,7 @@ data Options
                   , binwidth :: Maybe Int <?> "([5000] | BINSIZE) If input data is comprised of scATAC-seq features, where each feature is a range of the genome, BINSIZE input is required to convert ranges to fixed width bins."
                   , noBinarize :: Bool <?> "If a fragments.tsv.gz file, do not binarize data."
                   , excludeMatchFragments :: Maybe String <?> "([Nothing] | STRING) Exclude fragments from fragments.tsv.gz file if STRING is infix of fragment row. For instance, exclude all chrY fragments with \"--exclude-match-fragments chrY\"."
+                  , blacklistRegionsFile :: Maybe T.Text <?> "([Nothing] | FILE) Bed file containing regions to ignore. Any fragments overlapping these regions are ignored if the input is a fragments file."
                   , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                   , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                   , customLabel :: [T.Text] <?> "([] | [LABEL]) List of labels to assign each matrix if all cells from each matrix are given the same label per matrix. This argument intends to simplify the process of labeling by bypassing --labels-file if the user just wants each matrix to have its own label (i.e. sample). Must be the same length and order as --matrix-path: for instance, --matrix-path input1 --custom-label sample1 --matrix-path input2 --custom-label sample2 etc. will label all cells from input1 with sample1, input2 with sample2, etc. If there are multiple labels per matrix, you must use --labels-file."
@@ -95,6 +97,7 @@ data Options
                    , binwidth :: Maybe Int <?> "([5000] | BINSIZE) If input data is comprised of scATAC-seq features, where each feature is a range of the genome, BINSIZE input is required to convert ranges to fixed width bins."
                    , noBinarize :: Bool <?> "If a fragments.tsv.gz file, do not binarize data."
                    , excludeMatchFragments :: Maybe String <?> "([Nothing] | STRING) Exclude fragments from fragments.tsv.gz file if STRING is infix of fragment row. For instance, exclude all chrY fragments with \"--exclude-match-fragments chrY\"."
+                   , blacklistRegionsFile :: Maybe T.Text <?> "([Nothing] | FILE) Bed file containing regions to ignore. Any fragments overlapping these regions are ignored if the input is a fragments file."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
                    , customLabel :: [T.Text] <?> "([] | [LABEL]) List of labels to assign each matrix if all cells from each matrix are given the same label per matrix. This argument intends to simplify the process of labeling by bypassing --labels-file if the user just wants each matrix to have its own label (i.e. sample). Must be the same length and order as --matrix-path: for instance, --matrix-path input1 --custom-label sample1 --matrix-path input2 --custom-label sample2 etc. will label all cells from input1 with sample1, input2 with sample2, etc. If there are multiple labels per matrix, you must use --labels-file."
@@ -134,6 +137,7 @@ data Options
             , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the most csv files in the program. For instance, if using a normal csv rather than cellranger output and for --labels-file."
             , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
             , excludeMatchFragments :: Maybe String <?> "([Nothing] | STRING) Exclude fragments from fragments.tsv.gz file if STRING is infix of fragment row. For instance, exclude all chrY fragments with \"--exclude-match-fragments chrY\"."
+            , blacklistRegionsFile :: Maybe T.Text <?> "([Nothing] | FILE) Bed file containing regions to ignore. Any fragments overlapping these regions are ignored if the input is a fragments file."
             , peakCallCommand :: Maybe String <?> "([macs2 callpeak --nomodel --nolambda -p 0.001 -B -t %s -n %s --outdir %s] | STRING) The command to call peaks with. Can be any command that will be run on each generated fragment file per cluster, but the first \"%s\" must be the input argument, second \"%s\" is the name of the sample, and the third \"%s\" should be the output directory. Uses macs2 by default. Must return a .narrowPeak file with each row being \"CHR\tSTART\tEND\t*\tVALUE\n\" at least (* can be anything, after VALUE there can be anything as well. Check macs2 output for guidance)."
             , genomecovCommand :: Maybe String <?> "([bedtools genomecov -i %s -g %s -scale %f -bg -trackline > %s] | STRING) The command to convert to coverage bedgraph output. Can be any command that will be run on each bed per cluster, but the first \"%s\" must be the input argument, the second \"%s\" is the genome file (see https://github.com/arq5x/bedtools2/tree/master/genomes), followed by the \"%f\" scaling argument, with the last \"%s\" as the output argument, in order. Uses bedtools genomecov by default."
             , genome :: Maybe String <?> "([./human.hg38.genome] | PATH) The location of the genome file for the --genomecov-command, see https://github.com/arq5x/bedtools2/tree/master/genomes"
@@ -147,6 +151,7 @@ data Options
                    , binwidth :: Maybe Int <?> "([5000] | BINSIZE) If input data is comprised of scATAC-seq features, where each feature is a range of the genome, BINSIZE input is required to convert ranges to fixed width bins."
                    , noBinarize :: Bool <?> "If a fragments.tsv.gz file, do not binarize data."
                    , excludeMatchFragments :: Maybe String <?> "([Nothing] | STRING) Exclude fragments from fragments.tsv.gz file if STRING is infix of fragment row. For instance, exclude all chrY fragments with \"--exclude-match-fragments chrY\"."
+                   , blacklistRegionsFile :: Maybe T.Text <?> "([Nothing] | FILE) Bed file containing regions to ignore. Any fragments overlapping these regions are ignored if the input is a fragments file."
                    , cellWhitelistFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the cells to include. No header, line separated list of barcodes."
                    , customLabel :: [T.Text] <?> "([] | [LABEL]) List of labels to assign each matrix if all cells from each matrix are given the same label per matrix. This argument intends to simplify the process of labeling by bypassing --labels-file if the user just wants each matrix to have its own label (i.e. sample). Must be the same length and order as --matrix-path: for instance, --matrix-path input1 --custom-label sample1 --matrix-path input2 --custom-label sample2 etc. will label all cells from input1 with sample1, input2 with sample2, etc. If there are multiple labels per matrix, you must use --labels-file."
                    , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the most csv files in the program. For instance, if using a normal csv rather than cellranger output and for --labels-file."
@@ -168,6 +173,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "aggregate"             = Nothing
     short "atac"                  = Nothing
     short "bedgraph"              = Nothing
+    short "blacklistRegionsFile"  = Nothing
     short "clumpinessMethod"      = Just 'u'
     short "clusterNormalization"  = Just 'C'
     short "customCut"             = Nothing

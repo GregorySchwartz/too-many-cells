@@ -75,6 +75,7 @@ newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: HSet.HashSet Text
     } deriving (Eq,Ord,Show)
 newtype ExcludeFragments = ExcludeFragments { unExcludeFragments :: T.Text }
+newtype BlacklistRegions = BlacklistRegions { unBlacklistRegions :: T.Text }
 newtype PCADim = PCADim
     { unPCADim :: Int
     } deriving (Eq,Ord,Read,Show)

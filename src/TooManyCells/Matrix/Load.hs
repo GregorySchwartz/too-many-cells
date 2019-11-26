@@ -255,11 +255,12 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
 
 -- | Load a range feature list streaming in TSV 10x fragments.tsv.gz format.
 loadFragments :: Maybe CellWhitelist
+              -> Maybe BlacklistRegions
               -> Maybe ExcludeFragments
               -> Maybe BinWidth
               -> FragmentsFile
               -> IO SingleCells
-loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
+loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) = do
   let csvOpts = S.defaultDecodeOptions
                   { S.decDelimiter = fromIntegral (ord '\t') }
       readDecimal = either error fst . T.decimal
@@ -271,6 +272,8 @@ loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
       filterCells (CellWhitelist wl) =
         Turtle.mfilter (\(!b, _, _) -> HSet.member b wl)
       filterFragments (ExcludeFragments ef) = Turtle.mfilter (T.isInfixOf ef)
+      filterBlacklist (BlacklistRegions br) =
+        Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
       parseLine all@(chrom:start:end:barcode:duplicateCount:_) = force $
         ( barcode
         , maybe showt (\x -> showt . rangeToBin x) binWidth
@@ -283,6 +286,8 @@ loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
              . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments by name match
              . Turtle.mfilter (not . T.null)
              . fmap Turtle.lineToText
+             . (maybe id filterBlacklist blacklist)
+             . Turtle.inproc "bedtools" ["sort", "-i", "stdin"]
              . Turtle.toLines
              . TB.toUTF8
              . TB.decompress (WindowBits 31)
