@@ -37,7 +37,7 @@ import Data.Bool (bool)
 import Data.Char (toUpper)
 import Data.Function (on)
 import Data.Hashable (Hashable)
-import Data.List (maximumBy)
+import Data.List (maximumBy, isInfixOf)
 import Data.Maybe (fromMaybe)
 import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix)
 import Data.Scientific (toRealFloat, Scientific)
@@ -290,12 +290,3 @@ transposeSC (SingleCells (MatObsRow mat) rows cols) =
     (MatObsRow . S.transposeSM $ mat)
     (fmap (Cell . unFeature) cols)
     (fmap (Feature . unCell) rows)
-
--- | Read a file locally or remotely as a streaming bytestring.
-streamLocalOrRemote :: FilePath -> IO (BS.ByteString m r)
-streamLocalOrRemote path
-  | isInfixOf "http://" path = do
-      req <- parseRequest path
-      m <- newManager tlsManagerSettings 
-      withHTTP req m responseBody
-  | otherwise = BS.readFile path
