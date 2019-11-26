@@ -63,6 +63,9 @@ import qualified Streaming.Prelude as S
 import qualified Streaming.With.Lifted as S
 import qualified Streaming.Zip as S
 import qualified System.IO as IO
+import qualified Turtle as Turtle
+import qualified Turtle.Bytes as TB
+import qualified Turtle.Line as Turtle
 
 -- Local
 import TooManyCells.File.Types
@@ -261,13 +264,13 @@ loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
                   { S.decDelimiter = fromIntegral (ord '\t') }
       readDecimal = either error fst . T.decimal
       readDouble = either error fst . T.double
-      labelsFold = Fold.purely S.fold_ ((,) <$> cellsFold <*> featuresFold)
+      labelsFold = (,) <$> cellsFold <*> featuresFold
       cellsFold = Fold.premap (\(!c, _, _) -> c) hashNub
       featuresFold = Fold.premap (\(_, !r, _) -> r) hashNub
-      preprocessStream = maybe id filterCells whitelist . S.map parseLine
+      preprocessStream = maybe id filterCells whitelist . fmap parseLine
       filterCells (CellWhitelist wl) =
-        S.filter (\(!b, _, _) -> HSet.member b wl)
-      filterFragments (ExcludeFragments ef) = S.filter (B.isInfixOf ef)
+        Turtle.mfilter (\(!b, _, _) -> HSet.member b wl)
+      filterFragments (ExcludeFragments ef) = Turtle.mfilter (T.isInfixOf ef)
       parseLine all@(chrom:start:end:barcode:duplicateCount:_) = force $
         ( barcode
         , maybe showt (\x -> showt . rangeToBin x) binWidth
@@ -276,17 +279,19 @@ loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
         )
       parseLine xs = error $ "loadFragments: Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
       stream = preprocessStream
-             . S.map (T.splitOn "\t" . T.decodeUtf8)
+             . fmap (T.splitOn "\t")
              . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments by name match
-             . S.mapped BS.toStrict
-             . BS.lines
-             . decompressStreamAll (WindowBits 31) -- For gunzip
-             . BS.readFile
+             . Turtle.mfilter (not . T.null)
+             . fmap Turtle.lineToText
+             . Turtle.toLines
+             . TB.toUTF8
+             . TB.decompress (WindowBits 31)
+             . TB.input
+             . Turtle.fromText
+             . T.pack
              $ mf
 
-  (cellsList, featuresList) <- runResourceT
-                             . labelsFold
-                             $ stream
+  (cellsList, featuresList) <- Turtle.reduce labelsFold stream
 
   let cells = V.fromList cellsList
       features = V.fromList featuresList
@@ -294,29 +299,15 @@ loadFragments whitelist excludeFragments binWidth (FragmentsFile mf) = do
       featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
       findErr x = fromMaybe (error $ "loadFragments: No indices found: " <> show x)
                 . HMap.lookup x
-      matFold = S.fold_ addToMat init MatObsRow
+      matFold = Fold.Fold addToMat init MatObsRow
       addToMat m (!i, !j, !x) = HS.insertSpMatrix i j x m
       init = HS.zeroSM (V.length cells) (V.length features)
-      matFold' :: (MonadResource m) => S.Stream (S.Of (Int, Int, Double)) m r
-               -> m MatObsRow
-      matFold' = S.fold_
-                  addToMat'
-                  init'
-                  ( MatObsRow
-                  . HS.unsafeFromImmSM (V.length cells, V.length features)
-                  )
-      addToMat' :: IMap.IntMap (IMap.IntMap Double)
-                -> (Int, Int, Double)
-                -> IMap.IntMap (IMap.IntMap Double)
-      addToMat' m (!i, !j, !v) = IMap.insertWith (IMap.unionWith (+)) i (IMap.singleton j v) m
-      init' = mempty
       getIndices (!c, !r, !v) =
         (findErr c cellMap, findErr r featureMap, v)
 
   -- Get map second.
-  mat <- runResourceT
-       . matFold
-       . S.map getIndices
+  mat <- Turtle.reduce matFold
+       . fmap getIndices
        $ stream
 
   return $

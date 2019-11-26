@@ -32,6 +32,7 @@ import qualified Control.Lens as L
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified System.Directory as FP
 import qualified System.FilePath as FP
@@ -69,7 +70,7 @@ loadSSM opts matrixPath' = do
           FeatureColumn . fromMaybe 1 . unHelpful . featureColumn $ opts
       noBinarizeFlag' = NoBinarizeFlag . unHelpful . noBinarize $ opts
       binWidth' = fmap BinWidth . unHelpful . binwidth $ opts
-      excludeFragments' = fmap (ExcludeFragments . B.pack)
+      excludeFragments' = fmap (ExcludeFragments . T.pack)
                         . unHelpful
                         . excludeMatchFragments
                         $ opts

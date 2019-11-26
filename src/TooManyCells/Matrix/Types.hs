@@ -74,7 +74,7 @@ newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, 
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: HSet.HashSet Text
     } deriving (Eq,Ord,Show)
-newtype ExcludeFragments = ExcludeFragments { unExcludeFragments :: B.ByteString }
+newtype ExcludeFragments = ExcludeFragments { unExcludeFragments :: T.Text }
 newtype PCADim = PCADim
     { unPCADim :: Int
     } deriving (Eq,Ord,Read,Show)
