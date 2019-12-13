@@ -16,6 +16,7 @@ Paths entry point into program.
 module TooManyCells.Program.Paths where
 
 -- Remote
+import BirchBeer.ColorMap (getLabelColorMap)
 import BirchBeer.Load
 import BirchBeer.Types
 import BirchBeer.Utility
@@ -83,8 +84,10 @@ pathsMain opts = do
             labelItemDistance labelMap pathDistances
 
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
+        let labelColorMap = getLabelColorMap Set1 labelMap
         plotPathDistanceR
             (unOutputDirectory output' FP.</> "path_distances.pdf")
+            labelColorMap
             bandwidth'
             labeledPathDistances
         return ()

@@ -62,7 +62,7 @@ flipEdges n1 (a1, 0, l, a2) = ((0, n1) : a2, 0, l, removeN a1)
     removeN = filter (\(_, x) -> x /= n1)
 flipEdges _ (a1, n, l, a2)  = (a2, n, l, a1)
 
--- | Get the start of the diameter a subtree. Can specify which node.
+-- | Get the start of the diameter of a subtree. Can specify which node.
 treeDiameterStart
     :: G.Graph gr
     => PathDistance -> G.Node -> gr (G.Node, b) Double -> G.Node
