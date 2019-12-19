@@ -77,13 +77,25 @@ treeDiameterStart pd n gr =
         . getGraphLeavesCycles [] gr
         $ n
 
+-- | Get the shallowest leaf.
+shallowLeaf :: (G.Graph gr, Show a)
+            => PathDistance -> gr (G.Node, a) Double -> G.Node
+shallowLeaf pd gr = fst
+                  . fromMaybe (error "No nodes in tree.")
+                  . headMay
+                  . sortBy (compare `on` snd)
+                  . fmap (getDistance pd gr 0 . fst)
+                  . F.toList
+                  . getGraphLeavesCycles [] gr
+                  $ 0
+
 -- | Get the distance of each item from a starting point. Make graph undirected.
 linearItemDistance
     :: (TreeItem a, Show a)
-    => FlipFlag -> PathDistance -> ClusterGraph a -> [(a, Double)]
-linearItemDistance direction pd (ClusterGraph gr) =
+    => ShallowFlag -> FlipFlag -> PathDistance -> ClusterGraph a -> [(a, Double)]
+linearItemDistance shallow direction pd (ClusterGraph gr) =
     concatMap (uncurry assignItems)
-        . linearNodeDistance direction pd
+        . linearNodeDistance shallow direction pd
         . G.undir
         . G.emap (fromMaybe 0 . L.view edgeDistance)
         $ gr
@@ -107,17 +119,22 @@ flipDistance = Fold.fold subtractMaxAll
 -- | Get the distance of each leaf from a starting point.
 linearNodeDistance
     :: (G.Graph gr, Show a)
-    => FlipFlag -> PathDistance -> gr (G.Node, a) Double -> [(G.Node, Double)]
-linearNodeDistance (FlipFlag direction) pd gr =
+    => ShallowFlag
+    -> FlipFlag
+    -> PathDistance
+    -> gr (G.Node, a) Double
+    -> [(G.Node, Double)]
+linearNodeDistance (ShallowFlag shallow) (FlipFlag direction) pd gr =
     flipDirection direction
-        . fmap (getDistance pd gr start . fst)
+        . fmap (getDistance pd gr (start shallow) . fst)
         . F.toList
         . getGraphLeavesCycles [] gr
         $ 0
   where
     flipDirection True  = id
     flipDirection False = flipDistance
-    start               = treeDiameterStart pd 0 gr
+    start True          = shallowLeaf pd gr
+    start False         = treeDiameterStart pd 0 gr
 
 -- | Get the distance of a base node n1 to another node n2.
 getDistance

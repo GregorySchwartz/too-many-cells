@@ -59,6 +59,7 @@ pathsMain opts = do
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         bandwidth'    = Bandwidth . fromMaybe 1 . unHelpful . bandwidth $ opts
         direction'    = FlipFlag . unHelpful . flipDirection $ opts
+        shallow'      = ShallowFlag . unHelpful . shallowStart $ opts
         pathDistance' =
             maybe PathStep read . unHelpful . pathDistance $ opts
         output'       =
@@ -79,7 +80,7 @@ pathsMain opts = do
 
     let gr = treeToGraph tree
         pathDistances :: [(CellInfo, Double)]
-        pathDistances = linearItemDistance direction' pathDistance' gr
+        pathDistances = linearItemDistance shallow' direction' pathDistance' gr
         labeledPathDistances =
             labelItemDistance labelMap pathDistances
 

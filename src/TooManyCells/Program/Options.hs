@@ -128,6 +128,7 @@ data Options
     | Paths { prior :: Maybe String <?> "([Nothing] | STRING) The input folder containing the output from a previous run. If specified, skips clustering by using the previous clustering files."
             , labelsFile :: Maybe String <?> "([Nothing] | FILE) The input file containing the label for each cell barcode, with \"item,label\" header."
             , flipDirection :: Bool <?> "Flip the starting node when calculating the distances."
+            , shallowStart :: Bool <?> "Choose the shallowest leaf as the starting node (rather than the deepest)."
             , pathDistance :: Maybe String <?> "([PathStep] | PathModularity) How to measure the distance from the starting leaf. PathModularity weighs the steps by the modularity, while PathStep counts the number of steps."
             , bandwidth :: Maybe Double <?> "([1] | DOUBLE) Bandwidth of the density plot."
             , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the most csv files in the program. For instance, if using a normal csv rather than cellranger output and for --labels-file."
@@ -225,6 +226,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "priors"                = Just 'P'
     short "projectionFile"        = Just 'j'
     short "rootCut"               = Nothing
+    short "shallowStart"          = Nothing
     short "shiftPositive"         = Nothing
     short "svd"                   = Nothing
     short "updateTreeRows"        = Nothing

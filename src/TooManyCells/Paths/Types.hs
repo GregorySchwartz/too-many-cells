@@ -15,6 +15,7 @@ module TooManyCells.Paths.Types where
 
 -- Basic
 newtype FlipFlag  = FlipFlag { unFlipFlag :: Bool }
+newtype ShallowFlag = ShallowFlag { unShallowFlag :: Bool }
 newtype Bandwidth = Bandwidth { unBandwidth :: Double }
 
 -- Advanced
