@@ -82,7 +82,7 @@ loadPopulationCsv file = do
         return population
 
 -- | Convert previous cluster results to a population representation.
-priorToPopulation :: ClusterResults -> Either String Population
+priorToPopulation :: [(CellInfo, [Cluster])] -> Either String Population
 priorToPopulation =
     fmap (Population . Map.fromListWith (Seq.><))
         . mapM (\(!x, !y) -> do
@@ -94,7 +94,6 @@ priorToPopulation =
                         $ y
                     return (y', x')
                )
-        . _clusterList
 
 -- | Convert a Population to a custom population with a label map.
 popToLabelPop :: LabelMap -> Population -> Either String Population
@@ -127,7 +126,7 @@ loadPopulation lm (PriorPath path) = do
             pop <- ExceptT . loadPopulationCsv . PriorPath $ path
             return pop
         otherwise      -> runExceptT $ do
-            let crInput = path FP.</> "cluster_results.json"
+            let crInput = path FP.</> "cluster_list.json"
 
             pop <- ExceptT
                  . fmap ((=<<) priorToPopulation . A.eitherDecode)
