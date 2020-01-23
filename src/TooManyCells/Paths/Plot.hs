@@ -54,6 +54,7 @@ plotPathDistanceR outputPlot (LabelColorMap cm) (Bandwidth b) distances = do
                 xlab("Path distance") +
                 ylab("Cell density") +
                 scale_color_manual(guide = guide_legend(title = ""), aesthetics = c("color", "fill"), values = setNames(ccs_hs, cls_hs)) +
+                theme_cowplot() +
                 theme(aspect.ratio = 1)
 
         suppressMessages(ggsave(p, file = outputPlot_hs))

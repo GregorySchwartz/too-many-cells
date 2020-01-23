@@ -119,6 +119,7 @@ plotClustersR outputPlot pm clusterList = do
                 xlab("Projection 1") +
                 ylab("Projection 2") +
                 scale_color_discrete(guide = guide_legend(title = "Cluster", ncol = 3)) +
+                theme_cowplot() +
                 theme(aspect.ratio = 1)
 
         suppressMessages(ggsave(p, file = outputPlot_hs))
@@ -153,6 +154,7 @@ plotLabelClustersR outputPlot pm lm icm clusterList = do
                 scale_color_manual( guide = guide_legend(title = "Label")
                                   , values = colorMap
                                   ) +
+                theme_cowplot() +
                 theme(aspect.ratio = 1)
 
         suppressMessages(ggsave(p, file = outputPlot_hs))
@@ -242,6 +244,7 @@ plotRankedModularityR outputPlot tree = do
                 # geom_vline(xintercept = cutoff_hs, linetype = "dashed", color = "red") +
                 xlab("Ranking") +
                 ylab("Modularity") +
+                theme_cowplot() +
                 theme(aspect.ratio = 1)
 
         suppressMessages(ggsave(p, file = outputPlot_hs))
@@ -286,6 +289,7 @@ plotClumpinessHeatmapR outputPlot cs = Right $ do
                 xlab("") +
                 ylab("") +
                 scale_fill_gradient2(guide = guide_colorbar(title = "Clumpiness"), midpoint = 0.5, low = muted("blue"), high = muted("red")) +
+                theme_cowplot() +
                 theme(axis.text.x = element_text(angle = 315, hjust = 0))
 
         suppressMessages(ggsave(p, file = outputPlot_hs))

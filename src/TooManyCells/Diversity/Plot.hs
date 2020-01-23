@@ -96,6 +96,7 @@ plotDiversityR colors pops = do
             ylab("Diversity") +
             scale_fill_manual(values = as.character(colorsR_hs)) +
             guides(fill = "none") +
+            theme_cowplot() +
             theme(aspect.ratio = 1, axis.text.x = element_text(angle = 315, hjust = 0))
     |]
 
@@ -117,6 +118,7 @@ plotChao1R colors pops = do
             ylab("Chao1") +
             scale_fill_manual(values = as.character(colorsR_hs)) +
             guides(fill = "none") +
+            theme_cowplot() +
             theme(aspect.ratio = 1, axis.text.x = element_text(angle = 315, hjust = 0))
     |]
 
@@ -149,5 +151,6 @@ plotRarefactionR colors pops = do
             ylab("Estimated richness") +
             scale_color_manual(values = as.character(colorsR_hs)) +
             guides(color = guide_legend(title = "")) +
+            theme_cowplot() +
             theme(aspect.ratio = 0.5)
     |]
