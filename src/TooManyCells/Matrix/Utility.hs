@@ -30,6 +30,7 @@ module TooManyCells.Matrix.Utility
 
 -- Remote
 import BirchBeer.Types
+import Codec.Compression.GZip (compress)
 import Control.Monad.Managed (runManaged)
 import Control.Monad.State (MonadState (..), State (..), evalState, execState, modify)
 import Control.Monad.IO.Class (MonadIO)
@@ -39,7 +40,7 @@ import Data.Function (on)
 import Data.Hashable (Hashable)
 import Data.List (maximumBy, isInfixOf)
 import Data.Maybe (fromMaybe)
-import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix)
+import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix')
 import Data.Scientific (toRealFloat, Scientific)
 import Data.Streaming.Zlib (WindowBits)
 import Language.R as R
@@ -49,6 +50,7 @@ import TextShow (showt)
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.ByteString.Char8 as B
+import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
@@ -60,6 +62,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.IO as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Text.Lazy.Encoding as TL
 import qualified Data.Text.Lazy.IO as TL
 import qualified Data.Text.Lazy.Read as TL
 import qualified Data.Vector as V
@@ -178,18 +181,25 @@ writeSparseMatrixLike (MatrixTranspose mt) (MatrixFolder folder) mat = do
   -- Where to place output files.
   FP.createDirectoryIfMissing True folder
 
-  writeMatrix (folder </> "matrix.mtx")
+  let writeCompressedFile x = BL.writeFile x . compress
+
+  (=<<) (writeCompressedFile (folder </> "matrix.mtx.gz"))
+    . writeMatrix'
     . spMatToMat
-    . (bool S.transposeSM id mt) -- To have cells as columns
+    . (bool S.transposeSM id mt) -- whether to transpose
     . getMatrix
     $ mat
-  T.writeFile (folder </> "genes.tsv")
+  writeCompressedFile (folder </> "features.tsv.gz")
+    . TL.encodeUtf8
+    . TL.fromStrict
     . T.unlines
-    . fmap (\x -> T.intercalate "\t" [x, x])
+    . fmap (\x -> T.intercalate "\t" [x, x, "NA"])
     . V.toList
     . getColNames
     $ mat
-  T.writeFile (folder </> "barcodes.tsv")
+  writeCompressedFile (folder </> "barcodes.tsv.gz")
+    . TL.encodeUtf8
+    . TL.fromStrict
     . T.unlines
     . V.toList
     . getRowNames

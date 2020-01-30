@@ -113,6 +113,7 @@ extra-deps:
   - hierarchical-spectral-clustering-0.5.0.1
   - hmatrix-svdlibc-0.5.0.1@sha256:b0ad29ae6fdaafe2e9d3facc9f29e1779dc87fce674ae07df428e0b7ec4ab13b
   - json-stream-0.4.2.4@sha256:8b7f17d54a6e1e6311756270f8bcf51e91bab4300945400de66118470dcf51b9
+  - matrix-market-attoparsec-0.1.1.3
   - modularity-0.2.1.1@sha256:147e93b5c593e6070c390ce0ca850e83c13a23f6f7b6d38536acdc46ee2e8196
   - pango-0.13.6.0@sha256:ed8d300945bea97ccb652efc73d159634aefebff8c64f60eef6b6ac5ecebc4ae
   - plots-0.1.1.2@sha256:01f2ba7ca0c1e00b5231a81b44a3b8b9fd21b49bc333ff4cef880e31c5332935

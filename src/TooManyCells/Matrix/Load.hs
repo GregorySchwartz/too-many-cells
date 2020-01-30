@@ -31,7 +31,7 @@ import Control.Monad.Trans.Resource (runResourceT, MonadResource)
 import Data.Char (ord)
 import Data.Function (on)
 import Data.List (sortBy, sort, foldl')
-import Data.Matrix.MatrixMarket (readMatrix)
+import Data.Matrix.MatrixMarket (readMatrix, readMatrix')
 import Data.Maybe (fromMaybe, maybe)
 import Data.Monoid ((<>))
 import Data.Streaming.Zlib (WindowBits (..))
@@ -122,14 +122,12 @@ loadCellrangerDataFeatures
     -> MatrixFileFolder
     -> IO SingleCells
 loadCellrangerDataFeatures _ _ _ (MatrixFolder mf) = error "Expected matrix.mtx.gz, impossible error."
-loadCellrangerDataFeatures fc gf cf (MatrixFile mf) = withSystemTempFile "temp_mat.mtx" $ \tempMatFile h -> do
+loadCellrangerDataFeatures fc gf cf (MatrixFile mf) = do
     let csvOptsTabs = CSV.defaultDecodeOptions { CSV.decDelimiter = fromIntegral (ord '\t') }
 
-    BL.readFile mf >>= BL.hPut h . decompress >> IO.hClose h
-
-    m <- fmap (MatObsRow . HS.transposeSM . matToSpMat)  -- We want observations as rows
-       . readMatrix
-       $ tempMatFile
+    m <- BL.readFile mf
+     >>= readMatrix' . decompress
+     >>= pure . MatObsRow . HS.transposeSM . matToSpMat  -- We want observations as rows
     g <- fmap (\ x -> either error (fmap (Feature . getFeature fc)) ( CSV.decodeWith csvOptsTabs CSV.NoHeader (decompress x)
                                        :: Either String (Vector [T.Text])
                                         )
