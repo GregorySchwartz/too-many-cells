@@ -355,6 +355,8 @@ unionPeaks :: OutputDirectory -> [IO.FilePath] -> IO IO.FilePath
 unionPeaks (OutputDirectory path) files = do
   let outputPath = toTurtleFile $ path
       outputFile = outputPath Turtle.</> "union.bdg"
+      union [x] _ = input x
+      union xs stdin = inproc "bedtools" (["unionbedg", "-i"] <> fmap (format fp) xs) stdin
 
   bdgFiles <- mapM (narrowPeakToBdg . Turtle.fromText . T.pack) files
 
@@ -363,7 +365,7 @@ unionPeaks (OutputDirectory path) files = do
 
     output outputFile
       . inproc "bedtools" ["merge", "-i", "stdin"]
-      . inproc "bedtools" (["unionbedg", "-i"] <> fmap (format fp) bdgFiles)
+      . union bdgFiles
       $ mempty
 
   return . T.unpack . format fp $ outputFile

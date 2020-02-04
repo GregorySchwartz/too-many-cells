@@ -143,7 +143,7 @@ data Options
             , genomecovCommand :: Maybe String <?> "([bedtools genomecov -i %s -g %s -scale %f -bg -trackline > %s] | STRING) The command to convert to coverage bedgraph output. Can be any command that will be run on each bed per cluster, but the first \"%s\" must be the input argument, the second \"%s\" is the genome file (see https://github.com/arq5x/bedtools2/tree/master/genomes), followed by the \"%f\" scaling argument, with the last \"%s\" as the output argument, in order. Uses bedtools genomecov by default."
             , genome :: Maybe String <?> "([./human.hg38.genome] | PATH) The location of the genome file for the --genomecov-command, see https://github.com/arq5x/bedtools2/tree/master/genomes"
             , skipFragments :: Bool <?> "Whether to skip the generation of the fragments (e.g. if changing only --peak-call-command and fragment separation by cluster already exists)."
-            , peakNode :: [Int] <?> "([ALLLEAFNODES] | NODE) List of nodes to peak call, i.e. \"--peak-node 3 --peak-node 5 --peak-node 7\"."
+            , peakNode :: [Int] <?> "([ALLLEAFNODES] | NODE) List of nodes to peak call, i.e. \"--peak-node 3 --peak-node 5 --peak-node 7\". If the node is not a leaf node, make sure to use --all-nodes in addition."
             , peakNodeLabels :: [String] <?> "([ALLLABELS] | NODE) List of labels to keep in each node when outputting fragments and peaks, i.e. --peak-node-labels \"(3, [\\\"Red\\\"])\" --peak-node-labels \"(5, [\\\"Red\\\", \\\"Blue\\\"]. Nodes not listed will include all labels."
             , allNodes :: Bool <?> "Whether to get fragments and peaks for all nodes, not just the leaves."
             , bedgraph :: Bool <?> "Whether to output cluster normalized per million bedgraph output."
