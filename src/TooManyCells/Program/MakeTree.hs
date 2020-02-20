@@ -103,6 +103,13 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         minModularity'     = fmap Q . unHelpful . minModularity $ opts
         minDistanceSearch' = fmap MinDistanceSearch . unHelpful . minDistanceSearch $ opts
         smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
+        elbowCutoff'      =
+          fmap ( ElbowCutoff
+               . readOrErr "Cannot read --elbow-cutoff."
+               )
+            . unHelpful
+            . elbowCutoff
+            $ opts
         customCut'        = CustomCut . Set.fromList . unHelpful . customCut $ opts
         rootCut'          = fmap RootCut . unHelpful . rootCut $ opts
         dendrogramOutput' = DendrogramFile
@@ -295,6 +302,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchMinDistance = minDistance'
                     , _birchMinDistanceSearch   = minDistanceSearch'
                     , _birchSmartCutoff = smartCutoff'
+                    , _birchElbowCutoff = elbowCutoff'
                     , _birchCustomCut   = customCut'
                     , _birchRootCut     = rootCut'
                     , _birchOrder = Just order'

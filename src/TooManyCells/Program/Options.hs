@@ -40,7 +40,8 @@ data Options
                , minModularity :: Maybe Double <?> "([Nothing] | DOUBLE) Nearly the same as --min-distance, but for clustering instead of drawing (so the output json tree can be larger). Stopping criteria to stop at the node with DOUBLE modularity. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Does not include L and R in the final result."
                , minDistance :: Maybe Double <?> "([Nothing] | DOUBLE) Stopping criteria to stop at the node immediate after a node with DOUBLE distance. So a node N with L and R children will stop with this criteria the distance at N to L and R is < DOUBLE. Includes L and R in the final result."
                , minDistanceSearch :: Maybe Double <?> "([Nothing] | DOUBLE) Similar to --min-distance, but searches from the leaves to the root -- if a path from a subtree contains a distance of at least DOUBLE, keep that path, otherwise prune it. This argument assists in finding distant nodes."
-               , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the four arguments to an arbitrary number, whichever cutoff type you want to use. --min-proportion distribution is log2 transformed."
+               , smartCutoff :: Maybe Double <?> "([Nothing] | DOUBLE) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the distributions (median + (DOUBLE * MAD)) of all nodes. To use smart cutoffs, use this argument and then set one of the four arguments to an arbitrary number, whichever cutoff type you want to use. --max-proportion and --min-size distributions are log2 transformed."
+               , elbowCutoff :: Maybe String <?> "(Max | Min) Whether to set the cutoffs for --min-size, --max-proportion, --min-distance, and --min-distance-search based off of the elbow point of distributions of all nodes. For a distribution in positive x and y on a graph, the top left hump would be Max and the bottom right dip would be Min. To use elbow cutoffs, use this argument and then set one of the three arguments to an arbitrary number, whichever cutoff type you want to use. --max-proportion and --min-size distributions are log2 transformed. Conflicts with --smart-cutoff, so this argument takes precedent."
                , customCut :: [Int] <?> "([Nothing] | NODE) List of nodes to prune (make these nodes leaves). Invoked by --custom-cut 34 --custom-cut 65 etc."
                , rootCut :: Maybe Int <?> "([Nothing] | NODE) Assign a new root to the tree, removing all nodes outside of the subtree."
                , dendrogramOutput :: Maybe String <?> "([dendrogram.svg] | FILE) The filename for the dendrogram. Supported formats are PNG, PS, PDF, and SVG."
@@ -196,6 +197,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawPalette"           = Just 'Y'
     short "drawScaleSaturation"   = Just 'V'
     short "eigenGroup"            = Just 'B'
+    short "elbowCutoff"           = Nothing
     short "featureColumn"         = Nothing
     short "filterThresholds"      = Just 'H'
     short "fragmentsOutput"       = Nothing

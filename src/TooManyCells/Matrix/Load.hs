@@ -233,7 +233,7 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
         contents <- S.withBinaryFileContents mf
 
         (c S.:> g S.:> m S.:> _) <-
-            fmap (either (\x -> error $ show x <> " Expecting matrix market format. Is this the correct file name and file format?") id)
+            fmap (either (\x -> error $ show x <> " Expecting csv format. Is this the correct file name and file format?") id)
                 . runExceptT
                 . cS
                 . (S.store gS)
