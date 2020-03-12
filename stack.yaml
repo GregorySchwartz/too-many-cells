@@ -93,8 +93,10 @@ extra-deps:
   # # - git: https://github.com/GregorySchwartz/hierarchical-clustering-diagrams.git
   # #   commit: b92d8cc9b5275df38198ede27b58f7e35aaf69d1
 
-  - /home/gw/git_repos/sparse-linear-algebra
-  - /home/gw/code/utility/spectral-clustering
+  - git: https://github.com/GregorySchwartz/spectral-clustering.git
+    commit: 18729ec5f0a25584847fe75e7a3a1bcd71c88e60
+  - git: https://github.com/ocramz/sparse-linear-algebra.git
+    commit: dbad792f6c6a04e4de23806b676cb3e76d36a65b
   - BiobaseNewick-0.0.0.2@sha256:4006ede0492b50cf0ab8ec49166e0ca3553891e61a86841feabc35c914cc2bb5
   - cairo-0.13.6.1@sha256:6ec483dc48865d55e903aacb8740aee2d4831b8c0f34eebbf7a323edafdabb37
   - clustering-0.4.1@sha256:78d8e077f27526ff03b3879d951e09e040ca7dc23dd0e6044970be9d40ea37e2
