@@ -69,9 +69,10 @@ extra-deps:
   # - eigen-3.3.4.1
   - fast-math-1.0.2
   - fasta-0.10.4.2
-  - gio-0.13.4.1
+  - gio-0.13.8.0
+  - glib-0.13.8.0
   - graphviz-2999.20.0.2
-  - gtk-0.14.7
+  - gtk-0.15.4
   - hmatrix-svdlibc-0.5.0.1
   - inline-c-0.6.1.0
   - inline-r-0.9.2
@@ -79,6 +80,7 @@ extra-deps:
   - mfsolve-0.3.2.0
   - mmorph-1.0.9
   - palette-0.3.0.1
+  - pango-0.13.8.0
   - pipes-text-0.0.2.5
   - plots-0.1.1.0
   - streaming-cassava-0.1.0.1
