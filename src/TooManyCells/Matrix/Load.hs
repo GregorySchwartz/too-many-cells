@@ -272,7 +272,7 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
       filterFragments (ExcludeFragments ef) = Turtle.mfilter (T.isInfixOf ef)
       filterBlacklist (BlacklistRegions br) =
         Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
-      parseLine all@(chrom:start:end:barcode:duplicateCount:_) = force $
+      parseLine (chrom:start:end:barcode:duplicateCount:_) = force $
         ( barcode
         , maybe showt (\x -> showt . rangeToBin x) binWidth
         $ Range Nothing chrom (readDecimal start) (readDecimal end)
@@ -303,7 +303,7 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
       findErr x = fromMaybe (error $ "loadFragments: No indices found: " <> show x)
                 . HMap.lookup x
       matFold = Fold.Fold addToMat init MatObsRow
-      addToMat m (!i, !j, !x) = HS.insertSpMatrix i j x m
+      addToMat !m (!i, !j, !x) = HS.insertSpMatrix i j x m
       init = HS.zeroSM (V.length cells) (V.length features)
       getIndices (!c, !r, !v) =
         (findErr c cellMap, findErr r featureMap, v)
