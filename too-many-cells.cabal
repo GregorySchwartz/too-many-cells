@@ -51,6 +51,7 @@ library
                      , TooManyCells.Program.Peaks
                      , TooManyCells.Program.Utility
   build-depends:       base >= 4.7 && < 5
+                     , IntervalMap
                      , SVGFonts
                      , aeson
                      , async-pool

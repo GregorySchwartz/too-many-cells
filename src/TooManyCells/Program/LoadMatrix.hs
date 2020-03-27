@@ -23,6 +23,7 @@ import Control.Monad.STM (atomically)
 import Control.Monad.Trans (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
+import Data.Either (isRight)
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import GHC.Conc (getNumCapabilities)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
@@ -203,6 +204,21 @@ loadAllSSM opts = runMaybeT $ do
 
     -- Check for empty matrix.
     when (V.null . getRowNames $ processedSc) . error $ emptyMatErr "cells"
+
+    liftIO $ when ( length matrixPaths' > 1
+                 && ( fromMaybe False
+                    . fmap (isRight . parseChrRegion)
+                    . flip (V.!?) 0
+                    $ getColNames processedSc
+                    )
+                  )
+           $
+      hPutStrLn stderr "\nNote: Detected chromosome region features.\
+                       \ Matrices were combined by overlapping features.\
+                       \ To disable this feature, make sure the feature names\
+                       \ are NOT in the form `chrN:START-END`. For instance,\
+                       \ just add any character to the beginning of the feature.\
+                       \ Continuing..."
 
     liftIO . mapM_ print . matrixValidity $ processedSc
 

@@ -49,12 +49,15 @@ import System.FilePath ((</>))
 import TextShow (showt)
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
+import qualified Data.Attoparsec.Text as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Data.ByteString.Streaming.Char8 as BS
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
 import qualified Data.HashSet as HSet
+import qualified Data.IntMap.Strict as IMap
+import qualified Data.IntervalMap.Strict as IntervalMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S

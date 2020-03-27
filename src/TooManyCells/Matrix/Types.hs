@@ -21,6 +21,7 @@ module TooManyCells.Matrix.Types where
 import BirchBeer.Types
 import Control.DeepSeq (NFData (..), force)
 import Control.Monad (join)
+import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid (..), mempty)
 import Data.Colour.Palette.BrewerSet (Kolor)
@@ -36,16 +37,20 @@ import Language.R.QQ (r)
 import Math.Clustering.Hierarchical.Spectral.Sparse (ShowB)
 import Math.Clustering.Hierarchical.Spectral.Types (ClusteringTree, ClusteringVertex)
 import Math.Modularity.Types (Q (..))
+import Safe (headMay)
 import TextShow (TextShow (..))
 import qualified Control.DeepSeq as DS
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
+import qualified Data.Attoparsec.Text as Atto
 import qualified Data.ByteString as B
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
 import qualified Data.HashMap.Strict as HMap
 import qualified Data.HashSet as HSet
 import qualified Data.IntMap as IMap
+import qualified Data.IntervalMap.Interval as IntervalMap
+import qualified Data.IntervalMap.Strict as IntervalMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -97,6 +102,13 @@ newtype FilterThresholds = FilterThresholds
 newtype MatrixTranspose = MatrixTranspose
     { unMatrixTranspose :: Bool
     } deriving (Read,Show)
+newtype ChrRegion = ChrRegion
+    { unChrRegion :: (T.Text, IntervalMap.Interval Int)
+    } deriving (Read,Show)
+newtype ChrRegionMat = ChrRegionMat
+    { unChrRegionMat
+   :: Map.Map T.Text (IntervalMap.IntervalMap Int (S.SpVector Double))
+    } deriving (Show)
 newtype X = X
     { unX :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
@@ -133,6 +145,46 @@ instance Monoid MatObsRow where
     mempty = MatObsRow $ S.zeroSM 0 0
 
 -- Advanced
+-- | Parse a chromosome region feature into an interval map.
+parseChrRegion :: T.Text -> Either String ChrRegion
+parseChrRegion x = either (\a -> Left $ a <> ": " <> T.unpack x) Right
+                 . Atto.parseOnly parserChrRegion
+                 $ x
+
+parserChrRegion :: Atto.Parser ChrRegion
+parserChrRegion = do
+  Atto.string "chr"
+  chr <- Atto.takeWhile1 (/= ':')
+  Atto.char ':'
+  start <- Atto.decimal
+  Atto.char '-'
+  end <- Atto.decimal
+
+  return . ChrRegion $ (chr, IntervalMap.OpenInterval start end)
+
+instance TextShow ChrRegion where
+    showt (ChrRegion (chr, i)) = "chr"
+                              <> chr
+                              <> ":"
+                              <> showt (IntervalMap.lowerBound i)
+                              <> "-"
+                              <> showt (IntervalMap.upperBound i)
+
+instance Monoid ChrRegionMat where
+    mempty = ChrRegionMat Map.empty
+
+instance Semigroup ChrRegionMat where
+  (<>) (ChrRegionMat x) (ChrRegionMat y) =
+    ChrRegionMat
+      . Map.unionWith
+          ( \x y
+         -> IntervalMap.flattenWith (S.^+^)
+          . IntervalMap.unionWith (S.^+^) x
+          $ y
+          )
+          x
+      $ y
+
 data SingleCells = SingleCells { _matrix :: MatObsRow
                                , _rowNames :: Vector Cell
                                , _colNames :: Vector Feature
@@ -149,6 +201,12 @@ instance Semigroup SingleCells where
                     , _rowNames    = (V.++) (L.view rowNames x) (L.view rowNames y)
                     , _colNames    = _colNames x
                     }
+    | fromMaybe False
+        . fmap (isRight . parseChrRegion)
+        . flip (V.!?) 0
+        $ getColNames x =
+            either (\a -> error $ "Invalid chromosome region notation for feature, must be in format `chrN:START-END`: " <> a) id
+              $ mergeChrFeaturesSingleCells x y
     | otherwise = mergeFeaturesSingleCells x y
 
 -- | Join two SingleCells with different features.
@@ -179,6 +237,58 @@ mergeFeaturesSingleCells sc1 sc2 =
     newColMap = HMap.fromList . flip zip [0..] . fmap unFeature $ newCols
     newCols = Set.toAscList . Set.union (colToSet sc1) $ colToSet sc2
     colToSet = Set.fromList . V.toList . L.view colNames
+
+-- | Join two SingleCells with different chromosome region features. Merge the
+-- features such that overlapping regions become one region.
+mergeChrFeaturesSingleCells :: SingleCells -> SingleCells -> Either String SingleCells
+mergeChrFeaturesSingleCells sc1 sc2 = do
+  let getScMap sc = ChrRegionMat
+                  . fmap (IntervalMap.flattenWith (S.^+^))
+                  . Map.unionsWith (IntervalMap.unionWith (S.^+^))
+                  . zipWith (\r (ChrRegion (c, i))
+                            -> Map.singleton c $ IntervalMap.singleton i r
+                            )
+                      (S.toRowsL . S.transpose $ getMatrix sc)
+                <$> mapM parseChrRegion (V.toList $ getColNames sc)
+      sc1NRows = (V.length . L.view rowNames $ sc1)
+      newNRows = sc1NRows + (V.length . L.view rowNames $ sc2)
+      updateRows rowF mat = MatObsRow
+                          . S.modifyKeysSM
+                             rowF
+                             id
+                          . S.SM (newNRows, S.ncols $ unMatObsRow mat)
+                          . S.immSM
+                          . unMatObsRow
+                          $ mat
+      newSc1 = L.over matrix (updateRows id) sc1
+      newSc2 = L.over matrix (updateRows (+ sc1NRows)) sc2
+
+  sc1Map <- getScMap newSc1
+  sc2Map <- getScMap newSc2
+
+  let newMap = sc1Map <> sc2Map
+      newMat = S.fromColsL
+             $ Map.elems (unChrRegionMat newMap) >>= IntervalMap.elems
+      newCols =
+        Map.toAscList (unChrRegionMat newMap)
+          >>= ( \(!k, !v) -> zipWith
+                               (\ x y
+                               -> Feature
+                                . showt
+                                . ChrRegion
+                                $ (x, y)
+                               )
+                               (repeat k)
+                           $ IntervalMap.keys v
+              )
+
+  return $
+    SingleCells { _matrix      = MatObsRow . force $ newMat
+                , _rowNames    = (V.++)
+                                  (L.view rowNames sc1)
+                                  (L.view rowNames sc2)
+                , _colNames    = V.fromList newCols
+                }
 
 instance Monoid SingleCells where
     mempty  = SingleCells { _matrix = mempty
@@ -243,3 +353,4 @@ instance Generic Double
 instance Generic a => Generic (S.SpMatrix a)
 instance (Generic a, NFData a) => NFData (S.SpMatrix a) where
   rnf all@(S.SM (!x, !y) !m) = seq all ()
+
