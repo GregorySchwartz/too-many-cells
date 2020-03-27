@@ -119,6 +119,7 @@ loadAllSSM opts = runMaybeT $ do
     let matrixPaths'       = unHelpful . matrixPath $ opts
         normalization'     = getNormalization opts
         pca'               = fmap PCADim . unHelpful . pca $ opts
+        lsa'               = fmap LSADim . unHelpful . lsa $ opts
         svd'               = fmap SVDDim . unHelpful . svd $ opts
         noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
         transpose' = TransposeFlag . unHelpful . matrixTranspose $ opts
@@ -139,8 +140,8 @@ loadAllSSM opts = runMaybeT $ do
                            . filterThresholds
                            $ opts
 
-    liftIO $ when ((isJust pca' || isJust svd') && (elem normalization' [TfIdfNorm, BothNorm])) $
-      hPutStrLn stderr "\nWarning: PCA or SVD (creating negative numbers) with tf-idf\
+    liftIO $ when ((isJust pca' || isJust lsa' || isJust svd') && (elem normalization' [TfIdfNorm, BothNorm])) $
+      hPutStrLn stderr "\nWarning: Dimensionality reduction (creating negative numbers) with tf-idf\
                        \ normalization may lead to NaNs or 0s before spectral\
                        \ clustering (leading to svdlibc to hang or dense SVD\
                        \ to error out)! Continuing..."
@@ -178,14 +179,14 @@ loadAllSSM opts = runMaybeT $ do
         normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
         normMat LogCPMNorm   = logCPMSparseMat
         normMat NoneNorm     = id
-        processMat  = ( bool id shiftPositiveMat
-                      $ unShiftPositiveFlag shiftPositiveFlag'
-                      )
-                    . (\m -> maybe m (flip pcaDenseMat m) pca')
-                    . (\m -> maybe m (flip svdMat m) svd')
-                    . normMat normalization'
-                    . _matrix
-        processedSc = sc { _matrix = processMat sc }
+        processSc = L.over matrix ( bool id shiftPositiveMat
+                                  $ unShiftPositiveFlag shiftPositiveFlag'
+                                  )
+                  . (\m -> maybe m (flip pcaSparseSc m) pca')
+                  . (\m -> maybe m (flip lsaSparseSc m) lsa')
+                  . (\m -> maybe m (flip svdSparseSc m) svd')
+                  . L.over matrix (normMat normalization')
+        processedSc = processSc sc
         -- Filter label map if necessary.
         labelMap = (\ valid -> fmap ( LabelMap
                                     . Map.filterWithKey (\k _ -> Set.member k valid)

@@ -79,6 +79,9 @@ newtype BlacklistRegions = BlacklistRegions { unBlacklistRegions :: T.Text }
 newtype PCADim = PCADim
     { unPCADim :: Int
     } deriving (Eq,Ord,Read,Show)
+newtype LSADim = LSADim
+    { unLSADim :: Int
+    } deriving (Eq,Ord,Read,Show)
 newtype SVDDim = SVDDim
     { unSVDDim :: Int
     } deriving (Eq,Ord,Read,Show)

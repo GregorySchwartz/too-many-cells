@@ -25,10 +25,14 @@ module TooManyCells.Matrix.Preprocess
     , removeCorrelated
     , pcaRMat
     , pcaDenseSc
+    , pcaSparseSc
+    , lsaSparseSc
+    , svdSparseSc
     , shiftPositiveSc
     , pcaDenseMat
     , pcaSparseMat
-    , svdMat
+    , lsaSparseMat
+    , svdSparseMat
     , shiftPositiveMat
     , emptyMatErr
     , labelRows
@@ -44,6 +48,7 @@ import Data.Maybe (fromMaybe)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
+import Math.Clustering.Spectral.Sparse (B1 (..), B2 (..), b1ToB2)
 import Statistics.Quantile (quantile, s)
 import Statistics.Sample (mean, stdDev)
 import TextShow (showt)
@@ -63,7 +68,6 @@ import qualified Numeric.LinearAlgebra as H
 import qualified Numeric.LinearAlgebra.Devel as H
 import qualified Numeric.LinearAlgebra.HMatrix as H
 import qualified Numeric.LinearAlgebra.SVD.SVDLIBC as SVD
-import Debug.Trace
 
 -- Local
 import TooManyCells.File.Types
@@ -396,8 +400,8 @@ pcaDenseSc p@(PCADim n) =
     . L.over matrix (pcaDenseMat p)
 
 -- | Conduct SVD on a matrix, retaining the specified number of dimensions.
-svdMat :: SVDDim -> MatObsRow -> MatObsRow
-svdMat (SVDDim svdDim) =
+svdSparseMat :: SVDDim -> MatObsRow -> MatObsRow
+svdSparseMat (SVDDim svdDim) =
   MatObsRow
     . S.fromRowsL
     . S.secondLeft 1 svdDim
@@ -411,6 +415,18 @@ pcaSparseSc :: PCADim -> SingleCells -> SingleCells
 pcaSparseSc p@(PCADim n) =
   L.set colNames (V.fromList . fmap (\x -> Feature $ "PCA " <> showt x) $ [1..n])
     . L.over matrix (pcaSparseMat p)
+
+-- | Conduct LSA on a SingleCells, taking the first singular values.
+lsaSparseSc :: LSADim -> SingleCells -> SingleCells
+lsaSparseSc l@(LSADim n) =
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "LSA " <> showt x) $ [1..n])
+    . L.over matrix (lsaSparseMat l)
+
+-- | Conduct SVD on a SingleCells, taking the first singular values.
+svdSparseSc :: SVDDim -> SingleCells -> SingleCells
+svdSparseSc s@(SVDDim n) =
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "SVD " <> showt x) $ [1..n])
+    . L.over matrix (svdSparseMat s)
 
 -- | Obtain the right singular vectors from N to E on of a sparse
 -- matrix.
@@ -428,20 +444,27 @@ sparseRightSVD n e =
 pcaSparseMat :: PCADim -> MatObsRow -> MatObsRow
 pcaSparseMat (PCADim pcaDim) (MatObsRow mat) =
   MatObsRow
-    . (\x -> traceShow ("mul", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
     . (S.#~#) scaled
-    . (\x -> traceShow ("svd", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
     . S.fromRowsL
     . sparseRightSVD 1 pcaDim
-    . (\x -> traceShow ("scale", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
     $ scaled
   where
     scaled = S.fromColsL
            . fmap centerScaleSparseCell
            . S.toRowsL -- Scale features for PCA
            . S.transpose
-           . (\x -> traceShow ("input", sum x, take 10 . S.toListSM . S.sparsifySM $ x) x)
            $ mat
+
+-- | Conduct LSA on a matrix, retaining the specified number of dimensions.
+lsaSparseMat :: LSADim -> MatObsRow -> MatObsRow
+lsaSparseMat (LSADim lsaDim) =
+  MatObsRow
+    . S.fromRowsL
+    . S.secondLeft 1 lsaDim
+    . unB2
+    . b1ToB2
+    . B1
+    . unMatObsRow
 
 -- | Shift features to positive values.
 shiftPositiveMat :: MatObsRow -> MatObsRow

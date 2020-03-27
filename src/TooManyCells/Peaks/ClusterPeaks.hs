@@ -55,7 +55,6 @@ import qualified System.FilePath as FP
 import qualified Filesystem.Path as FSP
 import qualified System.IO as IO
 import qualified Turtle.Bytes as TB
-import Debug.Trace
 
 -- Local
 import TooManyCells.File.Types
