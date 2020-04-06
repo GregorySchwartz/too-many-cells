@@ -117,109 +117,118 @@ loadSSM opts matrixPath' = do
 -- | Load all single cell matrices.
 loadAllSSM :: Options -> IO (Maybe (SingleCells, Maybe LabelMap))
 loadAllSSM opts = runMaybeT $ do
-    let matrixPaths'       = unHelpful . matrixPath $ opts
-        normalization'     = getNormalization opts
-        pca'               = fmap PCADim . unHelpful . pca $ opts
-        lsa'               = fmap LSADim . unHelpful . lsa $ opts
-        svd'               = fmap SVDDim . unHelpful . svd $ opts
-        noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
-        transpose' = TransposeFlag . unHelpful . matrixTranspose $ opts
-        shiftPositiveFlag' =
-          ShiftPositiveFlag . unHelpful . shiftPositive $ opts
-        customLabel' = (\ xs -> bool
-                                  (fmap (Just . CustomLabel) xs)
-                                  (repeat Nothing)
-                              . null
-                              $ xs
-                        )
-                      . unHelpful
-                      . customLabel
-                      $ opts
-        filterThresholds'  = FilterThresholds
-                           . maybe (250, 1) read
-                           . unHelpful
-                           . filterThresholds
-                           $ opts
+  let matrixPaths'       = unHelpful . matrixPath $ opts
+      normalization'     = getNormalization opts
+      pca'               = fmap PCADim . unHelpful . pca $ opts
+      lsa'               = fmap LSADim . unHelpful . lsa $ opts
+      svd'               = fmap SVDDim . unHelpful . svd $ opts
+      noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
+      transpose' = TransposeFlag . unHelpful . matrixTranspose $ opts
+      shiftPositiveFlag' =
+        ShiftPositiveFlag . unHelpful . shiftPositive $ opts
+      customLabel' = (\ xs -> bool
+                                (fmap (Just . CustomLabel) xs)
+                                (repeat Nothing)
+                            . null
+                            $ xs
+                      )
+                    . unHelpful
+                    . customLabel
+                    $ opts
+      filterThresholds'  = FilterThresholds
+                         . maybe (250, 1) read
+                         . unHelpful
+                         . filterThresholds
+                         $ opts
+      customRegions' = CustomRegions
+                     . fmap (either (\x -> error $ "Cannot parse region format `chrN:START-END` in: " <> x) id . parseChrRegion)
+                     . unHelpful
+                     . customRegions
+                     $ opts
 
-    liftIO $ when ((isJust pca' || isJust lsa' || isJust svd') && (elem normalization' [TfIdfNorm, BothNorm])) $
-      hPutStrLn stderr "\nWarning: Dimensionality reduction (creating negative numbers) with tf-idf\
-                       \ normalization may lead to NaNs or 0s before spectral\
-                       \ clustering (leading to svdlibc to hang or dense SVD\
-                       \ to error out)! Continuing..."
+  liftIO $ when ((isJust pca' || isJust lsa' || isJust svd') && (elem normalization' [TfIdfNorm, BothNorm])) $
+    hPutStrLn stderr "\nWarning: Dimensionality reduction (creating negative numbers) with tf-idf\
+                     \ normalization may lead to NaNs or 0s before spectral\
+                     \ clustering (leading to svdlibc to hang or dense SVD\
+                     \ to error out)! Continuing..."
 
-    let labelAxis (TransposeFlag False) = labelRows
-        labelAxis (TransposeFlag True) = labelCols
+  let labelAxis (TransposeFlag False) = labelRows
+      labelAxis (TransposeFlag True) = labelCols
 
-    cores <- MaybeT . fmap Just $ getNumCapabilities
-    (whitelistSc, whitelistLM) <- MaybeT
-          $ if null matrixPaths'
-              then return Nothing
-              else
-                withTaskGroup cores $ \workers ->
-                  fmap ( Just
-                       . (L.over L._1 (\x -> bool x (transposeSC x) . unTransposeFlag $ transpose'))  -- Whether to transpose the matrix.
-                       . unLabelMat
-                       )
-                    . join
-                    . atomically
-                    . fmap wait
-                    . mapReduce workers
-                    . zipWith (\l -> fmap (labelAxis transpose' l)) customLabel'  -- Depending on which axis to label from transpose.
-                    . fmap (loadSSM opts)
-                    $ matrixPaths'
+  cores <- MaybeT . fmap Just $ getNumCapabilities
+  (whitelistSc, whitelistLM) <- MaybeT
+        $ if null matrixPaths'
+            then return Nothing
+            else
+              withTaskGroup cores $ \workers ->
+                fmap ( Just
+                     . (L.over L._1 (\x -> bool x (transposeSC x) . unTransposeFlag $ transpose'))  -- Whether to transpose the matrix.
+                     . unLabelMat
+                     )
+                  . join
+                  . atomically
+                  . fmap wait
+                  . mapReduce workers
+                  . zipWith (\l -> fmap (labelAxis transpose' l)) customLabel'  -- Depending on which axis to label from transpose.
+                  . fmap (loadSSM opts)
+                  $ matrixPaths'
 
-    let sc           =
-          ( bool (filterNumSparseMat filterThresholds') id
-          $ unNoFilterFlag noFilterFlag'
-          )
-            $ whitelistSc
-        normMat TfIdfNorm    = id -- Normalize during clustering.
-        normMat UQNorm       = uqScaleSparseMat
-        normMat MedNorm      = medScaleSparseMat
-        normMat TotalMedNorm = scaleSparseMat
-        normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
-        normMat LogCPMNorm   = logCPMSparseMat
-        normMat NoneNorm     = id
-        processSc = L.over matrix ( bool id shiftPositiveMat
-                                  $ unShiftPositiveFlag shiftPositiveFlag'
+  let sc = bool
+             (transformChrRegions customRegions')
+             id
+             (null $ unCustomRegions customRegions')
+         . bool
+            (filterNumSparseMat filterThresholds')
+            id
+            (unNoFilterFlag noFilterFlag')
+         $ whitelistSc
+      normMat TfIdfNorm    = id -- Normalize during clustering.
+      normMat UQNorm       = uqScaleSparseMat
+      normMat MedNorm      = medScaleSparseMat
+      normMat TotalMedNorm = scaleSparseMat
+      normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
+      normMat LogCPMNorm   = logCPMSparseMat
+      normMat NoneNorm     = id
+      processSc = L.over matrix ( bool id shiftPositiveMat
+                                $ unShiftPositiveFlag shiftPositiveFlag'
+                                )
+                . (\m -> maybe m (flip pcaSparseSc m) pca')
+                . (\m -> maybe m (flip lsaSparseSc m) lsa')
+                . (\m -> maybe m (flip svdSparseSc m) svd')
+                . L.over matrix (normMat normalization')
+      processedSc = processSc sc
+      -- Filter label map if necessary.
+      labelMap = (\ valid -> fmap ( LabelMap
+                                  . Map.filterWithKey (\k _ -> Set.member k valid)
+                                  . unLabelMap
                                   )
-                  . (\m -> maybe m (flip pcaSparseSc m) pca')
-                  . (\m -> maybe m (flip lsaSparseSc m) lsa')
-                  . (\m -> maybe m (flip svdSparseSc m) svd')
-                  . L.over matrix (normMat normalization')
-        processedSc = processSc sc
-        -- Filter label map if necessary.
-        labelMap = (\ valid -> fmap ( LabelMap
-                                    . Map.filterWithKey (\k _ -> Set.member k valid)
-                                    . unLabelMap
-                                    )
-                                    $ whitelistLM
-                   )
-                 . Set.fromList
-                 . fmap (Id . unCell)
-                 . V.toList
-                 . L.view rowNames
-                 $ processedSc
+                                  $ whitelistLM
+                 )
+               . Set.fromList
+               . fmap (Id . unCell)
+               . V.toList
+               . L.view rowNames
+               $ processedSc
 
 
-    -- Check for empty matrix.
-    when (V.null . getRowNames $ processedSc) . error $ emptyMatErr "cells"
+  -- Check for empty matrix.
+  when (V.null . getRowNames $ processedSc) . error $ emptyMatErr "cells"
 
-    liftIO $ when ( length matrixPaths' > 1
-                 && ( fromMaybe False
-                    . fmap (isRight . parseChrRegion)
-                    . flip (V.!?) 0
-                    $ getColNames processedSc
-                    )
+  liftIO $ when ( length matrixPaths' > 1
+               && ( fromMaybe False
+                  . fmap (isRight . parseChrRegion)
+                  . flip (V.!?) 0
+                  $ getColNames processedSc
                   )
-           $
-      hPutStrLn stderr "\nNote: Detected chromosome region features.\
-                       \ Matrices were combined by overlapping features.\
-                       \ To disable this feature, make sure the feature names\
-                       \ are NOT in the form `chrN:START-END`. For instance,\
-                       \ just add any character to the beginning of the feature.\
-                       \ Continuing..."
+                )
+         $
+    hPutStrLn stderr "\nNote: Detected chromosome region features.\
+                     \ Matrices were combined by overlapping features.\
+                     \ To disable this feature, make sure the feature names\
+                     \ are NOT in the form `chrN:START-END`. For instance,\
+                     \ just add any character to the beginning of the feature.\
+                     \ Continuing..."
 
-    liftIO . mapM_ print . matrixValidity $ processedSc
+  liftIO . mapM_ print . matrixValidity $ processedSc
 
-    return (processedSc, labelMap)
+  return (processedSc, labelMap)

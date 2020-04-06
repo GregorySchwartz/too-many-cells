@@ -109,6 +109,9 @@ newtype ChrRegionMat = ChrRegionMat
     { unChrRegionMat
    :: Map.Map T.Text (IntervalMap.IntervalMap Int (S.SpVector Double))
     } deriving (Show)
+newtype CustomRegions = CustomRegions
+    { unCustomRegions :: [ChrRegion]
+    } deriving (Read,Show)
 newtype X = X
     { unX :: Double
     } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)

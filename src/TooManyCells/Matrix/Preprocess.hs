@@ -7,6 +7,7 @@ Collects functions pertaining to preprocessing the data.
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TupleSections #-}
 
 module TooManyCells.Matrix.Preprocess
     ( scaleRMat
@@ -37,12 +38,13 @@ module TooManyCells.Matrix.Preprocess
     , emptyMatErr
     , labelRows
     , labelCols
+    , transformChrRegions
     ) where
 
 -- Remote
 import BirchBeer.Types (LabelMap (..), Id (..), Label (..), Feature (..))
 import Data.Bool (bool)
-import Data.List (sort)
+import Data.List (sort, foldl')
 import Data.Monoid ((<>))
 import Data.Maybe (fromMaybe)
 import H.Prelude (io)
@@ -53,8 +55,11 @@ import Statistics.Quantile (quantile, s)
 import Statistics.Sample (mean, stdDev)
 import TextShow (showt)
 import qualified Control.Lens as L
+import qualified Data.HashMap.Strict as HMap
 import qualified Data.HashSet as HSet
 import qualified Data.IntSet as ISet
+import qualified Data.IntervalMap.Interval as IntervalMap
+import qualified Data.IntervalMap.Strict as IntervalMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
@@ -515,3 +520,43 @@ labelCols (Just (CustomLabel l)) sc =
              $ newColNames
     newColNames = fmap labelCol . L.view colNames $ sc
     labelCol (Feature x) = Feature $ x <> "-" <> l
+
+-- | Transform a list of chromosome region features to a list of custom features.
+transformChrRegions :: CustomRegions -> SingleCells -> SingleCells
+transformChrRegions (CustomRegions customRegions) sc = 
+    L.set matrix mat
+      . L.set colNames features
+      $ sc
+  where
+    features = V.fromList . fmap (Feature . showt) $ customRegions
+    knownFeatureMap = foldl' (HMap.unionWith IntervalMap.union) HMap.empty
+                    . fmap (\ (!i, (!c, !interval))
+                           -> HMap.singleton c
+                            $ IntervalMap.singleton interval i
+                           )
+                    . zip ([0..] :: [Int])
+                    . fmap unChrRegion
+                    $ customRegions
+    findErrKnown :: T.Text -> [Int]
+    findErrKnown x = fromMaybe (error $ "transformChrRegions/findErrKnown: No indices found: " <> show x)
+                   . (\ (!c, !i) -> HMap.lookup c knownFeatureMap
+                                >>= Just
+                                  . IntervalMap.elems
+                                  . flip IntervalMap.intersecting i
+                     )
+                   . either error unChrRegion
+                   . parseChrRegion
+                   $ x
+    mat = MatObsRow
+        . S.fromListSM (S.dim . unMatObsRow $ L.view matrix sc)
+        . concatMap (\ (!i, !j, !v)
+                    -> fmap (i, , v)
+                     . findErrKnown
+                     . unFeature
+                     . fromMaybe (error $ "transformChrRegions/mat: No indices found: " <> show j)
+                     $ (V.!?) (L.view colNames sc) j
+                    )
+        . S.toListSM
+        . unMatObsRow
+        . L.view matrix
+        $ sc
