@@ -548,7 +548,7 @@ transformChrRegions (CustomRegions customRegions) sc =
                    . parseChrRegion
                    $ x
     mat = MatObsRow
-        . S.fromListSM (S.dim . unMatObsRow $ L.view matrix sc)
+        . foldl' addToMat init
         . concatMap (\ (!i, !j, !v)
                     -> fmap (i, , v)
                      . findErrKnown
@@ -557,6 +557,7 @@ transformChrRegions (CustomRegions customRegions) sc =
                      $ (V.!?) (L.view colNames sc) j
                     )
         . S.toListSM
-        . unMatObsRow
-        . L.view matrix
-        $ sc
+        $ oldMat
+    init = S.zeroSM (S.nrows oldMat) $ V.length features
+    addToMat !m x = m S.^+^ S.fromListSM (S.dim init) [x]
+    oldMat = unMatObsRow . L.view matrix $ sc

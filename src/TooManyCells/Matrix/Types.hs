@@ -163,7 +163,7 @@ parserChrRegion = do
   Atto.char '-'
   end <- Atto.decimal
 
-  return . ChrRegion $ (chr, IntervalMap.OpenInterval start end)
+  return . ChrRegion $ (chr, IntervalMap.ClosedInterval start end)
 
 instance TextShow ChrRegion where
     showt (ChrRegion (chr, i)) = "chr"
