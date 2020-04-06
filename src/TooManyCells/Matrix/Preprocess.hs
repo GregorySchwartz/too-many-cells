@@ -538,7 +538,7 @@ transformChrRegions (CustomRegions customRegions) sc =
                     . fmap unChrRegion
                     $ customRegions
     findErrKnown :: T.Text -> [Int]
-    findErrKnown x = fromMaybe (error $ "transformChrRegions/findErrKnown: No indices found: " <> show x)
+    findErrKnown x = fromMaybe []
                    . (\ (!c, !i) -> HMap.lookup c knownFeatureMap
                                 >>= Just
                                   . IntervalMap.elems
