@@ -143,7 +143,7 @@ loadAllSSM opts = runMaybeT $ do
       customRegions' = CustomRegions
                      . fmap (either (\x -> error $ "Cannot parse region format `chrN:START-END` in: " <> x) id . parseChrRegion)
                      . unHelpful
-                     . customRegions
+                     . customRegion
                      $ opts
 
   liftIO $ when ((isJust pca' || isJust lsa' || isJust svd') && (elem normalization' [TfIdfNorm, BothNorm])) $
