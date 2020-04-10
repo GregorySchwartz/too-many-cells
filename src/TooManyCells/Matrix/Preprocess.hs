@@ -13,6 +13,7 @@ module TooManyCells.Matrix.Preprocess
     ( scaleRMat
     , scaleDenseMat
     , scaleSparseMat
+    , totalScaleSparseMat
     , logCPMSparseMat
     , uqScaleSparseMat
     , medScaleSparseMat
@@ -96,7 +97,8 @@ scaleRMat (RMatObsRow mat) = do
             t(mat[,colSums(!is.na(mat)) > 0])
         |]
 
--- | Scale a matrix based on the library size.
+-- | Scale a matrix based on the library size for each cell and median feature
+-- size.
 scaleDenseMat :: MatObsRow -> MatObsRow
 scaleDenseMat (MatObsRow mat) = MatObsRow
                               . hToSparseMat
@@ -109,7 +111,8 @@ scaleDenseMat (MatObsRow mat) = MatObsRow
                               . sparseToHMat
                               $ mat
 
--- | Scale a matrix based on the library size.
+-- | Scale a matrix based on the library size for each cell and median feature
+-- size.
 scaleSparseMat :: MatObsRow -> MatObsRow
 scaleSparseMat (MatObsRow mat) = MatObsRow
                                . S.sparsifySM
@@ -120,6 +123,15 @@ scaleSparseMat (MatObsRow mat) = MatObsRow
                                . fmap scaleSparseCell
                                . S.toRowsL
                                $ mat
+
+-- | Scale a matrix based on the library size.
+totalScaleSparseMat :: MatObsRow -> MatObsRow
+totalScaleSparseMat (MatObsRow mat) = MatObsRow
+                                    . S.sparsifySM
+                                    . S.fromRowsL
+                                    . fmap scaleSparseCell
+                                    . S.toRowsL
+                                    $ mat
 
 -- | Scale a matrix based on the upper quartile.
 uqScaleSparseMat :: MatObsRow -> MatObsRow
@@ -523,7 +535,7 @@ labelCols (Just (CustomLabel l)) sc =
 
 -- | Transform a list of chromosome region features to a list of custom features.
 transformChrRegions :: CustomRegions -> SingleCells -> SingleCells
-transformChrRegions (CustomRegions customRegions) sc = 
+transformChrRegions (CustomRegions customRegions) sc =
     L.set matrix mat
       . L.set colNames features
       $ sc

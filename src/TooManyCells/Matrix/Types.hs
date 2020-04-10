@@ -152,7 +152,6 @@ instance Monoid MatObsRow where
 parseChrRegion :: T.Text -> Either String ChrRegion
 parseChrRegion x = either (\a -> Left $ a <> ": " <> T.unpack x) Right
                  . Atto.parseOnly parserChrRegion
-                 . T.filter (/= ',')
                  $ x
 
 parserChrRegion :: Atto.Parser ChrRegion
@@ -339,6 +338,7 @@ data NormType = TfIdfNorm
               | UQNorm
               | MedNorm
               | TotalMedNorm
+              | TotalNorm
               | BothNorm
               | LogCPMNorm
               | NoneNorm

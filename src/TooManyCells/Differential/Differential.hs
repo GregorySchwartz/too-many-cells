@@ -12,7 +12,9 @@ Functions for finding the differential between groups of cells.
 module TooManyCells.Differential.Differential
     ( scToTwoD
     , getDEGraph
+    , getDEGraphKruskalWallis
     , getDEString
+    , getDEStringKruskalWallis
     , getSingleDiff
     , combineNodesLabels
     , getAllDEGraphKruskalWallis
@@ -24,7 +26,7 @@ import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeafItems)
 import Control.Monad (join, mfilter)
 import Data.Function (on)
-import Data.List (sort, sortBy, genericLength)
+import Data.List (sort, sortBy, genericLength, partition)
 import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Monoid ((<>))
 import Language.R as R
@@ -125,6 +127,35 @@ getDEGraph (TopN topN) lm sc v1 v2 gr = do
 
     Diff.edgeR topN mat
 
+-- | Get the differential expression using Kruskall-Wallis of two sets of cells,
+-- filtered by labels.
+getDEGraphKruskalWallis
+  :: TopN
+  -> Maybe LabelMap
+  -> SingleCells
+  -> ([G.Node], Maybe (Set.Set Label))
+  -> ([G.Node], Maybe (Set.Set Label))
+  -> ClusterGraph CellInfo
+  -> [(Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+getDEGraphKruskalWallis (TopN topN) lm sc v1 v2 gr
+  | fastFiveCheck as || fastFiveCheck bs = error "Less than five cells in one node to compare."
+  | otherwise = take topN . sortBy (compare `on` L.view L._3) $ res
+  where
+    fastFiveCheck = (< 5) . length . take 5
+    res = filter (isJust . L.view L._3)
+        . zipWith
+              (\name (!x, !y, !z) -> (name, x, y, z))
+              (V.toList . L.view colNames $ sc)
+        . Diff.differentialMatrixFeatRow as bs
+        . S.transpose
+        . unMatObsRow
+        . L.view matrix
+        $ sc
+    cellGroups = getStatuses lm v1 v2 gr
+    (as, bs) = L.over L.both (fmap (L.view L._1))
+             . partition ((== 1) . L.view (L._3 . L._1))
+             $ cellGroups
+
 -- | Get the differential expression of each cluster to each other cluster using
 -- KruskalWallis.
 getAllDEGraphKruskalWallis :: TopN
@@ -182,7 +213,7 @@ getDEString :: [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
             -> B.ByteString
 getDEString xs = header <> "\n" <> body
   where
-    header = "feature,logFC,pVal,FDR"
+    header = "feature,log2FC,pVal,FDR"
     body   = CSV.encode
            . fmap ( L.over L._1 Diff.unName
                   . L.over L._3 Diff.unPValue
@@ -202,6 +233,21 @@ getAllDEStringKruskalWallis xs = header <> "\n" <> body
                   . L.over L._4 (maybe "NA" (showt . Diff.unPValue))
                   . L.over L._3 Diff.unLog2Diff
                   . L.over L._2 unFeature
+                  )
+           $ xs
+
+-- | Get the differential expression string between two sets of nodes using
+-- KruskalWallis.
+getDEStringKruskalWallis
+  :: [(Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)] -> B.ByteString
+getDEStringKruskalWallis xs = header <> "\n" <> body
+  where
+    header = "feature,log2FC,pVal,FDR"
+    body   = CSV.encode
+           . fmap ( L.over L._4 (maybe "NA" (showt . Diff.unFDR))
+                  . L.over L._3 (maybe "NA" (showt . Diff.unPValue))
+                  . L.over L._2 Diff.unLog2Diff
+                  . L.over L._1 unFeature
                   )
            $ xs
 

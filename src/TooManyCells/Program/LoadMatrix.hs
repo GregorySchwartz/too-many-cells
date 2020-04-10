@@ -174,10 +174,6 @@ loadAllSSM opts = runMaybeT $ do
                   $ matrixPaths'
 
   let sc = bool
-             (transformChrRegions customRegions')
-             id
-             (null $ unCustomRegions customRegions')
-         . bool
             (filterNumSparseMat filterThresholds')
             id
             (unNoFilterFlag noFilterFlag')
@@ -186,6 +182,7 @@ loadAllSSM opts = runMaybeT $ do
       normMat UQNorm       = uqScaleSparseMat
       normMat MedNorm      = medScaleSparseMat
       normMat TotalMedNorm = scaleSparseMat
+      normMat TotalNorm    = totalScaleSparseMat
       normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
       normMat LogCPMNorm   = logCPMSparseMat
       normMat NoneNorm     = id
@@ -195,6 +192,7 @@ loadAllSSM opts = runMaybeT $ do
                 . (\m -> maybe m (flip pcaSparseSc m) pca')
                 . (\m -> maybe m (flip lsaSparseSc m) lsa')
                 . (\m -> maybe m (flip svdSparseSc m) svd')
+                . bool (transformChrRegions customRegions') id (null $ unCustomRegions customRegions')
                 . L.over matrix (normMat normalization')
       processedSc = processSc sc
       -- Filter label map if necessary.

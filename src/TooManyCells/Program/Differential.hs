@@ -66,6 +66,7 @@ differentialMain opts = do
         features'    = fmap Feature . unHelpful . features $ opts
         aggregate' = Aggregate . unHelpful . aggregate $ opts
         updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
+        noEdger' = NoEdger . unHelpful . noEdger $ opts
         labels'   = fmap ( DiffLabels
                          . L.over L.both ( (\x -> bool (Just x) Nothing . Set.null $ x)
                                          . Set.fromList
@@ -114,15 +115,27 @@ differentialMain opts = do
             (DiffNodes ([], _)) -> error "Need other nodes to compare with. If every node should be compared to all other nodes using Mann-Whitney U, use \"([], [])\"."
             (DiffNodes (_, [])) -> error "Need other nodes to compare with. If every node should be compared to all other nodes using Mann-Whitney U, use \"([], [])\"."
             _ -> do
-              res <- getDEGraph
-                      topN'
-                      labelMap
-                      (extractSc processedSc)
-                      combined1
-                      combined2
-                      gr
+              if unNoEdger noEdger'
+                then do
+                  let res = getDEGraphKruskalWallis
+                             topN'
+                             labelMap
+                             (extractSc processedSc)
+                             combined1
+                             combined2
+                             gr
 
-              H.io . B.putStrLn . getDEString $ res
+                  H.io . B.putStrLn . getDEStringKruskalWallis $ res
+                else do
+                  res <- getDEGraph
+                          topN'
+                          labelMap
+                          (extractSc processedSc)
+                          combined1
+                          combined2
+                          gr
+
+                  H.io . B.putStrLn . getDEString $ res
         _ -> do
           let outputCsvR = FP.replaceExtension plotOutputR ".csv"
 
