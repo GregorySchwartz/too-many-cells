@@ -39,14 +39,13 @@ getNormalization opts@(Interactive{}) =
     . unHelpful
     . normalization
     $ opts
-getNormalization opts@(Differential{}) =
+getNormalization opts =
   maybe
     NoneNorm
     (readOrErr "Cannot read --normalization.")
     . unHelpful
     . normalization
     $ opts
-getNormalization _ = TfIdfNorm
 
 -- | Get the file type of an input matrix. Returns either a left CSV or a right
 -- matrix market.

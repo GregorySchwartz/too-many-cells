@@ -1,5 +1,5 @@
 name:                too-many-cells
-version:             0.2.3.0
+version:             0.2.4.0
 synopsis:            Cluster single cells and analyze cell clade relationships.
 description:         Different methods to cluster and analyze single cell data with diversity indices and differential expression.
 homepage:            http://github.com/GregorySchwartz/too-many-cells#readme
@@ -35,6 +35,8 @@ library
                      , TooManyCells.Matrix.Preprocess
                      , TooManyCells.Matrix.Types
                      , TooManyCells.Matrix.Utility
+                     , TooManyCells.Motif.FindMotif
+                     , TooManyCells.Motif.Types
                      , TooManyCells.Paths.Distance
                      , TooManyCells.Paths.Plot
                      , TooManyCells.Paths.Types
@@ -44,6 +46,7 @@ library
                      , TooManyCells.Program.LoadMatrix
                      , TooManyCells.Program.MakeTree
                      , TooManyCells.Program.MatrixOutput
+                     , TooManyCells.Program.Motif
                      , TooManyCells.Program.Interactive
                      , TooManyCells.Program.Differential
                      , TooManyCells.Program.Diversity

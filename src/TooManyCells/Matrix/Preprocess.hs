@@ -126,12 +126,12 @@ scaleSparseMat (MatObsRow mat) = MatObsRow
 
 -- | Scale a matrix based on the library size.
 totalScaleSparseMat :: MatObsRow -> MatObsRow
-totalScaleSparseMat (MatObsRow mat) = MatObsRow
-                                    . S.sparsifySM
-                                    . S.fromRowsL
-                                    . fmap scaleSparseCell
-                                    . S.toRowsL
-                                    $ mat
+totalScaleSparseMat = MatObsRow
+                    . S.sparsifySM
+                    . S.fromRowsL
+                    . fmap scaleSparseCell
+                    . S.toRowsL
+                    . unMatObsRow
 
 -- | Scale a matrix based on the upper quartile.
 uqScaleSparseMat :: MatObsRow -> MatObsRow
@@ -536,9 +536,7 @@ labelCols (Just (CustomLabel l)) sc =
 -- | Transform a list of chromosome region features to a list of custom features.
 transformChrRegions :: CustomRegions -> SingleCells -> SingleCells
 transformChrRegions (CustomRegions customRegions) sc =
-    L.set matrix mat
-      . L.set colNames features
-      $ sc
+  L.set matrix mat . L.set colNames features $ sc
   where
     features = V.fromList . fmap (Feature . showt) $ customRegions
     knownFeatureMap = foldl' (HMap.unionWith IntervalMap.union) HMap.empty
