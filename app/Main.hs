@@ -17,7 +17,7 @@ import TooManyCells.Program.Diversity
 import TooManyCells.Program.Interactive
 import TooManyCells.Program.MakeTree
 import TooManyCells.Program.MatrixOutput
-import TooManyCells.Program.Motif
+import TooManyCells.Program.Motifs
 import TooManyCells.Program.Options
 import TooManyCells.Program.Paths
 import TooManyCells.Program.Peaks
@@ -34,5 +34,5 @@ main = do
         Diversity{}    -> diversityMain opts
         Paths{}        -> pathsMain opts
         Peaks{}        -> peaksMain opts
-        Motif{}        -> motifMain opts
+        Motifs{}       -> motifsMain opts
         MatrixOutput{} -> matrixOutputMain opts

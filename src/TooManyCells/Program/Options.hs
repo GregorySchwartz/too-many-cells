@@ -157,11 +157,11 @@ data Options
             , allNodes :: Bool <?> "Whether to get fragments and peaks for all nodes, not just the leaves."
             , bedgraph :: Bool <?> "Whether to output cluster normalized per million bedgraph output."
             , output :: Maybe String <?> "([out] | STRING) The folder containing output." }
-    | Motif { diffFile :: T.Text <?> "(FILE) The input file containing the differential features between nodes. Must be in the format `node,feature,log2FC,pVal,FDR`. The node column is optional (if wanting to separate per node)."
-            , motifGenome :: T.Text <?> "(FILE) The location of the genome file in fasta format to convert bed to fasta."
-            , motifCommand :: Maybe String <?> "([meme -oc %s %s] | STRING) The command to find motifs in a fasta file. Can be any command that will be run on each fasta file converted from the bed optionally per node, but the first \"%s\" must be the output argument, the second \"%s\" is input file. Uses meme by default."
-            , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed features."
-            , output :: Maybe String <?> "([out] | STRING) The folder containing output." }
+    | Motifs { diffFile :: T.Text <?> "(FILE) The input file containing the differential features between nodes. Must be in the format `node,feature,log2FC,pVal,FDR`. The node column is optional (if wanting to separate per node)."
+             , motifGenome :: T.Text <?> "(FILE) The location of the genome file in fasta format to convert bed to fasta."
+             , motifCommand :: Maybe String <?> "([meme %s -oc %s] | STRING) The command to find motifs in a fasta file. Can be any command that will be run on each fasta file converted from the bed optionally per node, but the first \"%s\" must be the input file, the second \"%s\" is the argument. Uses meme by default."
+             , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed features."
+             , output :: Maybe String <?> "([out] | STRING) The folder containing output." }
     | MatrixOutput { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing feature row names and cell column names. scATAC-seq is supported if input file contains \"fragments\", ends with \".tsv.gz\" (such as \"fragments.tsv.gz\" or \"sample1_fragments.tsv.gz\"), and is in the SORTED (sort -k1,1 -k2,2n) 10x fragments format (see also --binwidth, --no-binarize). If given as a list (--matrix-path input1 --matrix-path input2 etc.) then will join all matrices together. Assumes the same number and order of features in each matrix, so only cells are added."
                    , binwidth :: Maybe Int <?> "([5000] | BINSIZE) If input data is a fragments file, where each feature is a range of the genome, BINSIZE input is required to convert ranges to fixed width bins."
                    , noBinarize :: Bool <?> "If a fragments.tsv.gz file, do not binarize data."
@@ -197,6 +197,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "customCut"             = Nothing
     short "customLabel"           = Just 'Z'
     short "dendrogramOutput"      = Just 'U'
+    short "diffFile"              = Nothing
     short "drawCollection"        = Just 'E'
     short "drawColors"            = Just 'R'
     short "drawDendrogram"        = Just 'D'
@@ -233,6 +234,8 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "minDistanceSearch"     = Nothing
     short "minModularity"         = Nothing
     short "minSize"               = Just 'M'
+    short "motifCommand"          = Nothing
+    short "motifGenome"           = Nothing
     short "noEdger"               = Nothing
     short "noFilter"              = Just 'F'
     short "normalization"         = Just 'z'

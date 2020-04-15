@@ -35,8 +35,8 @@ library
                      , TooManyCells.Matrix.Preprocess
                      , TooManyCells.Matrix.Types
                      , TooManyCells.Matrix.Utility
-                     , TooManyCells.Motif.FindMotif
-                     , TooManyCells.Motif.Types
+                     , TooManyCells.Motifs.FindMotif
+                     , TooManyCells.Motifs.Types
                      , TooManyCells.Paths.Distance
                      , TooManyCells.Paths.Plot
                      , TooManyCells.Paths.Types
@@ -46,7 +46,7 @@ library
                      , TooManyCells.Program.LoadMatrix
                      , TooManyCells.Program.MakeTree
                      , TooManyCells.Program.MatrixOutput
-                     , TooManyCells.Program.Motif
+                     , TooManyCells.Program.Motifs
                      , TooManyCells.Program.Interactive
                      , TooManyCells.Program.Differential
                      , TooManyCells.Program.Diversity
