@@ -30,6 +30,7 @@ without additional parameters or runs. See below for a full list of features.
 
 * New features for current version
 
+- Now packaged for the functional package manager =nix=! Check out
 - A new R wrapper was written to quickly get data to and from =too-many-cells=
   from R. [[https://github.com/GregorySchwartz/tooManyCellsR][Check it out here]]!
 - Now works with Cellranger 3.0 matrices in addition to Cellranger 2.0
@@ -44,16 +45,31 @@ without additional parameters or runs. See below for a full list of features.
 * Installation
 
 We provide multiple ways to install =too-many-cells=. We recommend installing
-=stack= ([[Install =stack= ][see below]]), but we also have [[Docker][docker]] images and a =Dockerfile= to
-use in any system in case you have a custom build (for instance, a non-standard
-R installation) or difficulty installing. *macOS and Windows users:*
-=too-many-cells= was built and tested on linux, so we highly recommend using the
-[[Docker][docker]] image (which a completely isolated environment which requires no
-compiling or installation, other than docker itself) as there may be
-difficulties in installing the dependencies. There are, however, additional
-instructions for macOS [[macOS][here]] if you really want to compile it.
+with [[nix][=nix=]] or [[Stack][=stack=]]. =nix= will provide all dependencies in the build, so try
+that first. We also have [[Docker][docker]] images and a =Dockerfile= to use in any system
+in case you have a custom build (for instance, a non-standard R installation) or
+difficulty installing. *macOS and Windows users:* =too-many-cells= was built and
+tested on linux, so we highly recommend using the [[Docker][docker]] image (which a
+completely isolated environment which requires no compiling or installation,
+other than docker itself) as there may be difficulties in installing the
+dependencies. There are, however, additional instructions for macOS [[macOS][here]] if you
+really want to compile it.
 
-** Dependencies
+** nix
+
+=too-many-cells= can be installed using the functional package manager [[https://nixos.org/nix/][=nix=]].
+While you will need =sudo= to install, no =sudo= is required after the correct
+setup. First, install =nix= following the instructions
+[[https://nixos.org/nix/][on the website]]. Next,
+
+#+BEGIN_SRC sh
+git clone https://github.com/GregorySchwartz/too-many-cells.git
+cd too-many-cells
+nix-env -f default.nix -i too-many-cells
+#+END_SRC
+
+** Stack
+*** Dependencies
 
 You may require the following dependencies to build and run (from Ubuntu 14.04,
 use the appropriate packages from your distribution of choice):
@@ -91,7 +107,7 @@ install.packages("BiocManager")
 BiocManager::install("edgeR")
 #+END_SRC
 
-** Install =stack=
+*** Install =stack=
 
 See [[https://docs.haskellstack.org/en/stable/README/]] for more details.
 
@@ -100,9 +116,9 @@ curl -sSL https://get.haskellstack.org/ | sh
 stack setup
 #+END_SRC
 
-** Install =too-many-cells=
+*** Install =too-many-cells=
 
-*** Source
+**** Source
 
 Probably the easiest method if you don't want to mess with dependencies (outside
 of the ones above).
@@ -113,7 +129,7 @@ cd too-many-cells
 stack install
 #+END_SRC
 
-*** Online
+**** Online
 
 We only require =stack= (or =cabal=), you do not need to download any source
 code (but you might need the stack.yaml dependency versions), just run the
@@ -130,7 +146,31 @@ file. For a quick =yaml= configuration, refer to
 [[https://github.com/GregorySchwartz/too-many-cells/blob/master/stack.yaml]]. Relies
 on =eigen-3.3.4.1= right now.
 
-*** Docker
+**** macOS
+<<macOS>>
+
+We recommend using [[Docker][docker]] on macOS. If you need to build =too-many-cells=, you
+should get the above dependencies. For some dependencies, you can use [[https://brew.sh/][brewer]],
+then install =too-many-cells= (in the cloned folder, don't forget to install the
+R dependencies above):
+
+#+BEGIN_SRC shell
+brew cask install xquartz
+brew install glib cairo gtk gettext fontconfig freetype
+
+brew tap brewsci/bio
+brew tap brewsci/science
+brew install r zeromq graphviz pkg-config gsl libffi gobject-introspection gtk+ gtk+3
+
+# Needed so pkg-config and libraries can be found.
+# For the second path, use the ouput of "brew info libffi".
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/opt/libffi/lib/pkgconfig
+
+# Tell gtk that it's quartz
+stack install --flag gtk:have-quartz-gtk
+#+END_SRC
+
+** Docker
 
 Different computers have different setups, operating systems, and repositories.
 Do put the entire program in a container to bypass difficulties (with the other
@@ -180,30 +220,6 @@ To build the =too-many-cells= image yourself if you want:
 git clone https://github.com/GregorySchwartz/too-many-cells.git
 cd too-many-cells
 docker build -t too-many-cells -f ./Dockerfile .
-#+END_SRC
-
-** macOS
-<<macOS>>
-
-We recommend using [[Docker][docker]] on macOS. If you need to build =too-many-cells=, you
-should get the above dependencies. For some dependencies, you can use [[https://brew.sh/][brewer]],
-then install =too-many-cells= (in the cloned folder, don't forget to install the
-R dependencies above):
-
-#+BEGIN_SRC shell
-brew cask install xquartz
-brew install glib cairo gtk gettext fontconfig freetype
-
-brew tap brewsci/bio
-brew tap brewsci/science
-brew install r zeromq graphviz pkg-config gsl libffi gobject-introspection gtk+ gtk+3
-
-# Needed so pkg-config and libraries can be found.
-# For the second path, use the ouput of "brew info libffi".
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/opt/libffi/lib/pkgconfig
-
-# Tell gtk that it's quartz
-stack install --flag gtk:have-quartz-gtk
 #+END_SRC
 
 * Troubleshooting
