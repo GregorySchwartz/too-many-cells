@@ -102,7 +102,7 @@ extra-deps:
   - clustering-0.4.1@sha256:78d8e077f27526ff03b3879d951e09e040ca7dc23dd0e6044970be9d40ea37e2
   - containers-0.6.2.1
   - async-pool-0.9.0.2@sha256:3aca5861a7b839d02a3f5c52ad6d1ce368631003f68c3d9cb6d711c29e9618db
-  - birch-beer-0.2.3.0
+  - birch-beer-0.2.4.1
   - diagrams-cairo-1.4.1@sha256:e08f15a15146da9222344fbc433ccd6103c0a7f1e9dfe21bb1e3d3e36ad83947
   - diagrams-graphviz-1.4.1@sha256:072c531d69822421cf318d80731c4f7b5e1b6e4d228db3507f84e9057e7a1f12
   - diagrams-gtk-1.4@sha256:154b71b093958a82ab8c05c2c7e63cf5ce70b219fba4c894d6eb86c937ce7441
