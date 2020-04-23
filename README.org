@@ -46,7 +46,7 @@ without additional parameters or runs. See below for a full list of features.
 * Installation
 
 We provide multiple ways to install =too-many-cells=. We recommend installing
-with [[nix][=nix=]] or [[Stack][=stack=]]. =nix= will provide all dependencies in the build,
+with [[nix][ =nix= ]] or [[Stack][ =stack= ]]. =nix= will provide all dependencies in the build,
 supports linux and macOS, and should be reproducible, so try that first. We also
 have [[Docker][docker]] images and a =Dockerfile= to use in any system in case you have a
 custom build (for instance, a non-standard R installation) or difficulty
@@ -59,7 +59,7 @@ instructions for macOS [[macOS][here]] if you really want to compile it.
 
 ** nix
 
-=too-many-cells= can be installed using the functional package manager [[https://nixos.org/nix/][=nix=]].
+=too-many-cells= can be installed using the functional package manager [[https://nixos.org/nix/][ =nix= ]].
 While you will need =sudo= to install, no =sudo= is required after the correct
 setup. First, install =nix= following the instructions
 [[https://nixos.org/nix/][on the website]]. Next,
