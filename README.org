@@ -30,7 +30,8 @@ without additional parameters or runs. See below for a full list of features.
 
 * New features for current version
 
-- Now packaged for the functional package manager =nix=! Check out
+- Now packaged for the functional package manager =nix=! No more dependency
+  shuffling or root for Docker needed!
 - A new R wrapper was written to quickly get data to and from =too-many-cells=
   from R. [[https://github.com/GregorySchwartz/tooManyCellsR][Check it out here]]!
 - Now works with Cellranger 3.0 matrices in addition to Cellranger 2.0
@@ -45,15 +46,16 @@ without additional parameters or runs. See below for a full list of features.
 * Installation
 
 We provide multiple ways to install =too-many-cells=. We recommend installing
-with [[nix][=nix=]] or [[Stack][=stack=]]. =nix= will provide all dependencies in the build, so try
-that first. We also have [[Docker][docker]] images and a =Dockerfile= to use in any system
-in case you have a custom build (for instance, a non-standard R installation) or
-difficulty installing. *macOS and Windows users:* =too-many-cells= was built and
-tested on linux, so we highly recommend using the [[Docker][docker]] image (which a
-completely isolated environment which requires no compiling or installation,
-other than docker itself) as there may be difficulties in installing the
-dependencies. There are, however, additional instructions for macOS [[macOS][here]] if you
-really want to compile it.
+with [[nix][=nix=]] or [[Stack][=stack=]]. =nix= will provide all dependencies in the build,
+supports linux and macOS, and should be reproducible, so try that first. We also
+have [[Docker][docker]] images and a =Dockerfile= to use in any system in case you have a
+custom build (for instance, a non-standard R installation) or difficulty
+installing. *macOS and Windows users:* =too-many-cells= was built and tested on
+linux, so we highly recommend using the =nix= (macOS) or [[Docker][docker]] (macOS or
+Windows) image (which a completely isolated environment which requires no
+compiling or installation, other than docker itself) as there may be
+difficulties in installing the dependencies. There are, however, additional
+instructions for macOS [[macOS][here]] if you really want to compile it.
 
 ** nix
 
@@ -149,10 +151,10 @@ on =eigen-3.3.4.1= right now.
 **** macOS
 <<macOS>>
 
-We recommend using [[Docker][docker]] on macOS. If you need to build =too-many-cells=, you
-should get the above dependencies. For some dependencies, you can use [[https://brew.sh/][brewer]],
-then install =too-many-cells= (in the cloned folder, don't forget to install the
-R dependencies above):
+We recommend using =nix= or [[Docker][docker]] on macOS. If you need to build
+=too-many-cells=, you should get the above dependencies. For some dependencies,
+you can use [[https://brew.sh/][brewer]], then install =too-many-cells= (in the cloned folder, don't
+forget to install the R dependencies above):
 
 #+BEGIN_SRC shell
 brew cask install xquartz
