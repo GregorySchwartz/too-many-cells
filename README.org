@@ -62,7 +62,7 @@ instructions for macOS [[macOS][here]] if you really want to compile it.
 =too-many-cells= can be installed using the functional package manager [[https://nixos.org/nix/][ =nix= ]].
 While you will need =sudo= to install, no =sudo= is required after the correct
 setup. First, install =nix= following the instructions
-[[https://nixos.org/nix/][on the website]]. Next,
+[[https://nixos.org/nix/][on the website]]. Then, with an unset =LD_LIBRARY_PATH=,
 
 #+BEGIN_SRC sh
 git clone https://github.com/GregorySchwartz/too-many-cells.git
@@ -225,6 +225,11 @@ docker build -t too-many-cells -f ./Dockerfile .
 #+END_SRC
 
 * Troubleshooting
+
+** Using nix, I'm getting shared object not found errors.
+
+Be sure to have =LD_LIBRARY_PATH= unset when running =nix-env= to make sure the
+linked libraries are in =/nix/store=.
 
 ** I am getting errors like =AesonException "Error in $.packages.cassava.constraints.flags...= when running =stack= commands
 
