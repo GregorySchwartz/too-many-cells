@@ -26,6 +26,13 @@ let
   fontsConf = pkgs.makeFontsConf {
     fontDirectories = [];
   };
+
+  # Additional dependencies
+  kent = pkgs.callPackage (pkgs.fetchurl { url = "https://raw.githubusercontent.com/NixOS/nixpkgs/5482754fde6fb7ae4797951227201a7e9a14a07a/pkgs/applications/science/biology/kent/default.nix"; sha256 = "28267b39ddb19eb260bd43902f52f7870d0ab0a5b0b87cad5dbec00598eed204"; } ) {};
+  macs2 = pkgs.callPackage ./deps/macs2.nix {};
+  meme = pkgs.callPackage ./deps/meme.nix {};
+
+  # Haskell compilier
   compiler = pkgs.haskell.packages."${compilerVersion}";
 
   # TooManyCells package
@@ -71,8 +78,13 @@ let
                   pkgs.Renv
                   pkgs.makeWrapper
                   pkgs.glibcLocales
+                  pkgs.ghcid
+                  pkgs.cabal-install
+                  (pkgs.python3.withPackages (p: with p; [ numpy macs2 ]))
+                  kent
+                  meme
                ];
-in (pkgs.haskell.lib.dontHaddock (pkg.overrideAttrs(attrs: {
+in (pkg.overrideAttrs(attrs: {
   buildInputs = attrs.buildInputs ++ buildInputs;
   nativeBuildInputs = attrs.nativeBuildInputs ++ buildInputs;
   postInstall = ''
@@ -93,4 +105,4 @@ in (pkgs.haskell.lib.dontHaddock (pkg.overrideAttrs(attrs: {
               --set 'LOCALE_ARCHIVE' "${pkgs.glibcLocales}/lib/locale/locale-archive" \
               --set 'FONTCONFIG_FILE' "${fontsConf}"
             '';
-})))
+}))
