@@ -20,7 +20,7 @@ module TooManyCells.MakeTree.Print
 import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents)
 import Control.Monad (join)
-import Data.List (genericLength, intercalate)
+import Data.List (genericLength, intercalate, foldl')
 import Data.Maybe (fromMaybe, mapMaybe, catMaybes, isJust)
 import Data.Monoid ((<>))
 import Data.Streaming.Zlib (WindowBits (..))
@@ -70,7 +70,7 @@ clusterInfo (ClusterGraph gr) =
     getSizes :: ([G.Node], a) -> [Int]
     getSizes = fmap getSize . fst
     getSize :: G.Node -> Int
-    getSize = sum . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
+    getSize = foldl' (+) 0 . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
     getQs :: ([G.Node], a) -> [Double]
     getQs = mapMaybe getQ . fst
     getQ :: G.Node -> Maybe Double
@@ -118,7 +118,7 @@ nodeInfo lm (ClusterGraph gr) = fmap getNodeInfo . G.nodes $ gr
                         (fmap (\a -> getComposition a (ClusterGraph gr) x) lm)
                         (getNodeChildren gr x)
     getSize :: G.Node -> Int
-    getSize = sum . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
+    getSize = foldl' (+) 0 . fmap (maybe 0 Seq.length . snd) . getGraphLeaves gr
     getQ :: G.Node -> Maybe Double
     getQ  = join . fmap (L.view edgeDistance . snd) . headMay . G.lsuc gr
     getSignificance :: G.Node -> Maybe Double

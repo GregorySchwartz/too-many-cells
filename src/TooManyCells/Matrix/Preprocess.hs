@@ -170,14 +170,14 @@ scaleDenseCell xs = H.cmap (/ total) xs
 scaleSparseCell :: S.SpVector Double -> S.SpVector Double
 scaleSparseCell xs = fmap (/ total) xs
   where
-    total = sum xs
+    total = foldl' (+) 0 xs
 
 -- | log(CPM + 1) normalization for cell.
 logCPMSparseCell :: S.SpVector Double -> S.SpVector Double
 logCPMSparseCell xs = fmap (logBase 2 . (+ 1) . cpm) xs
   where
     cpm x = x / tpm
-    tpm = sum xs / 1000000
+    tpm = foldl' (+) 0 xs / 1000000
 
 -- | Upper quartile scale cells.
 uqScaleSparseCell :: S.SpVector Double -> S.SpVector Double
@@ -282,8 +282,8 @@ filterNumSparseMat (FilterThresholds (rowThresh, colThresh)) sc =
                 }
   where
     m = MatObsRow colFilteredMat
-    rowFilter = (>= rowThresh) . sum
-    colFilter = (>= colThresh) . sum
+    rowFilter = (>= rowThresh) . foldl' (+) 0
+    colFilter = (>= colThresh) . foldl' (+) 0
     mat            = unMatObsRow . _matrix $ sc
     validRows = ISet.fromList
               . emptyMatCheckErr "cells"

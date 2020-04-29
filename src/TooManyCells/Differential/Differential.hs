@@ -26,7 +26,7 @@ import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeafItems)
 import Control.Monad (join, mfilter)
 import Data.Function (on)
-import Data.List (sort, sortBy, genericLength, partition)
+import Data.List (sort, sortBy, genericLength, partition, foldl')
 import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Monoid ((<>))
 import Language.R as R
@@ -273,7 +273,7 @@ scToEntities aggregate features cellGroups sc =
             status
             (Diff.Id b)
         . (/ n)
-        . sum
+        . foldl' (+) 0
         . fmap (\(_, idx) -> S.lookupWD_SM mat (cellIdx, idx))
     n = genericLength featureIdxs
     featureIdxs :: [(Feature, Int)]

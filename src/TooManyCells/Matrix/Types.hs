@@ -5,8 +5,10 @@ Collects the types used in the program concerning the matrix.
 -}
 
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -30,7 +32,7 @@ import Data.Function (on)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import Data.Text (Text)
-import Data.Vector (Vector)
+import Data.Vector (Vector (..))
 import GHC.Generics (Generic)
 import Language.R as R
 import Language.R.QQ (r)
@@ -60,22 +62,24 @@ import qualified Data.Text as T
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed as U
 import qualified Numeric.LinearAlgebra as H
+import qualified TextShow as TS
 
 -- Local
 
 -- Basic
 newtype Cell = Cell
     { unCell :: Text
-    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON, A.FromJSON)
+    } deriving (Eq,Ord,Read,Show,Generic) deriving anyclass (A.ToJSON, A.FromJSON)
 newtype Cols            = Cols { unCols :: [Double] }
 newtype FeatureColumn   = FeatureColumn { unFeatureColumn :: Int }
 newtype CustomLabel = CustomLabel { unCustomLabel :: Text}
                       deriving (Eq,Ord,Read,Show)
 newtype BinWidth = BinWidth { unBinWidth :: Int}
 newtype NoBinarizeFlag = NoBinarizeFlag { unNoBinarizeFlag :: Bool }
+newtype BinarizeFlag = BinarizeFlag { unBinarizeFlag :: Bool }
 newtype TransposeFlag = TransposeFlag { unTransposeFlag :: Bool }
-newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
-newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Num, Generic)
+newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Generic) deriving newtype (Num)
+newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Generic) deriving newtype (Num)
 newtype CellWhitelist = CellWhitelist
     { unCellWhitelist :: HSet.HashSet Text
     } deriving (Eq,Ord,Show)
@@ -114,10 +118,10 @@ newtype CustomRegions = CustomRegions
     } deriving (Read,Show)
 newtype X = X
     { unX :: Double
-    } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
+    } deriving (Eq,Ord,Read,Show,Generic) deriving newtype (Num) deriving anyclass (A.ToJSON,A.FromJSON)
 newtype Y = Y
     { unY :: Double
-    } deriving (Eq,Ord,Read,Show,Num,Generic,A.ToJSON,A.FromJSON)
+    } deriving (Eq,Ord,Read,Show,Generic) deriving newtype (Num) deriving anyclass (A.ToJSON,A.FromJSON)
 newtype ProjectionMap = ProjectionMap
   { unProjectionMap :: Map.Map Cell (X, Y)
   }
@@ -127,11 +131,13 @@ newtype RMatFeatRow s   = RMatFeatRow { unRMatFeatRow :: R.SomeSEXP s }
 newtype RMatScaled s    = RMatScaled { unRMatScaled :: R.SomeSEXP s }
 newtype Row = Row
     { unRow :: Int
-    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
+    } deriving (Eq,Ord,Read,Show,Generic) deriving anyclass (A.ToJSON,A.FromJSON)
 newtype Rows            = Rows { unRows :: [Double] }
 newtype Vals            = Vals { unVals :: [Double] }
 
 newtype LabelMat = LabelMat { unLabelMat :: (SingleCells, Maybe LabelMap) }
+newtype AggSingleCells = AggSingleCells { unAggSingleCells :: SingleCells }
+newtype AggReferenceMat = AggReferenceMat { unAggReferenceMat :: AggSingleCells }
 instance Semigroup LabelMat where
   (<>) (LabelMat (!m1, !l1)) (LabelMat (!m2, !l2)) =
     LabelMat (mappend m1 m2, mappend l1 l2)
@@ -141,7 +147,6 @@ instance Monoid LabelMat where
 newtype MatObsRow = MatObsRow
     { unMatObsRow :: S.SpMatrix Double
     } deriving (Show)
-instance (Generic a) => Generic (Vector a)
 instance Semigroup MatObsRow where
     (<>) (MatObsRow x) (MatObsRow y) = MatObsRow $ S.vertStackSM x y
 instance Monoid MatObsRow where
@@ -166,12 +171,12 @@ parserChrRegion = do
   return . ChrRegion $ (chr, IntervalMap.ClosedInterval start end)
 
 instance TextShow ChrRegion where
-    showt (ChrRegion (chr, i)) = "chr"
-                              <> chr
+    showb (ChrRegion (chr, i)) = "chr"
+                              <> TS.fromText chr
                               <> ":"
-                              <> showt (IntervalMap.lowerBound i)
+                              <> showb (IntervalMap.lowerBound i)
                               <> "-"
-                              <> showt (IntervalMap.upperBound i)
+                              <> showb (IntervalMap.upperBound i)
 
 instance Monoid ChrRegionMat where
     mempty = ChrRegionMat Map.empty
@@ -308,7 +313,7 @@ instance MatrixLike SingleCells where
 data CellInfo = CellInfo
     { _barcode :: Cell
     , _cellRow :: Row
-    } deriving (Eq,Ord,Read,Show,Generic,A.ToJSON,A.FromJSON)
+    } deriving (Eq,Ord,Read,Show,Generic) deriving anyclass (A.ToJSON,A.FromJSON)
 L.makeLenses ''CellInfo
 
 -- | A range with a label, most ranges can vary with each other.
@@ -320,14 +325,14 @@ data Range = Range { rangeIdx :: Maybe RangeIdx
              deriving (Eq, Ord, Read, Show)
 L.makeFields ''Range
 instance TextShow Range where
-  showt (Range _ l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
+  showb (Range _ l lb ub) = mconcat [TS.fromText l, ":", showb lb, "-", showb ub]
 
 -- | A bin with a label, bins are standard across all observations.
 data Bin = Bin { binIdx :: Maybe BinIdx, _binLabel :: Text, _binLowerBound :: Int, _binUpperBound :: Int }
              deriving (Eq, Ord, Read, Show)
 L.makeFields ''Bin
 instance TextShow Bin where
-  showt (Bin _ l lb ub)= mconcat [l, ":", showt lb, "-", showt ub]
+  showb (Bin _ l lb ub)= mconcat [TS.fromText l, ":", showb lb, "-", showb ub]
 
 -- | Map of ranges to their bins.
 newtype RangeBinMap = RangeBinMap
@@ -349,12 +354,8 @@ newtype BinIdxMap = BinIdxMap
   { unBinIdxMap :: Map.Map Bin BinIdx
   }
 
-instance Generic Feature
+deriving stock instance Generic Feature
 instance NFData Feature where rnf x = seq x ()
 
-instance Generic Double
-
-instance Generic a => Generic (S.SpMatrix a)
-instance (Generic a, NFData a) => NFData (S.SpMatrix a) where
+instance (NFData a) => NFData (S.SpMatrix a) where
   rnf all@(S.SM (!x, !y) !m) = seq all ()
-

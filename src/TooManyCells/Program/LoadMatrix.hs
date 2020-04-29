@@ -103,6 +103,16 @@ loadSSM opts matrixPath' = do
               fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
                 . loadFragments cellWhitelist blacklistRegionsFile' excludeFragments' binWidth'
                   $ file
+            (Left file@(BigWig _))  -> do
+              liftIO $ when (isNothing binWidth') $
+                hPutStrLn stderr "\nWarning: No binwidth specified for bigWig file\
+                                  \ input. This will make the feature list extremely large\
+                                  \ and may result in many outliers. Please see --binwidth.\
+                                  \ Ignore this message if using peaks.\
+                                  \ Continuing..."
+              fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
+                . loadBW blacklistRegionsFile' excludeFragments' binWidth'
+                $ file
             (Right (DecompressedMatrix file)) ->
               loadCellrangerData featureColumn' featuresFile' cellsFile' file
             (Right (CompressedMatrix file))   ->
@@ -123,6 +133,7 @@ loadAllSSM opts = runMaybeT $ do
       lsa'               = fmap LSADim . unHelpful . lsa $ opts
       svd'               = fmap SVDDim . unHelpful . svd $ opts
       noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
+      binarizeFlag'      = BinarizeFlag . unHelpful . binarize $ opts
       transpose' = TransposeFlag . unHelpful . matrixTranspose $ opts
       shiftPositiveFlag' =
         ShiftPositiveFlag . unHelpful . shiftPositive $ opts
@@ -194,6 +205,7 @@ loadAllSSM opts = runMaybeT $ do
                 . (\m -> maybe m (flip svdSparseSc m) svd')
                 . bool (transformChrRegions customRegions') id (null $ unCustomRegions customRegions')
                 . L.over matrix (normMat normalization')
+                . bool id binarizeSc (unBinarizeFlag binarizeFlag')
       processedSc = processSc sc
       -- Filter label map if necessary.
       labelMap = (\ valid -> fmap ( LabelMap

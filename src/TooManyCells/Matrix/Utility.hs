@@ -26,6 +26,11 @@ module TooManyCells.Matrix.Utility
     , hashNub
     , decompressStreamAll
     , transposeSC
+    , extractCellSc
+    , extractCellsSc
+    , removeCellsSc
+    , extractCellV
+    , aggSc
     ) where
 
 -- Remote
@@ -38,7 +43,7 @@ import Data.Bool (bool)
 import Data.Char (toUpper)
 import Data.Function (on)
 import Data.Hashable (Hashable)
-import Data.List (maximumBy, isInfixOf)
+import Data.List (maximumBy, isInfixOf, foldl')
 import Data.Maybe (fromMaybe)
 import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix')
 import Data.Scientific (toRealFloat, Scientific)
@@ -60,6 +65,7 @@ import qualified Data.IntMap.Strict as IMap
 import qualified Data.IntervalMap.Strict as IntervalMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
@@ -303,3 +309,74 @@ transposeSC (SingleCells (MatObsRow mat) rows cols) =
     (MatObsRow . S.transposeSM $ mat)
     (fmap (Cell . unFeature) cols)
     (fmap (Feature . unCell) rows)
+
+-- | Get a single cell from a SingleCells type.
+extractCellSc :: Cell -> SingleCells -> SingleCells
+extractCellSc cell sc = L.set rowNames (V.singleton cell)
+                    . L.set matrix newMatrix
+                    $ sc
+  where
+    newMatrix = MatObsRow
+              . S.fromRowsL
+              . (:[])
+              . flip S.extractRow (getCellIdx sc cell)
+              . unMatObsRow
+              . L.view matrix
+              $ sc
+
+-- | Get a list of single cells for each single cell from a SingleCells type.
+extractCellsSc :: SingleCells -> [SingleCells]
+extractCellsSc sc = zipWith
+                      (\ v c -> sc { _rowNames = V.singleton c
+                                   , _matrix = MatObsRow $ S.fromRowsL [v]
+                                   }
+                      )
+                      (S.toRowsL . unMatObsRow . L.view matrix $ sc)
+                  . V.toList
+                  . L.view rowNames
+                  $ sc
+
+-- | Get a single cell vector from a SingleCells type.
+extractCellV :: Cell -> SingleCells -> S.SpVector Double
+extractCellV cell sc =
+  flip S.extractRow (getCellIdx sc cell) . unMatObsRow . L.view matrix $ sc
+
+-- | Remove single cells from a SingleCells type.
+removeCellsSc :: [Cell] -> SingleCells -> SingleCells
+removeCellsSc cells sc = L.set rowNames newRowNames
+                     . L.set matrix newMatrix
+                     $ sc
+  where
+    blacklistCells = Set.fromList cells
+    blacklistIdxs = Set.fromList . fmap (getCellIdx sc) $ cells
+    whitelistIdxs = filter
+                      (not . flip Set.member blacklistIdxs)
+                      [0..(V.length $ L.view rowNames sc) - 1]
+    newRowNames =
+      V.filter (not . flip Set.member blacklistCells) . L.view rowNames $ sc
+    newMatrix = MatObsRow
+              . S.fromRowsL
+              . fmap (\x -> flip S.extractRow x . unMatObsRow . L.view matrix $ sc)
+              $ whitelistIdxs
+
+-- | Get the index of a cell in a SingleCells type.
+getCellIdx :: SingleCells -> Cell -> Int
+getCellIdx sc x =
+  fromMaybe (error $ "extractCell: cell not found in matrix: " <> show x)
+    . V.findIndex (== x)
+    . L.view rowNames
+    $ sc
+
+-- | Aggregate SingleCells using average.
+aggSc :: SingleCells -> AggSingleCells
+aggSc sc = AggSingleCells
+         . L.over matrix (MatObsRow . avgMat . unMatObsRow)
+         . L.over rowNames ( fmap (Cell . (<> " Aggregate") . unCell)
+                           . V.take 1
+                           )
+         $ sc
+  where
+    avgMat = S.fromListDenseSM numRows
+           . fmap ((/ fromIntegral numCols) . foldl' (+) 0)
+           . S.toRowsL
+    (numRows, numCols) = S.dim . unMatObsRow . L.view matrix $ sc

@@ -24,7 +24,7 @@ import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeavesWithParents, dendrogramToGraph, dendToTree, clusteringTreeToTree, treeToGraph)
 import Control.Monad (join)
 import Data.Function (on)
-import Data.List (sortBy, groupBy, zip4, genericLength)
+import Data.List (sortBy, groupBy, zip4, genericLength, foldl')
 import Data.Int (Int32)
 import Data.Maybe (fromMaybe, catMaybes, mapMaybe)
 import Math.Modularity.Types (Q (..))
@@ -93,7 +93,7 @@ hClust sc =
                $ dend
     dend = HC.dendrogram HC.CLINK items euclDist
     euclDist x y =
-        sqrt . sum . fmap (** 2) $ S.liftU2 (-) (L.view L._2 y) (L.view L._2 x)
+        sqrt . foldl' (+) 0 . fmap (** 2) $ S.liftU2 (-) (L.view L._2 y) (L.view L._2 x)
     items = (\ fs
             -> zip3
                    (V.toList $ _rowNames sc)

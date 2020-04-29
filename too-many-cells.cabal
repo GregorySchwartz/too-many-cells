@@ -15,9 +15,11 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     TooManyCells.Diversity.Diversity
+  exposed-modules:     TooManyCells.Classify.Classify
+                     , TooManyCells.Classify.Types
                      , TooManyCells.Differential.Differential
                      , TooManyCells.Differential.Types
+                     , TooManyCells.Diversity.Diversity
                      , TooManyCells.Diversity.Load
                      , TooManyCells.Diversity.Plot
                      , TooManyCells.Diversity.Types
@@ -42,14 +44,15 @@ library
                      , TooManyCells.Paths.Types
                      , TooManyCells.Peaks.ClusterPeaks
                      , TooManyCells.Peaks.Types
-                     , TooManyCells.Program.Options
+                     , TooManyCells.Program.Classify
+                     , TooManyCells.Program.Differential
+                     , TooManyCells.Program.Diversity
+                     , TooManyCells.Program.Interactive
                      , TooManyCells.Program.LoadMatrix
                      , TooManyCells.Program.MakeTree
                      , TooManyCells.Program.MatrixOutput
                      , TooManyCells.Program.Motifs
-                     , TooManyCells.Program.Interactive
-                     , TooManyCells.Program.Differential
-                     , TooManyCells.Program.Diversity
+                     , TooManyCells.Program.Options
                      , TooManyCells.Program.Paths
                      , TooManyCells.Program.Peaks
                      , TooManyCells.Program.Utility

@@ -54,4 +54,5 @@ data FragmentsFile = FragmentsFile FilePath
 data MatrixFileType = DecompressedMatrix MatrixFileFolder
                     | CompressedMatrix MatrixFileFolder
                     | CompressedFragments FragmentsFile
+                    | BigWig FilePath
                     deriving (Read, Show)

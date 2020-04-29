@@ -41,6 +41,7 @@ let
     source-overrides = {
       inline-r = "0.10.2";
       terminal-progress-bar = "0.2";
+      turtle = builtins.fetchTarball https://github.com/Gabriel439/Haskell-Turtle-Library/archive/ef0f4b15f82ac03708132726515c6bb59a0d2c07.tar.gz;
       elbow = builtins.fetchTarball https://github.com/GregorySchwartz/elbow/archive/03fff043c88b8c3de83b08f1638963f46e604c90.tar.gz;
       birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/c4e05529b68e4514df0f4f03e7a38c9feb17540b.tar.gz;
       sparse-linear-algebra = builtins.fetchTarball https://github.com/ocramz/sparse-linear-algebra/archive/dbad792f6c6a04e4de23806b676cb3e76d36a65b.tar.gz;

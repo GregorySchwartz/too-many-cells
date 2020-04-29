@@ -47,8 +47,8 @@ getNormalization opts =
     . normalization
     $ opts
 
--- | Get the file type of an input matrix. Returns either a left CSV or a right
--- matrix market.
+-- | Get the file type of an input matrix. Returns either a left file (i.e. CSV)
+-- or a right matrix market.
 getMatrixFileType :: FilePath -> IO (Either MatrixFileType MatrixFileType)
 getMatrixFileType path = do
   fileExist      <- FP.doesFileExist path
@@ -60,6 +60,7 @@ getMatrixFileType path = do
                     . FP.takeFileName
                     $ path
       matrixFile
+        | fileExist && (FP.takeExtension path == ".bw") = Left . BigWig $ path
         | fileExist && not fragmentsFile = Left . DecompressedMatrix . MatrixFile $ path
         | fileExist && fragmentsFile = Left . CompressedFragments . FragmentsFile $ path
         | directoryExist && not compressedFileExist = Right . DecompressedMatrix . MatrixFile $ path FP.</> "matrix.mtx"
