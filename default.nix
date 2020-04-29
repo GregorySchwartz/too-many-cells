@@ -1,6 +1,7 @@
 # default.nix
 { compilerVersion ? "ghc865", pkgsLink ? (builtins.fetchTarball https://github.com/NixOS/nixpkgs/archive/1e90c46c2d98f9391df79954a74d14f263cad729.tar.gz)}:
 let
+  # Packages
   config = { allowBroken = true;
              allowUnfree = true;
              packageOverrides = super: let self = super.pkgs; in {
@@ -18,10 +19,14 @@ let
               };
            };
   pkgs = import pkgsLink { inherit config; };
+
+  # Ensure working fonts with a fontconfig
   fontsConf = pkgs.makeFontsConf {
     fontDirectories = [];
   };
   compiler = pkgs.haskell.packages."${compilerVersion}";
+
+  # TooManyCells package
   pkg = compiler.developPackage {
     root = ./.;
     source-overrides = {
@@ -41,7 +46,6 @@ let
       typed-spreadsheet = doJailbreak super.typed-spreadsheet;
     });
   };
-  # in case your package source depends on any libraries directly, not just transitively.
   buildInputs = [ pkgs.zlib
                   pkgs.zlib.dev
                   pkgs.zlib.out
@@ -68,6 +72,7 @@ in (pkgs.haskell.lib.dontHaddock (pkg.overrideAttrs(attrs: {
             wrapProgram $out/bin/too-many-cells \
               --prefix 'PATH' ':' "${pkgs.Renv}/bin/" \
               --prefix-contents 'R_LIBS_SITE' ':' "${pkgs.Renv}/bin/R" \
+              --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \
               --set 'LOCALE_ARCHIVE' "${pkgs.glibcLocales}/lib/locale/locale-archive" \
               --set 'FONTCONFIG_FILE' "${fontsConf}"
