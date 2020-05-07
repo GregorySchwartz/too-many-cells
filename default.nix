@@ -45,7 +45,7 @@ let
       elbow = builtins.fetchTarball https://github.com/GregorySchwartz/elbow/archive/03fff043c88b8c3de83b08f1638963f46e604c90.tar.gz;
       birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/c4e05529b68e4514df0f4f03e7a38c9feb17540b.tar.gz;
       sparse-linear-algebra = builtins.fetchTarball https://github.com/ocramz/sparse-linear-algebra/archive/dbad792f6c6a04e4de23806b676cb3e76d36a65b.tar.gz;
-      spectral-clustering = builtins.fetchTarball https://github.com/GregorySchwartz/spectral-clustering/archive/18729ec5f0a25584847fe75e7a3a1bcd71c88e60.tar.gz;
+      spectral-clustering = builtins.fetchTarball https://github.com/GregorySchwartz/spectral-clustering/archive/8d735caeb26266beda299d7886b5586dc7d7e7b1.tar.gz;
     };
     overrides = self: super: (with pkgs.haskell.lib; with pkgs.haskellPackages; {
       BiobaseNewick = doJailbreak super.BiobaseNewick;
