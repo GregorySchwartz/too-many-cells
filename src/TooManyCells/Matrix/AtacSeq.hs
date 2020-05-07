@@ -52,9 +52,9 @@ rangeParser idx = do
 
 -- | Convert an input range to a bin.
 rangeToBin :: BinWidth -> Range -> Bin
-rangeToBin (BinWidth b) range@(Range _ l _ _) = Bin Nothing l lb (lb + b)
+rangeToBin (BinWidth b) range@(Range _ l _ _) = Bin Nothing l lb (lb + b - 1)
   where
-    lb = (div (midpoint range) b) * b
+    lb = ((div (midpoint range) b) * b) + 1
 
 -- | Find midpoint of a range.
 midpoint :: Range -> Int
