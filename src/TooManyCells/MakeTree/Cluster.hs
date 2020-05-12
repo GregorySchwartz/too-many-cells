@@ -93,7 +93,7 @@ hClust sc =
                $ dend
     dend = HC.dendrogram HC.CLINK items euclDist
     euclDist x y =
-        sqrt . foldl' (+) 0 . fmap (** 2) $ S.liftU2 (-) (L.view L._2 y) (L.view L._2 x)
+        sqrt . foldl' (+) 0 . fmap (** 2) $ (L.view L._2 y) S.^-^ (L.view L._2 x)
     items = (\ fs
             -> zip3
                    (V.toList $ _rowNames sc)

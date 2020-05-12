@@ -137,7 +137,9 @@ newtype Vals            = Vals { unVals :: [Double] }
 
 newtype LabelMat = LabelMat { unLabelMat :: (SingleCells, Maybe LabelMap) }
 newtype AggSingleCells = AggSingleCells { unAggSingleCells :: SingleCells }
+                         deriving (Show)
 newtype AggReferenceMat = AggReferenceMat { unAggReferenceMat :: AggSingleCells }
+                          deriving (Show)
 instance Semigroup LabelMat where
   (<>) (LabelMat (!m1, !l1)) (LabelMat (!m2, !l2)) =
     LabelMat (mappend m1 m2, mappend l1 l2)

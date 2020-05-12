@@ -85,7 +85,7 @@ https://support.10xgenomics.com/single-cell-gene-expression/datasets/3.0.0/neuro
 and
 https://support.10xgenomics.com/single-cell-gene-expression/datasets/3.0.0/heart_1k_v3
 as a quick, illustrative example here. *Note*: these are modern formats of
-=cellranger= outputs (=v3), but ==too-many-cells== works with both older and
+=cellranger= outputs (=v3=), but =too-many-cells= works with both older and
 newer formats.
 
 #+header: :exports both

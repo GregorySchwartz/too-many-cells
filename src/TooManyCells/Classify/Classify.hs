@@ -9,15 +9,17 @@ Collects functions pertaining to classifying cells from reference populations.
 
 module TooManyCells.Classify.Classify
     ( classifyCells
+    , classifyMat
     ) where
 
 -- Remote
-import BirchBeer.Types (Label (..))
+import BirchBeer.Types (getMatrix, Label (..))
 import Data.Function (on)
 import Data.List (maximumBy)
 import qualified Control.Lens as L
 import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
+import qualified Math.Clustering.Spectral.Sparse as Spectral
 
 -- Local
 import TooManyCells.Matrix.Types
@@ -25,47 +27,48 @@ import TooManyCells.Matrix.Utility
 import TooManyCells.MakeTree.Adjacency
 
 -- | Classify cells in a SingleCells type from a list of references.
-classifyCells :: SingleCells -> [AggReferenceMat] -> [(Cell, (Double, Label))]
-classifyCells sc refs = fmap (\ !x -> (x, classifyCell sc' refs' x))
-                      . V.toList
-                      $ cells
+classifyCells :: SingleCells -> [AggReferenceMat] -> [(Cell, (Label, Double))]
+classifyCells sc refs = zip (V.toList . L.view rowNames $ sc')
+                      . fmap (getMaxLabel . zip refNames . S.toDenseListSV)
+                      . S.toRowsL
+                      $ classifyMat sc' refs'
   where
-    cells = L.view rowNames sc'
     (sc', refs') = unifyFeatures sc refs
+    refNames = fmap (Label . unCell)
+             . V.toList
+             . L.view rowNames
+             . unAggSingleCells
+             $ unAggReferenceMat refs'
+    getMaxLabel = maximumBy (compare `on` snd)
 
--- | Classify a cell in a SingleCells type from a list of references.
-classifyCell :: SingleCells -> [AggReferenceMat] -> Cell -> (Double, Label)
-classifyCell sc refs cell =
-  maximumBy (compare `on` fst)
-    . fmap (\ !ref -> (compareCell sc ref cell, getRefName ref))
-    $ refs
-
--- | Get a correlation score between a cell and a reference.
-compareCell :: SingleCells -> AggReferenceMat -> Cell -> Double
-compareCell cell ref sc = cosineSimilaritySparse c r
+-- | Classify matrices using cosine similarity. Results in a matrix with scores
+-- (cosine similarity) for each column and observations per row.
+classifyMat :: SingleCells -> AggReferenceMat -> S.SpMatrix Double
+classifyMat sc refs = scMat S.#~# S.transpose refMat
   where
-    c = extractCellV sc cell
-    r = flip S.extractRow 0
-      . unMatObsRow
-      . L.view matrix
-      . unAggSingleCells
-      . unAggReferenceMat
-      $ ref
+    refMat = normScMat . unAggSingleCells . unAggReferenceMat $ refs
+    scMat = normScMat sc
+    normScMat = Spectral.unB . Spectral.b2ToB . Spectral.B2 . getMatrix
 
 -- | Force unification of features with reference features.
-unifyFeatures :: SingleCells -> [AggReferenceMat] -> (SingleCells, [AggReferenceMat])
+unifyFeatures :: SingleCells -> [AggReferenceMat] -> (SingleCells, AggReferenceMat)
 unifyFeatures sc refs = (newSc, newRefs)
   where
-    newSc = removeCellsSc (fmap (Cell . unLabel . getRefName) refs) sc
+    newSc = L.over rowNames (V.drop nRefs)
+          . L.over matrix (extractObsRows nRefs (nRows - 1))
+          $ unified
     newRefs = AggReferenceMat
             . AggSingleCells
-            . flip extractCellSc unified
-            . Cell
-            . unLabel
-            . getRefName
-          <$> refs
-    unified =
-      mconcat . reverse $ sc : fmap (unAggSingleCells . unAggReferenceMat) refs
+            . L.over rowNames (V.take nRefs)
+            . L.over matrix (extractObsRows 0 (nRefs - 1))
+            $ unified
+    nRefs = length refs
+    (nRows, nCols) = S.dim . getMatrix $ unified
+    unified = mconcat
+            . mconcat
+            $ [fmap (unAggSingleCells . unAggReferenceMat) refs, [sc]]
+    extractObsRows lb ub (MatObsRow x) =
+      MatObsRow $ S.extractSubmatrixRebalanceKeys x (lb, ub) (0, nCols - 1)
 
 -- | Get the name of a reference from an AggReferenceMat.
 getRefName :: AggReferenceMat -> Label
@@ -74,3 +77,10 @@ getRefName = maybe (error "unifyFeatures: no reference data") (Label . unCell)
            . L.view rowNames
            . unAggSingleCells
            . unAggReferenceMat
+
+-- | Get the reference vector from an AggReferenceMat.
+getRefVec :: AggReferenceMat -> S.SpVector Double
+getRefVec = flip S.extractRow 0
+          . getMatrix
+          . unAggSingleCells
+          . unAggReferenceMat

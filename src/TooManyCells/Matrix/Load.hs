@@ -110,7 +110,7 @@ loadCellrangerData fc gf cf (MatrixFile mf) = do
        $ cf
 
     return $
-        SingleCells { _matrix   = m -- We want observations as rows.
+        SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ m -- We want observations as rows.
                     , _rowNames = c
                     , _colNames = g
                     }
@@ -145,7 +145,7 @@ loadCellrangerDataFeatures fc gf cf (MatrixFile mf) = do
        $ cf
 
     return $
-        SingleCells { _matrix   = m -- We want observations as rows.
+        SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ m -- We want observations as rows.
                     , _rowNames = c
                     , _colNames = g
                     }
@@ -178,7 +178,7 @@ loadHMatrixData (Delimiter delim) (MatrixFile mf) = do
           $ all
 
     return $
-        SingleCells { _matrix   = m
+        SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ m
                     , _rowNames = c
                     , _colNames = g
                     }
@@ -208,7 +208,7 @@ loadSparseMatrixData (Delimiter delim) (MatrixFile mf) = do
           $ all
 
     return $
-        SingleCells { _matrix   = m
+        SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ m
                     , _rowNames = c
                     , _colNames = g
                     }
@@ -245,7 +245,7 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
         let finalMat = MatObsRow . HS.sparsifySM . HS.fromColsL $ m -- We want observations as rows
 
         return $
-            SingleCells { _matrix   = finalMat
+            SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ finalMat
                         , _rowNames = V.fromList c
                         , _colNames = V.fromList g
                         }
@@ -265,13 +265,15 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
       labelsFold = (,) <$> cellsFold <*> featuresFold
       cellsFold = Fold.premap (\(!c, _, _) -> c) hashNub
       featuresFold = Fold.premap (\(_, !r, _) -> r) hashNub
-      preprocessStream = maybe id filterCells whitelist . fmap parseLine
+      preprocessStream = maybe id filterCells whitelist
+                       . Turtle.mfilter (\(_, _, !x) -> x /= 0)  -- Ignore missing regions
+                       . fmap parseLine
       filterCells (CellWhitelist wl) =
         Turtle.mfilter (\(!b, _, _) -> HSet.member b wl)
       filterFragments (ExcludeFragments ef) = Turtle.mfilter (T.isInfixOf ef)
       filterBlacklist (BlacklistRegions br) =
         Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
-      parseLine (chrom:start:end:barcode:duplicateCount:_) = force $
+      parseLine (chrom:start:end:barcode:duplicateCount:_) =
         ( barcode
         , maybe showt (\x -> showt . rangeToBin x) binWidth
         $ Range Nothing chrom (readDecimal start) (readDecimal end)
@@ -313,7 +315,7 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
        $ stream
 
   return $
-      SingleCells { _matrix   = mat
+      SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ mat
                   , _rowNames = fmap Cell cells
                   , _colNames = fmap Feature features
                   }
@@ -375,11 +377,12 @@ loadBW blacklist excludeFragments binWidth (BigWig file) = do
   let readDecimal = either error fst . T.decimal
       readDouble = either error fst . T.double
       featuresFold = Fold.premap (\(!r, _) -> r) hashNub
-      preprocessStream = fmap parseLine
+      preprocessStream = Turtle.mfilter (\(_, !x) -> x /= 0)  -- Ignore missing regions
+                       . fmap parseLine
       filterFragments (ExcludeFragments ef) = Turtle.mfilter (T.isInfixOf ef)
       filterBlacklist (BlacklistRegions br) =
         Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
-      parseLine (chrom:start:end:duplicateCount:_) = force $
+      parseLine (chrom:start:end:duplicateCount:_) =
         ( maybe showt (\x -> showt . rangeToBin x) binWidth
         $ Range Nothing chrom (readDecimal start) (readDecimal end)
         , readDouble duplicateCount
@@ -413,7 +416,7 @@ loadBW blacklist excludeFragments binWidth (BigWig file) = do
        $ stream
 
   return $
-      SingleCells { _matrix   = mat
+      SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ mat
                   , _rowNames = V.singleton . Cell $ T.pack file
                   , _colNames = fmap Feature features
                   }

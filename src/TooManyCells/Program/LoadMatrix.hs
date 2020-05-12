@@ -197,7 +197,8 @@ loadAllSSM opts = runMaybeT $ do
       normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
       normMat LogCPMNorm   = logCPMSparseMat
       normMat NoneNorm     = id
-      processSc = L.over matrix ( bool id shiftPositiveMat
+      processSc = L.over matrix (MatObsRow . S.sparsifySM . unMatObsRow)
+                . L.over matrix ( bool id shiftPositiveMat
                                 $ unShiftPositiveFlag shiftPositiveFlag'
                                 )
                 . (\m -> maybe m (flip pcaSparseSc m) pca')

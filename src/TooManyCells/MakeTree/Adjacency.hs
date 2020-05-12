@@ -28,9 +28,8 @@ cosineSimilarityDense v w = H.dot v w / (H.norm_2 v * H.norm_2 w)
 
 -- | Get the cosine similarity between two vectors.
 cosineSimilaritySparse :: S.SpVector Double -> S.SpVector Double -> Double
-cosineSimilaritySparse v w = dot v w / (norm2 v * norm2 w)
+cosineSimilaritySparse v w = S.dot v w / (norm2 v * norm2 w)
   where
-    dot x = foldl' (+) 0 . S.liftU2 (*) x
     norm2 = sqrt . foldl' (+) 0 . fmap (** 2)
 
 -- | Get an adjacency matrix based on a matrix where each row is an observation

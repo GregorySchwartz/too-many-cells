@@ -34,8 +34,7 @@ import TooManyCells.Program.Options
 classifyMain :: Options -> IO ()
 classifyMain opts = do
   let readOrErr err = fromMaybe (error err) . readMaybe
-      refFiles' = fmap (\x -> if FP.takeExtension x /= ".bw" then error "Only .bw files for references supported at this time" else x)
-                . unHelpful
+      refFiles' = unHelpful
                 . referenceFile
                 $ opts
       singleRefMatFlag' = unHelpful . singleReferenceMatrix $ opts
@@ -58,10 +57,8 @@ classifyMain opts = do
   refs <- getRefs refFiles'
 
   let classified = classifyCells sc refs
+      outputRow (Cell !c, (_, 0)) = T.putStrLn $ c <> ",unknown,0.0"
+      outputRow (Cell !c, (Label !l, !s)) = T.putStrLn $ c <> "," <> l <> "," <> showt s
 
-  print "item,label,score"
-  mapM_
-    (\ (Cell !c, (!s, Label !l))
-    -> T.putStrLn $ c <> "," <> l <> "," <> showt s
-    )
-    classified
+  putStrLn "item,label,score"
+  mapM_ outputRow classified

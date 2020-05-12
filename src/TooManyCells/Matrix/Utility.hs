@@ -362,7 +362,7 @@ removeCellsSc cells sc = L.set rowNames newRowNames
 -- | Get the index of a cell in a SingleCells type.
 getCellIdx :: SingleCells -> Cell -> Int
 getCellIdx sc x =
-  fromMaybe (error $ "extractCell: cell not found in matrix: " <> show x)
+  fromMaybe (error $ "extractCellIdx: cell not found in matrix: " <> show x)
     . V.findIndex (== x)
     . L.view rowNames
     $ sc
