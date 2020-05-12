@@ -359,14 +359,14 @@ shiftPositiveMat :: MatObsRow -> MatObsRow
 shiftPositiveMat = MatObsRow
               . S.fromColsL
               . fmap (\ xs -> bool xs (shift . S.toDenseListSV $ xs)
-                            . any (<= 0)
+                            . any (< 0)
                             . S.toDenseListSV
                             $ xs
                      )
               . S.toColsL
               . unMatObsRow
   where
-    shift xs = S.sparsifySV . S.vr . fmap (\x -> x + minimum xs + 1) $ xs
+    shift xs = S.sparsifySV . S.vr . fmap (+ (abs $ minimum xs)) $ xs
 
 -- | Shift features to positive values for SingleCells.
 shiftPositiveSc :: SingleCells -> SingleCells
