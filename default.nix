@@ -7,13 +7,15 @@ let
              packageOverrides = super: let self = super.pkgs; in {
                 Renv = super.rWrapper.override {
                   packages = with self.rPackages; [
-                    ggplot2
                     devtools
+                    reshape2
+                    locfit
+                    limma
+                    jsonlite
+                    ggplot2
                     cowplot
                     dplyr
-                    jsonlite
                     edgeR
-                    reshape2
                   ];
                 };
               };
@@ -69,9 +71,16 @@ in (pkgs.haskell.lib.dontHaddock (pkg.overrideAttrs(attrs: {
   buildInputs = attrs.buildInputs ++ buildInputs;
   nativeBuildInputs = attrs.nativeBuildInputs ++ buildInputs;
   postInstall = ''
+            mkdir -p $out/paths
+            cat "${pkgs.Renv}/bin/R" \
+              | grep export \
+              | sed "s/export R_LIBS_SITE=//" \
+              | sed "s/'\$.*//" \
+              > $out/paths/r_path.txt
+
             wrapProgram $out/bin/too-many-cells \
               --prefix 'PATH' ':' "${pkgs.Renv}/bin/" \
-              --prefix-contents 'R_LIBS_SITE' ':' "${pkgs.Renv}/bin/R" \
+              --prefix-contents 'R_LIBS_SITE' ':' "$out/paths/r_path.txt" \
               --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \
               --set 'LOCALE_ARCHIVE' "${pkgs.glibcLocales}/lib/locale/locale-archive" \
