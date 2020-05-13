@@ -80,6 +80,7 @@ in (pkgs.haskell.lib.dontHaddock (pkg.overrideAttrs(attrs: {
 
             wrapProgram $out/bin/too-many-cells \
               --prefix 'PATH' ':' "${pkgs.Renv}/bin/" \
+              --prefix 'PATH' ':' "${pkgs.graphviz}/bin/" \
               --prefix-contents 'R_LIBS_SITE' ':' "$out/paths/r_path.txt" \
               --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \
