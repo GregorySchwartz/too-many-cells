@@ -50,6 +50,7 @@ import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HMap
 import qualified Data.HashSet as HSet
 import qualified Data.IntMap.Strict as IMap
+import qualified Data.IntervalMap.Interval as I
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sparse.Common as HS
@@ -275,8 +276,10 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
         Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
       parseLine (chrom:start:end:barcode:duplicateCount:_) =
         ( barcode
-        , maybe showt (\x -> showt . rangeToBin x) binWidth
-        $ Range Nothing chrom (readDecimal start) (readDecimal end)
+        , maybe showt (\x -> showt . unChrRegionBin . rangeToBin x) binWidth
+        . either (\x -> error $ "Cannot read region in file: " <> x) id
+        . parseChrRegion
+        $ mconcat [chrom, ":", start, "-", end]
         , readDouble duplicateCount
         )
       parseLine xs = error $ "loadFragments: Unexpected number of columns, did you use the fragments.tsv.gz 10x format? Input: " <> show xs
@@ -304,7 +307,7 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
       findErr x = fromMaybe (error $ "loadFragments: No indices found: " <> show x)
                 . HMap.lookup x
       matFold = Fold.Fold addToMat init MatObsRow
-      addToMat !m (!i, !j, !x) = HS.insertSpMatrix i j x m
+      addToMat !m val = m HS.^+^ HS.fromListSM (HS.dimSM init) [val]
       init = HS.zeroSM (V.length cells) (V.length features)
       getIndices (!c, !r, !v) =
         (findErr c cellMap, findErr r featureMap, v)
@@ -383,8 +386,10 @@ loadBW blacklist excludeFragments binWidth (BigWig file) = do
       filterBlacklist (BlacklistRegions br) =
         Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
       parseLine (chrom:start:end:duplicateCount:_) =
-        ( maybe showt (\x -> showt . rangeToBin x) binWidth
-        $ Range Nothing chrom (readDecimal start) (readDecimal end)
+        ( maybe showt (\x -> showt . unChrRegionBin . rangeToBin x) binWidth
+        . either (\x -> error $ "Cannot read region in file: " <> x) id
+        . parseChrRegion
+        $ mconcat [chrom, ":", start, "-", end]
         , readDouble duplicateCount
         )
       parseLine xs = error $ "loadBW: Unexpected number of columns, did you use the bigWig format? Input: " <> show xs

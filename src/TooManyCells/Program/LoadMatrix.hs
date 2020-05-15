@@ -121,8 +121,17 @@ loadSSM opts matrixPath' = do
 
   let whiteListFilter Nothing = id
       whiteListFilter (Just wl) = filterWhitelistSparseMat wl
+      -- Convert non-read data (all matrix formats) to bins. This is done
+      -- separately from the read data as it's faster to do this process in the
+      -- fragment reading before the matrix creation.
+      windowSc Nothing sc = sc
+      windowSc (Just bw) sc =
+        case matrixFile' of
+          (Left file@(CompressedFragments _)) -> sc
+          (Left file@(BigWig _)) -> sc
+          otherwise -> bool sc (rangeToBinSc bw sc) . isChrRegionMat $ sc
 
-  fmap (whiteListFilter cellWhitelist) unFilteredSc
+  fmap (windowSc binWidth' . whiteListFilter cellWhitelist) unFilteredSc
 
 -- | Load all single cell matrices.
 loadAllSSM :: Options -> IO (Maybe (SingleCells, Maybe LabelMap))

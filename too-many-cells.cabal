@@ -116,7 +116,7 @@ library
                      , text
                      , text-show
                      , transformers
-                     , turtle
+                     , turtle >= 1.5.18
                      , unordered-containers
                      , vector
                      , vector-algorithms

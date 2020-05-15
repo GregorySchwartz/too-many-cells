@@ -23,6 +23,7 @@ module TooManyCells.Matrix.Types where
 import BirchBeer.Types
 import Control.DeepSeq (NFData (..), force)
 import Control.Monad (join)
+import Control.Parallel.Strategies (withStrategy, rdeepseq)
 import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid (..), mempty)
@@ -108,7 +109,10 @@ newtype MatrixTranspose = MatrixTranspose
     } deriving (Read,Show)
 newtype ChrRegion = ChrRegion
     { unChrRegion :: (T.Text, IntervalMap.Interval Int)
-    } deriving (Read,Show)
+    } deriving (Read,Show,Eq,Ord)
+newtype ChrRegionBin = ChrRegionBin
+    { unChrRegionBin :: ChrRegion
+    } deriving (Read,Show,Eq,Ord)
 newtype ChrRegionMat = ChrRegionMat
     { unChrRegionMat
    :: Map.Map T.Text (IntervalMap.IntervalMap Int (S.SpVector Double))
@@ -157,8 +161,9 @@ instance Monoid MatObsRow where
 -- Advanced
 -- | Parse a chromosome region feature into an interval map.
 parseChrRegion :: T.Text -> Either String ChrRegion
-parseChrRegion x = either (\a -> Left $ a <> ": " <> T.unpack x) Right
+parseChrRegion x = either (\a -> Left $ a <> " (did you follow the format chrN:LOWERBOUND-UPPERBOUND ?): " <> T.unpack x) Right
                  . Atto.parseOnly parserChrRegion
+                 . T.filter (/= ',')
                  $ x
 
 parserChrRegion :: Atto.Parser ChrRegion
@@ -171,6 +176,11 @@ parserChrRegion = do
   end <- Atto.decimal
 
   return . ChrRegion $ (chr, IntervalMap.ClosedInterval start end)
+
+-- | Check if a matrix is a ChrRegion matrix based on the first feature.
+isChrRegionMat :: (MatrixLike m) => m -> Bool
+isChrRegionMat =
+  maybe False (isRight . parseChrRegion) . flip (V.!?) 0 . getColNames
 
 instance TextShow ChrRegion where
     showb (ChrRegion (chr, i)) = "chr"
@@ -211,10 +221,7 @@ instance Semigroup SingleCells where
                     , _rowNames    = (V.++) (L.view rowNames x) (L.view rowNames y)
                     , _colNames    = _colNames x
                     }
-    | fromMaybe False
-        . fmap (isRight . parseChrRegion)
-        . flip (V.!?) 0
-        $ getColNames x =
+    | isChrRegionMat x =
             either (\a -> error $ "Invalid chromosome region notation for feature, must be in format `chrN:START-END`: " <> a) id
               $ mergeChrFeaturesSingleCells x y
     | otherwise = mergeFeaturesSingleCells x y
@@ -254,7 +261,7 @@ mergeChrFeaturesSingleCells :: SingleCells -> SingleCells -> Either String Singl
 mergeChrFeaturesSingleCells sc1 sc2 = do
   let getScMap sc = ChrRegionMat
                   . fmap (IntervalMap.flattenWith (S.^+^))
-                  . Map.unionsWith (IntervalMap.unionWith (S.^+^))
+                  . Map.unionsWith (withStrategy rdeepseq . IntervalMap.unionWith (S.^+^))
                   . zipWith (\r (ChrRegion (c, i))
                             -> Map.singleton c $ IntervalMap.singleton i r
                             )

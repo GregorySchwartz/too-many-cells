@@ -6,6 +6,7 @@ matrix, where each feature is a bin range.
 -}
 
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TupleSections #-}
 
 module TooManyCells.Matrix.AtacSeq
     ( rangeToBin
@@ -23,6 +24,7 @@ import qualified Control.Lens as L
 import qualified Data.Attoparsec.Text as A
 import qualified Data.Foldable as F
 import qualified Data.IntMap as IMap
+import qualified Data.IntervalMap.Interval as I
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
@@ -33,58 +35,33 @@ import qualified Data.Vector as V
 -- Local
 import TooManyCells.Matrix.Types
 
--- | Read a range from a text of the form LABEL:LOWERBOUND-UPPERBOUND.
-readRange :: RangeIdx -> T.Text -> Range
-readRange idx x = either (\ a -> error $ "Error in readRange: " <> a <> ": " <> T.unpack x <> " (did you follow the format LABEL:LOWERBOUND-UPPERBOUND ?)") id
-                . A.parseOnly (rangeParser idx)
-                . T.filter (/= ',')
-                $ x
-
--- | How to parse a range.
-rangeParser :: RangeIdx -> A.Parser Range
-rangeParser idx = do
-  l <- A.many1 (A.notChar ':')
-  A.char ':'
-  lb <- A.decimal
-  A.char '-'
-  ub <- A.decimal
-  return $ Range (Just idx) (T.pack l) lb ub
-
 -- | Convert an input range to a bin.
-rangeToBin :: BinWidth -> Range -> Bin
-rangeToBin (BinWidth b) range@(Range _ l _ _) = Bin Nothing l lb (lb + b - 1)
+rangeToBin :: BinWidth -> ChrRegion -> ChrRegionBin
+rangeToBin (BinWidth !b) region@(ChrRegion (!l, _)) =
+  ChrRegionBin $ ChrRegion (l, I.ClosedInterval lb (lb + b - 1))
   where
-    lb = ((div (midpoint range) b) * b) + 1
+    lb = ((div (midpoint region) b) * b) + 1
 
 -- | Find midpoint of a range.
-midpoint :: Range -> Int
-midpoint (Range _ _ lb ub) = lb + div (ub - lb) 2
+midpoint :: ChrRegion -> Int
+midpoint (ChrRegion (_, !i)) =
+  I.lowerBound i + div (I.upperBound i - I.lowerBound i) 2
 
 -- | Get the map of ranges to their bins, keeping bin order.
 binsToRangeBinMapWithOrder :: BinWidth
-                           -> V.Vector Range
-                           -> (RangeBinMap, V.Vector Bin)
+                           -> [ChrRegion]
+                           -> (RangeBinMap, [ChrRegionBin])
 binsToRangeBinMapWithOrder b rs =
-  (rangeBinMap, V.fromList . Set.toAscList . Set.fromList $ rangeBins)
+  (rangeBinMap, Set.toAscList . Set.fromList $ bins)
   where
-    rangeBinMap = RangeBinMap
-                . IMap.fromList
-                . zip ( fmap (maybe (error "Range missing index in binsToRangeBinMapWithOrder") unRangeIdx . rangeIdx)
-                             . V.toList
-                             $ rs
-                      )
-                . fmap (fromMaybe (error "Bin missing index in binsToRangeBinMapWithOrder") . binIdx)
-                $ rangeBins
-    rangeBins = fmap (\v -> v { binIdx = Map.lookup v binMap }) -- Insert correct idx
-              $ bins
+    rangeBinMap = RangeBinMap . IMap.fromList . zip [0..] . fmap fst $ rangeBins
+    rangeBins = fmap (\ !v -> (Map.findWithDefault (error "Bin missing index in binsToRangeBinMapWithOrder") v binMap, v)) bins  -- Insert correct idx
     binMap = Map.fromList
            . flip zip (fmap BinIdx [0..])
            . Set.toAscList
            . Set.fromList
            $ bins
-    bins = fmap (rangeToBin b)
-         . V.toList
-         $ rs
+    bins = fmap (rangeToBin b) rs
 
 -- | Convert a range matrix to a bin matrix.
 rangeToBinMat :: RangeBinMap -> MatObsRow -> MatObsRow
@@ -103,14 +80,16 @@ rangeToBinSc :: BinWidth -> SingleCells -> SingleCells
 rangeToBinSc b sc =
   SingleCells { _matrix = rangeToBinMat rangeBinMap . L.view matrix $ sc
               , _rowNames = L.view rowNames sc
-              , _colNames = fmap (Feature . showt) bins
+              , _colNames =
+                  V.fromList . fmap (Feature . showt . unChrRegionBin) $ bins
               }
   where
     (rangeBinMap, bins) =
       binsToRangeBinMapWithOrder b
-        . V.fromList
-        . fmap (\(!i, !v) -> readRange (RangeIdx i) . unFeature $ v)
-        . zip [0..]
+        . fmap ( either (error . (<>) "Cannot parse region format `chrN:START-END` in: ") id
+               . parseChrRegion
+               . unFeature
+               )
         . V.toList
         . L.view colNames
         $ sc
