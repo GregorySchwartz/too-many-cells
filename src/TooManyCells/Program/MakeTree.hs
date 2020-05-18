@@ -188,6 +188,10 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             finalError err x = "Error in draw-discretize: " <> err <> " " <> x
         drawScaleSaturation' =
             fmap DrawScaleSaturation . unHelpful . drawScaleSaturation $ opts
+        drawItemLineWeight' = fmap DrawItemLineWeight
+                            . unHelpful
+                            . drawItemLineWeight
+                            $ opts
         drawFont' = fmap DrawFont . unHelpful . drawFont $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
         clumpinessMethod' =
@@ -320,6 +324,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawDiscretize      = drawDiscretize'
                     , _birchDrawScaleSaturation = drawScaleSaturation'
                     , _birchDrawFont            = drawFont'
+                    , _birchDrawItemLineWeight  = drawItemLineWeight'
                     , _birchTree = _clusterDend originalClusterResults
                     , _birchMat = birchMat
                     , _birchSimMat = birchSimMat

@@ -143,7 +143,8 @@ loadAllSSM opts = runMaybeT $ do
       svd'               = fmap SVDDim . unHelpful . svd $ opts
       noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
       binarizeFlag'      = BinarizeFlag . unHelpful . binarize $ opts
-      transpose' = TransposeFlag . unHelpful . matrixTranspose $ opts
+      binWidth'          = fmap BinWidth . unHelpful . binwidth $ opts
+      transpose'         = TransposeFlag . unHelpful . matrixTranspose $ opts
       shiftPositiveFlag' =
         ShiftPositiveFlag . unHelpful . shiftPositive $ opts
       customLabel' = (\ xs -> bool
@@ -174,6 +175,13 @@ loadAllSSM opts = runMaybeT $ do
 
   let labelAxis (TransposeFlag False) = labelRows
       labelAxis (TransposeFlag True) = labelCols
+      -- Fast bin joining. If the data is binned, then they should have
+      -- identical region names, so avoing interval joining. Then undo later.
+      -- Forces non-region format.
+      fastBinJoin
+        :: TransposeFlag -> Maybe BinWidth -> Bool -> SingleCells -> SingleCells
+      fastBinJoin (TransposeFlag False) b j = fastBinJoinCols b j
+      fastBinJoin (TransposeFlag True) b j = fastBinJoinRows b j
 
   cores <- MaybeT . fmap Just $ getNumCapabilities
   (whitelistSc, whitelistLM) <- MaybeT
@@ -183,6 +191,7 @@ loadAllSSM opts = runMaybeT $ do
               withTaskGroup cores $ \workers ->
                 fmap ( Just
                      . (L.over L._1 (\x -> bool x (transposeSC x) . unTransposeFlag $ transpose'))  -- Whether to transpose the matrix.
+                     . (L.over L._1 (fastBinJoin transpose' binWidth' False))  -- Possibly undo feature change for fast bin joining
                      . unLabelMat
                      )
                   . join
@@ -190,7 +199,7 @@ loadAllSSM opts = runMaybeT $ do
                   . fmap wait
                   . mapReduce workers
                   . zipWith (\l -> fmap (labelAxis transpose' l)) customLabel'  -- Depending on which axis to label from transpose.
-                  . fmap (loadSSM opts)
+                  . fmap (fmap (fastBinJoin transpose' binWidth' True) . loadSSM opts)  -- Load matrices, possible preparing for fast bin joining
                   $ matrixPaths'
 
   let sc = bool

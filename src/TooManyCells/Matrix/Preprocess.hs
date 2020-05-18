@@ -39,6 +39,8 @@ module TooManyCells.Matrix.Preprocess
     , emptyMatErr
     , labelRows
     , labelCols
+    , fastBinJoinRows
+    , fastBinJoinCols
     , transformChrRegions
     ) where
 
@@ -47,7 +49,7 @@ import BirchBeer.Types (LabelMap (..), Id (..), Label (..), Feature (..))
 import Data.Bool (bool)
 import Data.List (sort, foldl')
 import Data.Monoid ((<>))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust)
 import H.Prelude (io)
 import Language.R as R
 import Language.R.QQ (r)
@@ -532,6 +534,23 @@ labelCols (Just (CustomLabel l)) sc =
              $ newColNames
     newColNames = fmap labelCol . L.view colNames $ sc
     labelCol (Feature x) = Feature $ x <> "-" <> l
+
+-- | Add or remove a single character to speed up joining if region data is
+-- binned across rows before transposition.
+fastBinJoinRows :: Maybe BinWidth -> Bool -> SingleCells -> SingleCells
+fastBinJoinRows binWidth joining =
+  bool id (L.over rowNames (fmap (Cell . j . unCell))) $ isJust binWidth
+    where
+      j = if joining then T.cons 'B' else T.drop 1
+
+-- | Add or remove a single character to speed up joining if region data is
+-- binned across columns.
+fastBinJoinCols :: Maybe BinWidth -> Bool -> SingleCells -> SingleCells
+fastBinJoinCols binWidth joining =
+  bool id (L.over colNames (fmap (Feature . j . unFeature)))
+    $ isJust binWidth
+    where
+      j = if joining then T.cons 'B' else T.drop 1
 
 -- | Transform a list of chromosome region features to a list of custom features.
 transformChrRegions :: CustomRegions -> SingleCells -> SingleCells

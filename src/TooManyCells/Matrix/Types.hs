@@ -23,7 +23,8 @@ module TooManyCells.Matrix.Types where
 import BirchBeer.Types
 import Control.DeepSeq (NFData (..), force)
 import Control.Monad (join)
-import Control.Parallel.Strategies (withStrategy, rdeepseq)
+import Control.Parallel (par)
+import Control.Parallel.Strategies (withStrategy, rdeepseq, Strategy (..))
 import Data.Either (isRight)
 import Data.Maybe (fromMaybe)
 import Data.Monoid (Monoid (..), mempty)
@@ -261,7 +262,8 @@ mergeChrFeaturesSingleCells :: SingleCells -> SingleCells -> Either String Singl
 mergeChrFeaturesSingleCells sc1 sc2 = do
   let getScMap sc = ChrRegionMat
                   . fmap (IntervalMap.flattenWith (S.^+^))
-                  . Map.unionsWith (withStrategy rdeepseq . IntervalMap.unionWith (S.^+^))
+                  -- . Map.unionsWith (\x y -> force x `par` force y `par` IntervalMap.unionWith (S.^+^) x y)
+                  . Map.unionsWith (IntervalMap.unionWith (S.^+^))
                   . zipWith (\r (ChrRegion (c, i))
                             -> Map.singleton c $ IntervalMap.singleton i r
                             )
@@ -368,3 +370,6 @@ instance NFData Feature where rnf x = seq x ()
 
 instance (NFData a) => NFData (S.SpMatrix a) where
   rnf all@(S.SM (!x, !y) !m) = seq all ()
+
+instance (NFData a) => NFData (S.SpVector a) where
+  rnf all@(S.SV !x !m) = seq all ()
