@@ -44,7 +44,7 @@ classifyCells sc refs = zip (V.toList . L.view rowNames $ sc')
 -- | Classify matrices using cosine similarity. Results in a matrix with scores
 -- (cosine similarity) for each column and observations per row.
 classifyMat :: SingleCells -> AggReferenceMat -> S.SpMatrix Double
-classifyMat sc refs = scMat S.#~# S.transpose refMat
+classifyMat sc refs = scMat S.## S.transpose refMat
   where
     refMat = normScMat . unAggSingleCells . unAggReferenceMat $ refs
     scMat = normScMat sc
@@ -54,19 +54,19 @@ classifyMat sc refs = scMat S.#~# S.transpose refMat
 unifyFeatures :: SingleCells -> [AggReferenceMat] -> (SingleCells, AggReferenceMat)
 unifyFeatures sc refs = (newSc, newRefs)
   where
-    newSc = L.over rowNames (V.drop nRefs)
-          . L.over matrix (extractObsRows nRefs (nRows - 1))
+    newSc = L.over rowNames (V.take nRowsSc)
+          . L.over matrix (extractObsRows 0 (nRowsSc - 1))
           $ unified
     newRefs = AggReferenceMat
             . AggSingleCells
-            . L.over rowNames (V.take nRefs)
-            . L.over matrix (extractObsRows 0 (nRefs - 1))
+            . L.over rowNames (V.drop nRowsSc)
+            . L.over matrix (extractObsRows nRowsSc (nRows - 1))
             $ unified
     nRefs = length refs
     (nRows, nCols) = S.dim . getMatrix $ unified
+    (nRowsSc, nColsSc) = S.dim . getMatrix $ sc
     unified = mconcat
-            . mconcat
-            $ [fmap (unAggSingleCells . unAggReferenceMat) refs, [sc]]
+            $ sc : fmap (unAggSingleCells . unAggReferenceMat) refs
     extractObsRows lb ub (MatObsRow x) =
       MatObsRow $ S.extractSubmatrixRebalanceKeys x (lb, ub) (0, nCols - 1)
 

@@ -60,6 +60,7 @@ getMatrixFileType path = do
                     . FP.takeFileName
                     $ path
       matrixFile
+        | fileExist && (FP.takeExtension path == ".bdg") = Left . BedGraph $ path
         | fileExist && (FP.takeExtension path == ".bw") = Left . BigWig $ path
         | fileExist && not fragmentsFile = Left . DecompressedMatrix . MatrixFile $ path
         | fileExist && fragmentsFile = Left . CompressedFragments . FragmentsFile $ path

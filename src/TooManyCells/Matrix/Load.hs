@@ -18,7 +18,7 @@ module TooManyCells.Matrix.Load
     , loadSparseMatrixDataStream
     , loadFragments
     , loadProjectionMap
-    , loadBW
+    , loadBdgBW
     ) where
 
 -- Remote
@@ -323,6 +323,70 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
                   , _colNames = fmap Feature features
                   }
 
+-- | Load a bedGraph or bigWig file as a reference to classify cells.
+loadBdgBW :: Maybe BlacklistRegions
+          -> Maybe ExcludeFragments
+          -> Maybe BinWidth
+          -> MatrixFileType
+          -> IO SingleCells
+loadBdgBW blacklist excludeFragments binWidth inFile = do
+  let readDecimal = either error fst . T.decimal
+      readDouble = either error fst . T.double
+      featuresFold = Fold.premap (\(!r, _) -> r) hashNub
+      preprocessStream = Turtle.mfilter (\(_, !x) -> x /= 0)  -- Ignore missing regions
+                       . fmap parseLine
+      filterFragments (ExcludeFragments ef) = Turtle.mfilter (T.isInfixOf ef)
+      filterBlacklist (BlacklistRegions br) =
+        Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
+      parseLine (chrom:start:end:duplicateCount:_) =
+        ( maybe showt (\x -> showt . unChrRegionBin . rangeToBin x) binWidth
+        . either (\x -> error $ "Cannot read region in file: " <> x) id
+        . parseChrRegion
+        $ mconcat [chrom, ":", start, "-", end]
+        , readDouble duplicateCount
+        )
+      parseLine xs = error $ "loadBW: Unexpected number of columns, did you use the bigWig format? Input: " <> show xs
+      fromFile (BigWig file) =
+        Turtle.inproc "bigWigToBedGraph" [T.pack file, "stdout"] mempty
+      fromFile (BedGraph file) = Turtle.input . Turtle.fromText . T.pack $ file
+      fromFile file =
+        error $ "Only accepts BedGraph or BigWig for now: " <> show file
+      getFileName (BigWig file) = file
+      getFileName (BedGraph file) = file
+      getFileName file =
+        error $ "Only accepts BedGraph or BigWig for now: " <> show file
+      stream = preprocessStream
+             . fmap (T.splitOn "\t")
+             . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments by name match
+             . Turtle.mfilter (not . T.null)
+             . fmap Turtle.lineToText
+             . (maybe id filterBlacklist blacklist)
+             . Turtle.inproc "bedtools" ["sort", "-i", "stdin"]
+             $ fromFile inFile
+
+  featuresList <- Turtle.reduce featuresFold stream
+
+  let features = V.fromList featuresList
+      featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
+      findErr x = fromMaybe (error $ "loadBW: No indices found: " <> show x)
+                . HMap.lookup x
+      matFold = Fold.Fold addToMat init MatObsRow
+      addToMat !m (!i, !j, !x) = HS.insertSpMatrix i j x m
+      init = HS.zeroSM 1 (V.length features)
+      getIndices (!r, !v) =
+        (0, findErr r featureMap, v)
+
+  -- Get map second.
+  mat <- Turtle.reduce matFold
+       . fmap getIndices
+       $ stream
+
+  return $
+      SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ mat
+                  , _rowNames = V.singleton . Cell . T.pack $ getFileName inFile
+                  , _colNames = fmap Feature features
+                  }
+
 -- | Load a projection file to get a vector of projections.
 loadProjectionFile :: ProjectionFile -> IO (Vector (X, Y))
 loadProjectionFile =
@@ -369,60 +433,3 @@ toPoint = (\[!x, !y] -> (X x, Y y)) . HS.toDenseListSV . HS.takeSV 2
 -- | Project a matrix to first two dimensions.
 projectMatrix :: MatObsRow -> Vector (X, Y)
 projectMatrix = V.fromList . fmap toPoint . HS.toRowsL . unMatObsRow
-
--- | Load a bigWig file as a reference to classify cells.
-loadBW :: Maybe BlacklistRegions
-       -> Maybe ExcludeFragments
-       -> Maybe BinWidth
-       -> MatrixFileType
-       -> IO SingleCells
-loadBW blacklist excludeFragments binWidth (BigWig file) = do
-  let readDecimal = either error fst . T.decimal
-      readDouble = either error fst . T.double
-      featuresFold = Fold.premap (\(!r, _) -> r) hashNub
-      preprocessStream = Turtle.mfilter (\(_, !x) -> x /= 0)  -- Ignore missing regions
-                       . fmap parseLine
-      filterFragments (ExcludeFragments ef) = Turtle.mfilter (T.isInfixOf ef)
-      filterBlacklist (BlacklistRegions br) =
-        Turtle.inproc "bedtools" ["subtract", "-A", "-a", "stdin", "-b", br]
-      parseLine (chrom:start:end:duplicateCount:_) =
-        ( maybe showt (\x -> showt . unChrRegionBin . rangeToBin x) binWidth
-        . either (\x -> error $ "Cannot read region in file: " <> x) id
-        . parseChrRegion
-        $ mconcat [chrom, ":", start, "-", end]
-        , readDouble duplicateCount
-        )
-      parseLine xs = error $ "loadBW: Unexpected number of columns, did you use the bigWig format? Input: " <> show xs
-      stream = preprocessStream
-             . fmap (T.splitOn "\t")
-             . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments by name match
-             . Turtle.mfilter (not . T.null)
-             . fmap Turtle.lineToText
-             . (maybe id filterBlacklist blacklist)
-             . Turtle.inproc "bedtools" ["sort", "-i", "stdin"]
-             . Turtle.inproc "bigWigToBedGraph" [T.pack file, "stdout"]
-             $ mempty
-
-  featuresList <- Turtle.reduce featuresFold stream
-
-  let features = V.fromList featuresList
-      featureMap = HMap.fromList . flip zip ([0..] :: [Int]) $ featuresList
-      findErr x = fromMaybe (error $ "loadBW: No indices found: " <> show x)
-                . HMap.lookup x
-      matFold = Fold.Fold addToMat init MatObsRow
-      addToMat !m (!i, !j, !x) = HS.insertSpMatrix i j x m
-      init = HS.zeroSM 1 (V.length features)
-      getIndices (!r, !v) =
-        (0, findErr r featureMap, v)
-
-  -- Get map second.
-  mat <- Turtle.reduce matFold
-       . fmap getIndices
-       $ stream
-
-  return $
-      SingleCells { _matrix   = MatObsRow . HS.sparsifySM . unMatObsRow $ mat
-                  , _rowNames = V.singleton . Cell $ T.pack file
-                  , _colNames = fmap Feature features
-                  }
-loadBW _ _ _ file = error $ "Only accepts BigWig for now: " <> show file

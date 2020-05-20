@@ -103,6 +103,16 @@ loadSSM opts matrixPath' = do
               fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
                 . loadFragments cellWhitelist blacklistRegionsFile' excludeFragments' binWidth'
                   $ file
+            (Left file@(BedGraph _))  -> do
+              liftIO $ when (isNothing binWidth') $
+                hPutStrLn stderr "\nWarning: No binwidth specified for BedGraph file\
+                                  \ input. This will make the feature list extremely large\
+                                  \ and may result in many outliers. Please see --binwidth.\
+                                  \ Ignore this message if using peaks.\
+                                  \ Continuing..."
+              fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
+                . loadBdgBW blacklistRegionsFile' excludeFragments' binWidth'
+                $ file
             (Left file@(BigWig _))  -> do
               liftIO $ when (isNothing binWidth') $
                 hPutStrLn stderr "\nWarning: No binwidth specified for bigWig file\
@@ -111,7 +121,7 @@ loadSSM opts matrixPath' = do
                                   \ Ignore this message if using peaks.\
                                   \ Continuing..."
               fmap (bool binarizeSc id . unNoBinarizeFlag $ noBinarizeFlag')
-                . loadBW blacklistRegionsFile' excludeFragments' binWidth'
+                . loadBdgBW blacklistRegionsFile' excludeFragments' binWidth'
                 $ file
             (Right (DecompressedMatrix file)) ->
               loadCellrangerData featureColumn' featuresFile' cellsFile' file
