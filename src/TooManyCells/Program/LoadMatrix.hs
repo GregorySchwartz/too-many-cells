@@ -224,6 +224,7 @@ loadAllSSM opts = runMaybeT $ do
       normMat TotalNorm    = totalScaleSparseMat
       normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
       normMat LogCPMNorm   = logCPMSparseMat
+      normMat QuantileNorm = quantileScaleSparseMat
       normMat NoneNorm     = id
       processSc = L.over matrix (MatObsRow . S.sparsifySM . unMatObsRow)
                 . L.over matrix ( bool id shiftPositiveMat

@@ -17,6 +17,7 @@ module TooManyCells.Matrix.Preprocess
     , logCPMSparseMat
     , uqScaleSparseMat
     , medScaleSparseMat
+    , quantileScaleSparseMat
     , centerScaleSparseCell
     , filterRMat
     , filterDenseMat
@@ -47,7 +48,7 @@ module TooManyCells.Matrix.Preprocess
 -- Remote
 import BirchBeer.Types (LabelMap (..), Id (..), Label (..), Feature (..))
 import Data.Bool (bool)
-import Data.List (sort, foldl')
+import Data.List (sort, foldl', transpose)
 import Data.Monoid ((<>))
 import Data.Maybe (fromMaybe, isJust)
 import H.Prelude (io)
@@ -57,9 +58,11 @@ import Math.Clustering.Spectral.Sparse (B1 (..), B2 (..), b1ToB2)
 import Statistics.Quantile (quantile, s)
 import Statistics.Sample (mean, stdDev)
 import TextShow (showt)
+import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.HashMap.Strict as HMap
 import qualified Data.HashSet as HSet
+import qualified Data.IntMap as IMap
 import qualified Data.IntSet as ISet
 import qualified Data.IntervalMap.Interval as IntervalMap
 import qualified Data.IntervalMap.Strict as IntervalMap
@@ -161,6 +164,38 @@ medScaleSparseMat (MatObsRow mat) = MatObsRow
                                  . fmap medScaleSparseCell
                                  . S.toRowsL
                                  $ mat
+
+-- | Scale a matrix based quantile normalization. Will ignore 0s if missing from
+-- input.
+quantileScaleSparseMat :: MatObsRow -> MatObsRow
+quantileScaleSparseMat (MatObsRow mat) =
+  MatObsRow
+    . S.sparsifySM
+    . fmap (flip (IMap.findWithDefault 0) totalRankMap)
+    $ rankMat
+  where
+    totalRankMap = IMap.fromList
+                 . zip [1,2..]
+                 . fmap (Fold.fold avg)
+                 . transpose
+                 . fmap (sort . fmap snd . S.toListSV)
+                 . S.toRowsL
+                 $ mat
+    avg = (/) <$> Fold.sum <*> Fold.genericLength 
+    rankMat :: S.SpMatrix Int
+    rankMat = S.fromRowsL . fmap rankTransform . S.toRowsL $ mat
+    rankTransform :: S.SpVector Double -> S.SpVector Int
+    rankTransform xs = fmap (flip (Map.findWithDefault 0) rankMap) xs
+      where
+        rankMap :: Map.Map Double Int
+        rankMap = Map.fromList
+                . flip zip [1,2..]
+                . Set.toList
+                . Set.fromList
+                . sort
+                . fmap snd
+                . S.toListSV
+                $ xs
 
 -- | Scale a cell by the library size.
 scaleDenseCell :: H.Vector H.R -> H.Vector H.R

@@ -357,6 +357,7 @@ data NormType = TfIdfNorm
               | TotalNorm
               | BothNorm
               | LogCPMNorm
+              | QuantileNorm
               | NoneNorm
                 deriving (Read, Show, Eq)
 
