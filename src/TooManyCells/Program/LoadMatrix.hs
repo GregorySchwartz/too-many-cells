@@ -67,6 +67,7 @@ loadSSM opts matrixPath' = do
              FP.</> (bool "barcodes.tsv" "barcodes.tsv.gz" compressedFileExist)
       delimiter'      =
           Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+      transpose'      = TransposeFlag . unHelpful . matrixTranspose $ opts
       featureColumn'  =
           FeatureColumn . fromMaybe 1 . unHelpful . featureColumn $ opts
       noBinarizeFlag' = NoBinarizeFlag . unHelpful . noBinarize $ opts
@@ -140,8 +141,9 @@ loadSSM opts matrixPath' = do
           (Left file@(CompressedFragments _)) -> sc
           (Left file@(BigWig _)) -> sc
           otherwise -> bool sc (rangeToBinSc bw sc) . isChrRegionMat $ sc
+      transposeFunc = bool id transposeSc $ unTransposeFlag transpose'  -- Whether to transpose matrix
 
-  fmap (windowSc binWidth' . whiteListFilter cellWhitelist) unFilteredSc
+  fmap (windowSc binWidth' . whiteListFilter cellWhitelist . transposeFunc) unFilteredSc
 
 -- | Load all single cell matrices.
 loadAllSSM :: Options -> IO (Maybe (SingleCells, Maybe LabelMap))
@@ -154,7 +156,6 @@ loadAllSSM opts = runMaybeT $ do
       noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
       binarizeFlag'      = BinarizeFlag . unHelpful . binarize $ opts
       binWidth'          = fmap BinWidth . unHelpful . binwidth $ opts
-      transpose'         = TransposeFlag . unHelpful . matrixTranspose $ opts
       shiftPositiveFlag' =
         ShiftPositiveFlag . unHelpful . shiftPositive $ opts
       customLabel' = (\ xs -> bool
@@ -183,16 +184,6 @@ loadAllSSM opts = runMaybeT $ do
                      \ clustering (leading to svdlibc to hang or dense SVD\
                      \ to error out)! Continuing..."
 
-  let labelAxis (TransposeFlag False) = labelRows
-      labelAxis (TransposeFlag True) = labelCols
-      -- Fast bin joining. If the data is binned, then they should have
-      -- identical region names, so avoing interval joining. Then undo later.
-      -- Forces non-region format.
-      fastBinJoin
-        :: TransposeFlag -> Maybe BinWidth -> Bool -> SingleCells -> SingleCells
-      fastBinJoin (TransposeFlag False) b j = fastBinJoinCols b j
-      fastBinJoin (TransposeFlag True) b j = fastBinJoinRows b j
-
   cores <- MaybeT . fmap Just $ getNumCapabilities
   (whitelistSc, whitelistLM) <- MaybeT
         $ if null matrixPaths'
@@ -200,16 +191,15 @@ loadAllSSM opts = runMaybeT $ do
             else
               withTaskGroup cores $ \workers ->
                 fmap ( Just
-                     . (L.over L._1 (\x -> bool x (transposeSC x) . unTransposeFlag $ transpose'))  -- Whether to transpose the matrix.
-                     . (L.over L._1 (fastBinJoin transpose' binWidth' False))  -- Possibly undo feature change for fast bin joining
+                     . (L.over L._1 (fastBinJoinCols binWidth' False))  -- Possibly undo feature change for fast bin joining
                      . unLabelMat
                      )
                   . join
                   . atomically
                   . fmap wait
                   . mapReduce workers
-                  . zipWith (\l -> fmap (labelAxis transpose' l)) customLabel'  -- Depending on which axis to label from transpose.
-                  . fmap (fmap (fastBinJoin transpose' binWidth' True) . loadSSM opts)  -- Load matrices, possible preparing for fast bin joining
+                  . zipWith (\l -> fmap (labelRows l)) customLabel'  -- Depending on which axis to label from transpose.
+                  . fmap (fmap (fastBinJoinCols binWidth' True) . loadSSM opts)  -- Load matrices, possible preparing for fast bin joining
                   $ matrixPaths'
 
   let sc = bool
