@@ -128,6 +128,8 @@ data Options
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed features."
                    , features :: [T.Text] <?> "([Nothing] | FEATURE) List of features (e.g. genes) to plot for all cells within selected nodes. Invoked by --features CD4 --features CD8 etc. When this argument is supplied, only the plot is outputted and edgeR differential expression is ignored. Outputs to --output."
                    , aggregate :: Bool <?> "([False] | True) Whether to plot the aggregate (mean here) of features for each cell from \"--features\" instead of plotting different distributions for each feature."
+                   , plotSeparateNodes :: Bool <?> "([False] | True) Whether to plot each node separately. This will plot each node provided in --nodes from both entries in the tuple (as they may be different from --labels)."
+                   , plotViolin :: Bool <?> "([False] | True) Whether to plot features as a violin plots instea of boxplots."
                    , plotOutput :: Maybe String <?> "([out.pdf] | STRING) The file containing the output plot."}
     | Diversity { priors :: [String] <?> "(PATH) Either input folders containing the output from a run of too-many-cells or a csv files containing the clusters for each cell in the format \"cell,cluster\". Advanced features not available in the latter case. If --labels-file is specified, those labels designate entity type, otherwise the assigned cluster is the entity type."
                 , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the most csv files in the program. For instance, if using a normal csv rather than cellranger output and for --labels-file."
@@ -274,6 +276,8 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "peakNode"              = Nothing
     short "peakNodeLabels"        = Nothing
     short "plotOutput"            = Nothing
+    short "plotSeparateNodes"     = Nothing
+    short "plotViolin"            = Nothing
     short "priors"                = Just 'P'
     short "projectionFile"        = Just 'j'
     short "rootCut"               = Nothing

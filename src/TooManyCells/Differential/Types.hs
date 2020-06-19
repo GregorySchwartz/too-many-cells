@@ -22,3 +22,5 @@ newtype DiffNodes = DiffNodes {unDiffNodes :: ([G.Node], [G.Node])}
 newtype DiffLabels =
   DiffLabels { unDiffLabels :: (Maybe (Set.Set Label), Maybe (Set.Set Label)) }
 newtype Aggregate = Aggregate { unAggregate :: Bool }
+newtype SeparateNodes = SeparateNodes { unSeparateNodes :: Bool }
+newtype ViolinFlag = ViolinFlag { unViolinFlag :: Bool }

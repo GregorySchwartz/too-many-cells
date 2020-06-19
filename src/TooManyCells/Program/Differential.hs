@@ -65,6 +65,8 @@ differentialMain opts = do
         topN'     = TopN . fromMaybe 100 . unHelpful . topN $ opts
         features'    = fmap Feature . unHelpful . features $ opts
         aggregate' = Aggregate . unHelpful . aggregate $ opts
+        separateNodes' = SeparateNodes . unHelpful . plotSeparateNodes $ opts
+        violinFlag' = ViolinFlag . unHelpful . plotViolin $ opts
         updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
         noEdger' = NoEdger . unHelpful . noEdger $ opts
         labels'   = fmap ( DiffLabels
@@ -141,7 +143,9 @@ differentialMain opts = do
 
           diffPlot <- getSingleDiff
                        False
+                       violinFlag'
                        aggregate'
+                       separateNodes'
                        labelMap
                        (extractSc processedSc)
                        combined1
@@ -158,7 +162,9 @@ differentialMain opts = do
 
           diffNormPlot <- getSingleDiff
                             True
+                            violinFlag'
                             aggregate'
+                            separateNodes'
                             labelMap
                             (extractSc processedSc)
                             combined1

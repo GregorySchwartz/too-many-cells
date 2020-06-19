@@ -69,17 +69,17 @@ scToTwoD cellGroups sc =
                 . filter ((>) (S.nrows . unMatObsRow $ _matrix sc) . L.view L._1)
                 $ cellGroups
 
--- | Get the indices and statuses for two lists of nodes.
+-- | Get the indices and statuses for a list of groups of nodes.
 getStatuses
     :: Maybe LabelMap
-    -> ([G.Node], Maybe (Set.Set Label))
-    -> ([G.Node], Maybe (Set.Set Label))
+    -> [([G.Node], Maybe (Set.Set Label))]
     -> ClusterGraph CellInfo
     -> [(Int, Cell, (Int, Diff.Status))]
-getStatuses lm (v1, l1) (v2, l2) (ClusterGraph gr) =
+getStatuses lm gs (ClusterGraph gr) =
     sort
-        . F.toList
-        $ mappend (collapseStatus (1 :: Int) v1 l1) (collapseStatus (2 :: Int) v2 l2)
+        . concatMap F.toList
+        . zipWith (\x (a, b) -> collapseStatus x a b) [1..]
+        $ gs
   where
     collapseStatus s vs ls =
         fmap (\ !x -> (unRow . _cellRow $ x, _barcode x, (s, Diff.Status $ statusName vs ls)))
@@ -122,7 +122,7 @@ getDEGraph :: TopN
            -> ClusterGraph CellInfo
            -> R.R s [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
 getDEGraph (TopN topN) lm sc v1 v2 gr = do
-    let cellGroups = getStatuses lm v1 v2 gr
+    let cellGroups = getStatuses lm [v1, v2] gr
         mat        = scToTwoD cellGroups sc
 
     Diff.edgeR topN mat
@@ -151,7 +151,7 @@ getDEGraphKruskalWallis (TopN topN) lm sc v1 v2 gr
         . unMatObsRow
         . L.view matrix
         $ sc
-    cellGroups = getStatuses lm v1 v2 gr
+    cellGroups = getStatuses lm [v1, v2] gr
     (as, bs) = L.over L.both (fmap (L.view L._1))
              . partition ((== 1) . L.view (L._3 . L._1))
              $ cellGroups
@@ -287,7 +287,9 @@ scToEntities aggregate features cellGroups sc =
 -- | Get the differential expression plot of features (or aggregate of features
 -- by average) over statuses, filtered by labels.
 getSingleDiff :: Bool
+              -> ViolinFlag
               -> Aggregate
+              -> SeparateNodes
               -> Maybe LabelMap
               -> SingleCells
               -> ([G.Node], Maybe (Set.Set Label))
@@ -295,11 +297,14 @@ getSingleDiff :: Bool
               -> [Feature]
               -> ClusterGraph CellInfo
               -> R.R s (R.SomeSEXP s)
-getSingleDiff normalize aggregate lm sc v1 v2 features gr = do
-  let cellGroups = getStatuses lm v1 v2 gr
+getSingleDiff normalize (ViolinFlag vf) aggregate sn lm sc v1 v2 features gr = do
+  let splitNodeGroup (!ns, !ls) = fmap (\ !x -> ([x], ls)) ns
+      cellGroups = if unSeparateNodes sn
+                    then getStatuses lm (concatMap splitNodeGroup [v1, v2]) gr
+                    else getStatuses lm [v1, v2] gr
       entities = scToEntities aggregate features cellGroups sc
 
-  Diff.plotSingleDiff normalize entities
+  Diff.plotSingleDiff normalize vf entities
 
 -- | Combine nodes and labels.
 combineNodesLabels
