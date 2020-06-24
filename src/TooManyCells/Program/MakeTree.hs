@@ -204,12 +204,9 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         output'           =
             OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
 
+    pb <- Progress.newProgressBar Progress.defStyle 10 (Progress.Progress 0 11 ())
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Loading and processing matrix")
-        Progress.percentage
-        80
-        $ Progress.Progress 0 10
+    Progress.incProgress pb 1
 
     -- Load matrix once.
     scRes <- loadAllSSM opts
@@ -217,11 +214,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         customLabelMap = join . fmap snd $ scRes
 
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Planning leaf colors")
-        Progress.percentage
-        80
-        $ Progress.Progress 1 10
+    Progress.incProgress pb 1
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
@@ -240,11 +233,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                           else return customLabelMap
 
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Planting tree")
-        Progress.percentage
-        80
-        $ Progress.Progress 2 10
+    Progress.incProgress pb 1
 
     --R.withEmbeddedR R.defaultConfig $ R.runRegion $ do
         -- For r clustering.
@@ -273,11 +262,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
               $ loadClusterResultsFiles clInput treeInput
 
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Measuring roots")
-        Progress.percentage
-        80
-        $ Progress.Progress 3 10
+    Progress.incProgress pb 1
 
     let birchMat = processedSc
         birchSimMat =
@@ -291,11 +276,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 _ -> Nothing
 
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Sketching tree")
-        Progress.percentage
-        80
-        $ Progress.Progress 4 10
+    Progress.incProgress pb 1
 
     let config :: BirchBeer.Types.Config CellInfo SingleCells
         config = BirchBeer.Types.Config
@@ -333,11 +314,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     (plot, labelColorMap, itemColorMap, markColorMap, tree', gr') <- mainDiagram config
 
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Recording tree measurements")
-        Progress.percentage
-        80
-        $ Progress.Progress 5 10
+    Progress.incProgress pb 1
 
     -- Write results.
     clusterResults <- case prior' of
@@ -413,11 +390,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                         $ result
 
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Counting leaves")
-        Progress.percentage
-        80
-        $ Progress.Progress 6 10
+    Progress.incProgress pb 1
 
     -- Header
     B.putStrLn $ "cell,cluster,path"
@@ -435,11 +408,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         $ clusterResults
 
     -- Increment  progress bar.
-    Progress.autoProgressBar
-        (Progress.msg "Painting sketches")
-        Progress.percentage
-        80
-        $ Progress.Progress 7 10
+    Progress.incProgress pb 1
 
     -- Plot only if needed and ignore non-tree analyses if dendrogram is
     -- supplied.
@@ -477,11 +446,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     $ clusterResults
 
         -- Increment  progress bar.
-        H.io $ Progress.autoProgressBar
-            (Progress.msg "Painting tree")
-            Progress.percentage
-            80
-            $ Progress.Progress 8 10
+        H.io $ Progress.incProgress pb 1
 
         -- Plot.
         H.io $ do
@@ -502,11 +467,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     plot
 
         -- Increment  progress bar.
-        H.io $ Progress.autoProgressBar
-            (Progress.msg "Squishing tree")
-            Progress.percentage
-            80
-            $ Progress.Progress 9 10
+        H.io $ Progress.incProgress pb 1
 
         -- Plot clustering of the projections.
         case projectionFile' of
@@ -533,10 +494,6 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 _ -> return ()
 
         -- Increment  progress bar.
-        H.io $ Progress.autoProgressBar
-            (Progress.msg "Packing up")
-            Progress.percentage
-            80
-            $ Progress.Progress 10 10
+        H.io $ Progress.incProgress pb 1
 
         return ()

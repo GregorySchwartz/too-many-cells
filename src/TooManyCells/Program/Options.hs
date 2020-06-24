@@ -60,7 +60,7 @@ data Options
                , drawNoScaleNodes :: Bool <?> "Do not scale inner node size when drawing the graph. Instead, uses draw-max-node-size as the size of each node and is highly recommended to change as the default may be too large for this option."
                , drawLegendSep :: Maybe Double <?> "([1] | DOUBLE) The amount of space between the legend and the tree."
                , drawLegendAllLabels :: Bool <?> "Whether to show all the labels in the label file instead of only showing labels within the current tree. The program generates colors from all labels in the label file first in order to keep consistent colors. By default, this value is false, meaning that only the labels present in the tree are shown (even though the colors are the same). The subset process occurs after --draw-colors, so when using that argument make sure to account for all labels."
-               , drawPalette :: Maybe String <?> "([Set1] | Hsv | Ryb) Palette to use for legend colors. With high saturation in --draw-scale-saturation, consider using Hsv to better differentiate colors."
+               , drawPalette :: Maybe String <?> "([Set1] | Hsv | Ryb | Blues) Palette to use for legend colors. With high saturation in --draw-scale-saturation, consider using Hsv to better differentiate colors."
                , drawColors :: Maybe String <?> "([Nothing] | COLORS) Custom colors for the labels or continuous features. Will repeat if more labels than provided colors. For continuous feature plots, uses first two colors [high, low], defaults to [red, gray]. For instance: --draw-colors \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\""
                , drawDiscretize :: Maybe String <?> "([Nothing] | COLORS | INT) Discretize colors by finding the nearest color for each item and node. For instance, --draw-discretize \"[\\\"#e41a1c\\\", \\\"#377eb8\\\"]\" will change all node and item colors to one of those two colors, based on Euclidean distance. If using \"--draw-discretize INT\", will instead take the default map and segment (or interpolate) it into INT colors, rather than a more continuous color scheme. May have unintended results when used with --draw-scale-saturation."
                , drawScaleSaturation :: Maybe Double <?> "([Nothing] | DOUBLE) Multiply the saturation value all nodes by this number in the HSV model. Useful for seeing more visibly the continuous colors by making the colors deeper against a gray scale."
@@ -146,6 +146,7 @@ data Options
             , pathDistance :: Maybe String <?> "([PathStep] | PathModularity) How to measure the distance from the starting leaf. PathModularity weighs the steps by the modularity, while PathStep counts the number of steps."
             , bandwidth :: Maybe Double <?> "([1] | DOUBLE) Bandwidth of the density plot."
             , delimiter :: Maybe Char <?> "([,] | CHAR) The delimiter for the most csv files in the program. For instance, if using a normal csv rather than cellranger output and for --labels-file."
+            , pathsPalette :: Maybe String <?> "([Set1] | Hsv | Ryb | Blues) Palette to use for legend colors."
             , output :: Maybe String <?> "([out] | STRING) The folder containing output."}
     | Classify { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing feature row names and cell column names. scATAC-seq is supported if input file contains \"fragments\", ends with \".tsv.gz\" (such as \"fragments.tsv.gz\" or \"sample1_fragments.tsv.gz\"), and is in the SORTED (sort -k1,1 -k2,2n) 10x fragments format (see also --binwidth, --no-binarize). If given as a list (--matrix-path input1 --matrix-path input2 etc.) then will join all matrices together. Assumes the same number and order of features in each matrix, so only cells are added."
                , referenceFile :: [String] <?> "(PATH) The path to the reference file to compare each cell to. Every transformation (e.g. filters and normalizations) applied to --matrix-path apply here as well."
@@ -272,6 +273,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "numEigen"              = Just 'G'
     short "numRuns"               = Nothing
     short "order"                 = Just 'O'
+    short "pathsPalette"          = Nothing
     short "pca"                   = Nothing
     short "peakNode"              = Nothing
     short "peakNodeLabels"        = Nothing

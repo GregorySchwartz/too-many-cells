@@ -25,6 +25,7 @@ import Data.Maybe (fromMaybe)
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Options.Generic
+import Text.Read (readMaybe)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified H.Prelude as H
@@ -45,7 +46,8 @@ import TooManyCells.Matrix.Types
 -- | Paths path.
 pathsMain :: Options -> IO ()
 pathsMain opts = do
-    let labelsFile'   =
+    let readOrErr err = fromMaybe (error err) . readMaybe
+        labelsFile'   =
             maybe (error "\nNeed a label file.") LabelFile
                 . unHelpful
                 . labelsFile
@@ -60,6 +62,10 @@ pathsMain opts = do
         bandwidth'    = Bandwidth . fromMaybe 1 . unHelpful . bandwidth $ opts
         direction'    = FlipFlag . unHelpful . flipDirection $ opts
         shallow'      = ShallowFlag . unHelpful . shallowStart $ opts
+        palette'      = maybe Set1 ( readOrErr "Cannot read --paths-palette")
+                      . unHelpful
+                      . pathsPalette
+                      $ opts
         pathDistance' =
             maybe PathStep read . unHelpful . pathDistance $ opts
         output'       =
@@ -85,7 +91,7 @@ pathsMain opts = do
             labelItemDistance labelMap pathDistances
 
     H.withEmbeddedR defaultConfig $ H.runRegion $ do
-        let labelColorMap = getLabelColorMap Set1 labelMap
+        let labelColorMap = getLabelColorMap palette' labelMap
         plotPathDistanceR
             (unOutputDirectory output' FP.</> "path_distances.pdf")
             labelColorMap
