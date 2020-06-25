@@ -326,7 +326,11 @@ The second most important argument is =--labels-file=. Supply with a =csv= with
 a format and header of "item,label" to provide colorings and statistics of the
 relationships between labels. Here the "item" column contains the name of each
 cell (barcode) and the label is any property of the cell (the tissue of origin,
-hour in a time course, celltype, etc.).
+hour in a time course, celltype, etc.). You can also now use =-Z= as a list for
+each matching =-m= in order to manually give the entire matrix that label
+(useful for situations like =-m ./t-all -Z T-ALL -m ./control -Z Control). To
+get the newly generated labels with =-Z= into a =labels.csv= file, specify
+=--labels-output= and the =labels.csv= will be in the output folder.
 
 To see the full list of options, use =too-many-cells -h= and =-h= for each entry
 point (i.e. =too-many-cells make-tree -h=).
@@ -854,6 +858,159 @@ too-many-cells paths\
     -o out_paths
 #+END_SRC
 
+** Working with scATAC-seq data
+
+scATAC-seq is a powerful technology for quantifying chromatin accessibility for
+individual cells. =too-many-cells= now supports scATAC-seq to generate cell clade
+relationships from chromatin state information. All of the previous analyses
+used with gene-product features now work with genomic regions in the form
+=chrN:START-END=, where =N= is the chromosome number, =START= is the start of
+the region and =END= is the end base of the region.
+
+Matrices in this format can be read from either =CSV= or =matrix-market= as
+above but with the correctly formatted features, or you can load in directly
+from a =fragments.tsv.gz= file in Cellranger format (tab delimited with each row
+being =chrN\tSTART\tEND\tBARCODE\tCOUNT=) making sure that the filename contains
+the fragments ending, such as =t-all_fragments.tsv.gz=. For example:
+
+#+BEGIN_SRC sh
+too-many-cells make-tree\
+    -m ./t-all_fragments.tsv.gz \
+    -Z "T-ALL" \
+    -m ./control_fragments.tsv.gz
+    -Z "Control" \
+    --filter-thresholds "(1000, 1)" \
+    --bindwidth 5000 \
+    --lsa 50 \
+    --normalization NoneNorm \
+    --blacklist-regions-file Anshul_Hg19UltraHighSignalArtifactRegions.bed.gz \
+    --draw-node-number \
+    --draw-mark "MarkModularity" \
+    --fragments-output \
+    --labels-output \
+    -o out \
+    > out_leaves.csv
+#+END_SRC
+
+*Note*: We use =--lsa= and =--normalization NoneNorm= for latent semantic
+analysis dimensionality reduction as there are many features in scATAC-seq, so
+we try to overcome a potential issue where all cells are considered outliers. We
+also change the =--filter-thresholds= as the default thresholds are for
+scRNA-seq. To blacklist known biased regions in the genome, we can call
+=--blacklist-regions-file=. The =--fragments-output= and =--labels-output= go
+hand-in-hand with =-Z= in order to keep the renamed barcodes and labels (found
+in the output folder). =too-many-cells= will binarize the data by default unless
+=--no-binarize= is specified. Lastly, we choose a bindwidth using =--binwidth=
+to conform to a set of standard features across cells and samples.
+
+** =peaks=
+
+With scATAC-seq, we want to identify enriched locations in the genome for each
+newly found subpopulation of cells. The =peaks= entrypoint can collect the
+appropriate fragments for quantification and visualization of peaks.
+
+#+BEGIN_SRC sh
+too-many-cells peaks \
+    -f ./out/fragments.tsv.gz \
+    -F \
+    --prior ./out \
+    --genome human.hg19.genome \
+    --bedgraph \
+    --labels-file ./out/labels.csv \
+    --all-nodes \
+    --peak-node "1" \
+    --peak-node "5" \
+    --peak-node-labels "(1, [\"Control\"])" \
+    --peak-node-labels "(5, [\"T-ALL\"])" \
+    -o out_peaks \
+    +RTS -N6
+#+END_SRC
+
+Here, we will have our peaks in the specified output folder, along with many
+other files and folder:
+
+| File                                             | Description                                                                                    |
+|--------------------------------------------------+------------------------------------------------------------------------------------------------|
+| =out_peaks/cluster_fragments=                    | =fragments.tsv.gz= files for each node.                                                        |
+| =out_peaks/cluster_bedgraphs=                    | Bedgraphs and bigwigs if specified using =--bedgraph= for track visualization uses.            |
+| =out_peaks/cluster_peaks/union.bdg=              | Merged peaks across all requested nodes in bedgraph format.                                    |
+| =out_peaks/cluster_peaks/union_fragments.tsv.gz= | Merged peaks across all requested nodes in =fragments.tsv.gz= format.                          |
+| =out_peaks/cluster_peaks/=                       | Folder containing merged peaks across nodes and peaks for each individual node in each folder. |
+
+=--bedgraph= enabled the =cluster_bedgraphs= folder, while =--all-nodes=
+specified to find peaks for all nodes, not just the leaves. However, when paired
+with =--peak-node=, we just look at the peaks for each node in the list (but
+=--all-nodes= is still required if looking at non-leaf nodes as well). Without
+=--peak-node=, this command would have found peaks for every node. Furthermore,
+=--peak-node-labels= allows the filtration based on the label of cells in of the
+requested node. =--genome= tells the peak finding program where the genome file
+is (containing the effective genome sizes of chromosomes in tab-delimited format
+of =chrN\tSIZE= used in the MACS2 program). Here, the =-f= =fragments.tsv.gz=
+and =labels.csv= was from the [[Working with scATAC-seq data][previous scATAC-seq section]], where we
+automatically generated the correctly renamed barcodes and labels. Lastly, =+RTS
+-N6= tells =too-many-cells= to use six cores for the calculation. These output
+files, especially the merged peak files, can be used for differential
+accessibility analysis as in scRNA-seq. This entrypoint is highly customizable,
+down to the exact command used for peak calling, so check out =too-many-cells
+peaks -h= for more information.
+
+** =motifs=
+
+After differential accessibility using peaks, the result can be used to find
+motifs enriched in each node.
+
+#+BEGIN_SRC sh
+too-many-cells motifs \
+    --diff-file ./diff_out.csv \
+    --motif-genome hg19.fa \
+    --top-n 1000 \
+    --motif-command "homer/homer-4.9/bin/findMotifs.pl %s fasta %s" \
+    -o motifs
+#+END_SRC
+
+In this example, we use the output from a differential expression analysis using
+=too-many-cells differential= from our merged peaks. Using a complete genome
+file used by our motif program of choice (here homer, but defaults to MEME) with
+=--motif-genome=, we want to provide the motif program with the top 1000 most
+differential peaks using =--top-n=. Lastly, while the default uses MEME, we find
+homer to be much faster. The prior command shows the use of another program to
+find the motifs, making sure the =%s= for input and output are in the right
+locations (check =too-many-cells motifs -h=).
+
+** classify
+
+To identify potential cell type candidates from sorted bulk data,
+=too-many-cells classify= uses cosine-similarity to provide scores for each bulk
+population. For example, we have a scATAC-seq experiment in =./mat=. We also
+have known bulk ATAC-seq peak data of B cells in bedgraph files. We can score
+each cell with:
+
+#+BEGIN_SRC sh
+too-many-cells classify \
+    --reference-file ./proB.bdg \
+    --reference-file ./preB.bdg \
+    --reference-file ./memoryB.bdg \
+    --reference-file ./plasmaB.bdg \
+    -m ./mat \
+    -F \
+    --normalization "NoneNorm" \
+    --blacklist-regions-file "mm9-blacklist.bed.gz" \
+    > labels.csv
+#+END_SRC
+
+=--reference-file= is a list of bedgraphs here for each population. You can also
+specify a single reference file as an input matrix with each barcode being the
+label for the population, as bulk just has one sample. To use a single matrix,
+use =--single-reference-matrix= in addition to =--reference-file= to specify the
+file as a single reference matrix. The output will be identical to a normal
+=too-many-cells= =labels.csv= file, but with an additional column =score= which
+provides the value of the highest cosine-similarity label.
+
+** matrix-output
+
+A simple entrypoint to output the transformed matrix =too-many-cells= uses
+before clustering. Saves to =--mat-output=.
+
 * Advanced documentation
 
 Each entry point has its own documentation accessible with =-h=, such as
@@ -869,17 +1026,21 @@ too-many-cells -h
 too-many-cells, Gregory W. Schwartz. Clusters and analyzes single cell data.
 
 Usage: too-many-cells (make-tree | interactive | differential | diversity |
-                      paths)
+                      paths | classify | peaks | motifs | matrix-output)
 
 Available options:
   -h,--help                Show this help text
 
 Available commands:
-  make-tree
-  interactive
-  differential
-  diversity
-  paths
+  make-tree                
+  interactive              
+  differential             
+  diversity                
+  paths                    
+  classify                 
+  peaks                    
+  motifs                   
+  matrix-output            
 #+end_example
 
 * Demo
