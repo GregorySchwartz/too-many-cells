@@ -121,3 +121,9 @@ docker:
   enable: false
 
 pvp-bounds: lower
+
+
+# Uncomment below to correct compiler issue on Mac OS 10.15.15 (Catalina). 
+#apply-ghc-options: everything
+#ghc-options:
+#  $everything: -optc -Wno-unused-command-line-argument
