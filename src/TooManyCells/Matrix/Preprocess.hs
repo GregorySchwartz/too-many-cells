@@ -148,13 +148,13 @@ uqScaleSparseMat (MatObsRow mat) = MatObsRow
                                  $ mat
 
 -- | Scale a matrix based on log(CPM + 1).
-logCPMSparseMat :: MatObsRow -> MatObsRow
-logCPMSparseMat (MatObsRow mat) = MatObsRow
-                                . S.sparsifySM
-                                . S.fromRowsL
-                                . fmap logCPMSparseCell
-                                . S.toRowsL
-                                $ mat
+logCPMSparseMat :: Double -> MatObsRow -> MatObsRow
+logCPMSparseMat b (MatObsRow mat) = MatObsRow
+                                  . S.sparsifySM
+                                  . S.fromRowsL
+                                  . fmap (logCPMSparseCell b)
+                                  . S.toRowsL
+                                  $ mat
 
 -- | Scale a matrix based on the median.
 medScaleSparseMat :: MatObsRow -> MatObsRow
@@ -210,8 +210,8 @@ scaleSparseCell xs = fmap (/ total) xs
     total = foldl' (+) 0 xs
 
 -- | log(CPM + 1) normalization for cell.
-logCPMSparseCell :: S.SpVector Double -> S.SpVector Double
-logCPMSparseCell xs = fmap (logBase 2 . (+ 1) . cpm) xs
+logCPMSparseCell :: Double -> S.SpVector Double -> S.SpVector Double
+logCPMSparseCell b xs = fmap (logBase b . (+ 1) . cpm) xs
   where
     cpm x = x / tpm
     tpm = foldl' (+) 0 xs / 1000000

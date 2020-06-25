@@ -207,15 +207,15 @@ loadAllSSM opts = runMaybeT $ do
             id
             (unNoFilterFlag noFilterFlag')
          $ whitelistSc
-      normMat TfIdfNorm    = id -- Normalize during clustering.
-      normMat UQNorm       = uqScaleSparseMat
-      normMat MedNorm      = medScaleSparseMat
-      normMat TotalMedNorm = scaleSparseMat
-      normMat TotalNorm    = totalScaleSparseMat
-      normMat BothNorm     = scaleSparseMat -- TF-IDF comes later.
-      normMat LogCPMNorm   = logCPMSparseMat
-      normMat QuantileNorm = quantileScaleSparseMat
-      normMat NoneNorm     = id
+      normMat TfIdfNorm      = id -- Normalize during clustering.
+      normMat UQNorm         = uqScaleSparseMat
+      normMat MedNorm        = medScaleSparseMat
+      normMat TotalMedNorm   = scaleSparseMat
+      normMat TotalNorm      = totalScaleSparseMat
+      normMat BothNorm       = scaleSparseMat -- TF-IDF comes later.
+      normMat (LogCPMNorm b) = logCPMSparseMat b
+      normMat QuantileNorm   = quantileScaleSparseMat
+      normMat NoneNorm       = id
       processSc = L.over matrix (MatObsRow . S.sparsifySM . unMatObsRow)
                 . L.over matrix ( bool id shiftPositiveMat
                                 $ unShiftPositiveFlag shiftPositiveFlag'
