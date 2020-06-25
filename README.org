@@ -28,7 +28,20 @@ different perspective of single cells, using our [[http://github.com/GregorySchw
 and tree measures to describe simultaneously large and small populations,
 without additional parameters or runs. See below for a full list of features.
 
-* New features for current version
+
+* New features for v2.0.0.0
+
+- Support for scATAC-seq for chromatin state relationships.
+- Find enchriched regions as peaks for scATAC-seq with =peaks=.
+- Find motifs from differential chromatin state using =motifs=.
+- Linear relationships across the tree as pseudotime with =paths=.
+- Classify single-cell data from bulk with =classify=.
+- New dimensionality reductions.
+- Output transformed matrix with =matrix-output=.
+- Bypass =labels.csv= with =-Z= quick labels.
+- And much more!
+
+* New features since initial launch
 
 - Now packaged for the functional package manager =nix=! No more dependency
   shuffling or root for Docker needed!
