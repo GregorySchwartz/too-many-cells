@@ -47,10 +47,13 @@ plotPathDistanceR outputPlot (LabelColorMap cm) (Bandwidth b) distances = do
     [r| suppressMessages(library(ggplot2))
         suppressMessages(library(cowplot))
         suppressMessages(library(RColorBrewer))
+        suppressMessages(library(plyr))
         df = data.frame(x = xs_hs, l = ls_hs)
+        spikeDf = ddply(df, "l", summarise, groupSpike = median(x))
 
         p = ggplot(df, aes(x = x, color = l, fill = l)) +
                 geom_density(adjust = b_hs, alpha = 0.1) +
+                geom_vline(data = spikeDf, aes(xintercept = groupSpike, color = l), linetype="dashed") +
                 xlab("Path distance") +
                 ylab("Cell density") +
                 scale_color_manual(guide = guide_legend(title = ""), aesthetics = c("color", "fill"), values = setNames(c(ccs_hs, "NA"), c(cls_hs, "#000000"))) +
