@@ -49,7 +49,7 @@ plotPathDistanceR outputPlot (LabelColorMap cm) (Bandwidth b) distances = do
         suppressMessages(library(RColorBrewer))
         suppressMessages(library(plyr))
         df = data.frame(x = xs_hs, l = ls_hs)
-        spikeDf = ddply(df, "l", summarise, groupSpike = median(x))
+        spikeDf = ddply(df, "l", here(summarise), groupSpike = density(x, adjust = b_hs)$x[which.max(density(x, adjust = b_hs)$y)])
 
         p = ggplot(df, aes(x = x, color = l, fill = l)) +
                 geom_density(adjust = b_hs, alpha = 0.1) +
