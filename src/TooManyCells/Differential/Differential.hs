@@ -290,6 +290,7 @@ getSingleDiff :: Bool
               -> ViolinFlag
               -> Aggregate
               -> SeparateNodes
+              -> SeparateLabels
               -> Maybe LabelMap
               -> SingleCells
               -> ([G.Node], Maybe (Set.Set Label))
@@ -297,11 +298,25 @@ getSingleDiff :: Bool
               -> [Feature]
               -> ClusterGraph CellInfo
               -> R.R s (R.SomeSEXP s)
-getSingleDiff normalize (ViolinFlag vf) aggregate sn lm sc v1 v2 features gr = do
+getSingleDiff normalize (ViolinFlag vf) aggregate sn sl lm sc v1 v2 features gr = do
   let splitNodeGroup (!ns, !ls) = fmap (\ !x -> ([x], ls)) ns
-      cellGroups = if unSeparateNodes sn
-                    then getStatuses lm (concatMap splitNodeGroup [v1, v2]) gr
-                    else getStatuses lm [v1, v2] gr
+      splitLabelGroup (!ns, !ls) =
+        maybe
+          [(ns, ls)]
+          (fmap (\ !l -> (ns, Just $ Set.singleton l)) . Set.toAscList)
+          ls
+      cellGroups = case (unSeparateNodes sn, unSeparateLabels sl) of
+                    (False, False) -> getStatuses lm [v1, v2] gr
+                    (True, False)  -> getStatuses lm (concatMap splitNodeGroup [v1, v2]) gr
+                    (False, True)  -> getStatuses lm (concatMap splitLabelGroup [v1, v2]) gr
+                    (True, True)  ->
+                      getStatuses
+                        lm
+                        ( concatMap splitNodeGroup
+                        . concatMap splitLabelGroup
+                        $ [v1, v2]
+                        )
+                        gr
       entities = scToEntities aggregate features cellGroups sc
 
   Diff.plotSingleDiff normalize vf entities

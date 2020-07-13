@@ -43,7 +43,7 @@ let
       terminal-progress-bar = "0.4.1";
       turtle = builtins.fetchTarball https://github.com/Gabriel439/Haskell-Turtle-Library/archive/ef0f4b15f82ac03708132726515c6bb59a0d2c07.tar.gz;
       elbow = builtins.fetchTarball https://github.com/GregorySchwartz/elbow/archive/03fff043c88b8c3de83b08f1638963f46e604c90.tar.gz;
-      birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/eed7acbe9943fac0f530b00c4eee681df6aeefcb.tar.gz;
+      birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/f4838c361485e91ff381448395179c5429b7d9d2.tar.gz;
       sparse-linear-algebra = builtins.fetchTarball https://github.com/ocramz/sparse-linear-algebra/archive/dbad792f6c6a04e4de23806b676cb3e76d36a65b.tar.gz;
       spectral-clustering = builtins.fetchTarball https://github.com/GregorySchwartz/spectral-clustering/archive/8d735caeb26266beda299d7886b5586dc7d7e7b1.tar.gz;
       differential = builtins.fetchTarball https://github.com/GregorySchwartz/differential/archive/fa6f49c38e9f78a3eced224f603fc0f0a9f7b9f6.tar.gz;

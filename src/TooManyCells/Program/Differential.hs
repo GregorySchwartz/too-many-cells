@@ -66,6 +66,7 @@ differentialMain opts = do
         features'    = fmap Feature . unHelpful . features $ opts
         aggregate' = Aggregate . unHelpful . aggregate $ opts
         separateNodes' = SeparateNodes . unHelpful . plotSeparateNodes $ opts
+        separateLabels' = SeparateLabels . unHelpful . plotSeparateLabels $ opts
         violinFlag' = ViolinFlag . unHelpful . plotViolin $ opts
         updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
         noEdger' = NoEdger . unHelpful . noEdger $ opts
@@ -146,6 +147,7 @@ differentialMain opts = do
                        violinFlag'
                        aggregate'
                        separateNodes'
+                       separateLabels'
                        labelMap
                        (extractSc processedSc)
                        combined1
@@ -165,6 +167,7 @@ differentialMain opts = do
                             violinFlag'
                             aggregate'
                             separateNodes'
+                            separateLabels'
                             labelMap
                             (extractSc processedSc)
                             combined1

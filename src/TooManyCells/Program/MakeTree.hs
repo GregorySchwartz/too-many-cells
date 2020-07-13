@@ -380,7 +380,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             case clusterDiversity order' lm clusterResults of
                 (Left err) -> hPutStrLn stderr
                             $ err
-                           <> "\nError in diversity, skipping cluster_diversity.csv output ..."
+                           <> "\nWarning: Problem in diversity, skipping cluster_diversity.csv output ..."
                 (Right result) ->
                     B.writeFile
                         ( unOutputDirectory output'
@@ -423,7 +423,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     (Left err) -> H.io
                                 . hPutStrLn stderr
                                 $ err
-                               <> "\nError in clumpiness, skipping clumpiness.* output ..."
+                               <> "\nWarning: Problem in clumpiness, skipping clumpiness output ..."
                     (Right clumpList) -> do
                         -- Save clumpiness to a file.
                         H.io

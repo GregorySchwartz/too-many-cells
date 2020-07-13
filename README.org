@@ -39,6 +39,7 @@ without additional parameters or runs. See below for a full list of features.
 - New dimensionality reductions.
 - Output transformed matrix with =matrix-output=.
 - Bypass =labels.csv= with =-Z= quick labels.
+- MADs-from-median-based thresholds for multi-gene overlay plots
 - And much more!
 
 * New features since initial launch
@@ -59,16 +60,14 @@ without additional parameters or runs. See below for a full list of features.
 * Installation
 
 We provide multiple ways to install =too-many-cells=. We recommend installing
-with [[nix][ =nix= ]] or [[Stack][ =stack= ]]. =nix= will provide all dependencies in the build,
-supports linux and macOS, and should be reproducible, so try that first. We also
-have [[Docker][docker]] images and a =Dockerfile= to use in any system in case you have a
-custom build (for instance, a non-standard R installation) or difficulty
-installing. *macOS and Windows users:* =too-many-cells= was built and tested on
-linux, so we highly recommend using the =nix= (macOS) or [[Docker][docker]] (macOS or
-Windows) image (which a completely isolated environment which requires no
-compiling or installation, other than docker itself) as there may be
-difficulties in installing the dependencies. There are, however, additional
-instructions for macOS [[macOS][here]] if you really want to compile it.
+with [[nix][ =nix= ]]. =nix= will provide all dependencies in the build, supports linux,
+and should be reproducible, so try that first. We also have [[Docker][docker]] images and a
+=Dockerfile= to use in any system in case you have a custom build (for instance,
+a non-standard R installation) or difficulty installing. *macOS and Windows
+users:* =too-many-cells= was built and tested on linux, so we highly recommend
+using the [[Docker][docker]] image (which is a completely isolated environment which
+requires no compiling or installation, other than docker itself) as there may be
+difficulties in installing the dependencies.
 
 ** nix
 
@@ -83,7 +82,7 @@ cd too-many-cells
 nix-env -f default.nix -i too-many-cells
 #+END_SRC
 
-** Stack
+** Stack (unsupported in =too-many-cells > v2.0.0.0=, use nix)
 *** Dependencies
 
 You may require the following dependencies to build and run (from Ubuntu 14.04,
@@ -164,7 +163,8 @@ on =eigen-3.3.4.1= right now.
 **** macOS
 <<macOS>>
 
-We recommend using =nix= or [[Docker][docker]] on macOS. If you need to build
+We recommend using [[Docker][docker]] on macOS. The following is written for
+=too-many-cells < v2.0.0.0=. If you must compile
 =too-many-cells=, you should get the above dependencies. For some dependencies,
 you can use [[https://brew.sh/][brewer]], then install =too-many-cells= (in the cloned folder, don't
 forget to install the R dependencies above):
@@ -713,8 +713,9 @@ the continuous color spectrum of expression values, we can have a binary "high"
 and "low" expression. Here, we'll continue to have the red and gray colors
 represent high and low expressions respectively using the =--draw-colors=
 argument. Note that this binary expression technique can be used for multiple
-features, hence it's a list of features with cutoffs so you can be high in a
-gene and low in another gene, etc. for all possible combinations.
+features, hence it's a list of features with cutoffs (=Exact= for specified
+cutoffs or =MadMedian= for how many MADs from the median) so you can be high in
+a gene and low in another gene, etc. for all possible combinations.
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
@@ -724,7 +725,7 @@ too-many-cells make-tree \
     --smart-cutoff 4 \
     --min-size 1 \
     --feature-column 2 \
-    --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", 0), (\"Cd8a\", 0)])" \
+    --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Cd4\", Exact 0), (\"Cd8a\", Exact 0)])" \
     --draw-colors "[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]" \
     --draw-scale-saturation 10 \
     --output out_gene_expression \

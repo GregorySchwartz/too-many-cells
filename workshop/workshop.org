@@ -476,7 +476,7 @@ too-many-cells make-tree \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
-  --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Rbfox3\", 0), (\"Gata6\", 0)])" \
+  --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Rbfox3\", Exact 0), (\"Gata6\", Exact 0)])" \
   --dendrogram-output "tree_brain_heart_markers.svg" \
   --output out \
   > clusters.csv
@@ -503,7 +503,7 @@ too-many-cells make-tree \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
-  --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Rbfox3\", 0), (\"Gata6\", 0)])" \
+  --draw-leaf "DrawItem (DrawThresholdContinuous [(\"Rbfox3\", Exact 0), (\"Gata6\", Exact 0)])" \
   --dendrogram-output "tree_brain_heart_markers_alternate.svg" \
   --draw-colors "[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#999999\"]" \
   --draw-scale-saturation 6 \
