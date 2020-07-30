@@ -134,38 +134,17 @@ clustersToClusterList sc clustering = do
 -- | Hierarchical spectral clustering.
 hSpecClust :: DenseFlag
            -> EigenGroup
-           -> NormType
            -> Maybe NumEigen
            -> Maybe Q
            -> Maybe NumRuns
            -> SingleCells
            -> IO (ClusterResults, ClusterGraph CellInfo)
-hSpecClust (DenseFlag isDense) eigenGroup norm numEigen minModMay runsMay sc = do
+hSpecClust (DenseFlag isDense) eigenGroup numEigen minModMay runsMay sc = do
   let items      = V.zipWith
                       (\x y -> CellInfo x y)
                       (_rowNames sc)
                       (fmap Row . flip V.generate id . V.length . _rowNames $ sc)
-      hSpecCommand TfIdfNorm False =
-          hierarchicalSpectralCluster
-            eigenGroup
-            True
-            (fmap unNumEigen numEigen)
-            Nothing
-            minModMay
-            (fmap unNumRuns runsMay)
-            items
-          . Left
-      hSpecCommand BothNorm False =
-          hierarchicalSpectralCluster
-            eigenGroup
-            True
-            (fmap unNumEigen numEigen)
-            Nothing
-            minModMay
-            (fmap unNumRuns runsMay)
-            items
-          . Left
-      hSpecCommand _ False =
+      hSpecCommand False =
           hierarchicalSpectralCluster
             eigenGroup
             False
@@ -175,29 +154,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen minModMay runsMay sc = d
             (fmap unNumRuns runsMay)
             items
           . Left
-      hSpecCommand TfIdfNorm True =
-          HSD.hierarchicalSpectralCluster
-            eigenGroup
-            True
-            (fmap unNumEigen numEigen)
-            Nothing
-            minModMay
-            (fmap unNumRuns runsMay)
-            items
-          . Left
-          . sparseToHMat
-      hSpecCommand BothNorm True =
-          HSD.hierarchicalSpectralCluster
-            eigenGroup
-            True
-            (fmap unNumEigen numEigen)
-            Nothing
-            minModMay
-            (fmap unNumRuns runsMay)
-            items
-          . Left
-          . sparseToHMat
-      hSpecCommand _ True =
+      hSpecCommand True =
           HSD.hierarchicalSpectralCluster
             eigenGroup
             False
@@ -209,7 +166,7 @@ hSpecClust (DenseFlag isDense) eigenGroup norm numEigen minModMay runsMay sc = d
           . Left
           . sparseToHMat
 
-  tree <- hSpecCommand norm isDense . unMatObsRow . _matrix $ sc
+  tree <- hSpecCommand isDense . unMatObsRow . _matrix $ sc
 
   let clustering :: [(CellInfo, [Cluster])]
       clustering =

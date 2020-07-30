@@ -19,6 +19,7 @@ module TooManyCells.Matrix.Preprocess
     , medScaleSparseMat
     , quantileScaleSparseMat
     , centerScaleSparseCell
+    , tfidfScaleSparseMat
     , filterRMat
     , filterDenseMat
     , filterNumSparseMat
@@ -181,7 +182,7 @@ quantileScaleSparseMat (MatObsRow mat) =
                  . fmap (sort . fmap snd . S.toListSV)
                  . S.toRowsL
                  $ mat
-    avg = (/) <$> Fold.sum <*> Fold.genericLength 
+    avg = (/) <$> Fold.sum <*> Fold.genericLength
     rankMat :: S.SpMatrix Int
     rankMat = S.fromRowsL . fmap rankTransform . S.toRowsL $ mat
     rankTransform :: S.SpVector Double -> S.SpVector Int
@@ -196,6 +197,10 @@ quantileScaleSparseMat (MatObsRow mat) =
                 . fmap snd
                 . S.toListSV
                 $ xs
+
+-- | TF-IDF normalization.
+tfidfScaleSparseMat :: MatObsRow -> MatObsRow
+tfidfScaleSparseMat = MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow
 
 -- | Scale a cell by the library size.
 scaleDenseCell :: H.Vector H.R -> H.Vector H.R
@@ -431,56 +436,53 @@ pcaRMat (RMatObsRow mat) = do
         [r| mat = prcomp(t(mat_hs), tol = 0.95)$x
         |]
 
--- | Conduct PCA on a matrix, retaining the specified number of dimensions.
-pcaDenseMat :: PCADim -> MatObsRow -> MatObsRow
-pcaDenseMat (PCADim pcaDim) (MatObsRow matObs) =
-  MatObsRow
-    . hToSparseMat
-    . H.takeColumns pcaDim
-    . H.mul mat
-    . (\(u, _, _) -> u)
-    . H.svd
-    . H.unSym
-    . snd
-    . H.meanCov
-    $ mat
+-- | Conduct PCA on a SingleCells, taking the first principal components.
+pcaDenseSc :: DropDimensionFlag -> PCADim -> SingleCells -> SingleCells
+pcaDenseSc df p@(PCADim n) sc =
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "PCA " <> showt x) $ [begin..end])
+    . L.over matrix (pcaDenseMat df p)
+    $ sc
   where
-    mat = sparseToHMat matObs
+    begin = bool 1 (n + 1) . unDropDimensionFlag $ df
+    end   = bool n ((S.ncols . unMatObsRow . L.view matrix $ sc) - n + 1)
+          . unDropDimensionFlag
+          $ df
 
 -- | Conduct PCA on a SingleCells, taking the first principal components.
-pcaDenseSc :: PCADim -> SingleCells -> SingleCells
-pcaDenseSc p@(PCADim n) =
-  L.set colNames (V.fromList . fmap (\x -> Feature $ "PCA " <> showt x) $ [1..n])
-    . L.over matrix (pcaDenseMat p)
-
--- | Conduct SVD on a matrix, retaining the specified number of dimensions.
-svdSparseMat :: SVDDim -> MatObsRow -> MatObsRow
-svdSparseMat (SVDDim svdDim) =
-  MatObsRow
-    . S.fromRowsL
-    . S.secondLeft 1 svdDim
-    . S.fromRowsL
-    . fmap centerScaleSparseCell
-    . S.toRowsL
-    . unMatObsRow
-
--- | Conduct PCA on a SingleCells, taking the first principal components.
-pcaSparseSc :: PCADim -> SingleCells -> SingleCells
-pcaSparseSc p@(PCADim n) =
-  L.set colNames (V.fromList . fmap (\x -> Feature $ "PCA " <> showt x) $ [1..n])
-    . L.over matrix (pcaSparseMat p)
+pcaSparseSc :: DropDimensionFlag -> PCADim -> SingleCells -> SingleCells
+pcaSparseSc df p@(PCADim n) sc =
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "PCA " <> showt x) $ [begin..end])
+    . L.over matrix (pcaSparseMat df p)
+    $ sc
+  where
+    begin = bool 1 (n + 1) . unDropDimensionFlag $ df
+    end   = bool n ((S.ncols . unMatObsRow . L.view matrix $ sc) - n + 1)
+          . unDropDimensionFlag
+          $ df
 
 -- | Conduct LSA on a SingleCells, taking the first singular values.
-lsaSparseSc :: LSADim -> SingleCells -> SingleCells
-lsaSparseSc l@(LSADim n) =
-  L.set colNames (V.fromList . fmap (\x -> Feature $ "LSA " <> showt x) $ [1..n])
-    . L.over matrix (lsaSparseMat l)
+lsaSparseSc :: DropDimensionFlag -> LSADim -> SingleCells -> SingleCells
+lsaSparseSc df l@(LSADim n) sc =
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "LSA " <> showt x) $ [begin..end])
+    . L.over matrix (lsaSparseMat df l)
+    $ sc
+  where
+    begin = bool 1 (n + 1) . unDropDimensionFlag $ df
+    end   = bool n ((S.ncols . unMatObsRow . L.view matrix $ sc) - n + 1)
+          . unDropDimensionFlag
+          $ df
 
 -- | Conduct SVD on a SingleCells, taking the first singular values.
-svdSparseSc :: SVDDim -> SingleCells -> SingleCells
-svdSparseSc s@(SVDDim n) =
-  L.set colNames (V.fromList . fmap (\x -> Feature $ "SVD " <> showt x) $ [1..n])
-    . L.over matrix (svdSparseMat s)
+svdSparseSc :: DropDimensionFlag -> SVDDim -> SingleCells -> SingleCells
+svdSparseSc df s@(SVDDim n) sc =
+  L.set colNames (V.fromList . fmap (\x -> Feature $ "SVD " <> showt x) $ [begin..end])
+    . L.over matrix (svdSparseMat df s)
+    $ sc
+  where
+    begin = bool 1 (n + 1) . unDropDimensionFlag $ df
+    end   = bool n ((S.ncols . unMatObsRow . L.view matrix $ sc) - n + 1)
+          . unDropDimensionFlag
+          $ df
 
 -- | Obtain the right singular vectors from N to E on of a sparse
 -- matrix.
@@ -494,13 +496,33 @@ sparseRightSVD n e =
     . fmap (\(!i, !j, !x) -> ((i, j), x))
     . S.toListSM
 
+-- | Conduct PCA on a matrix, retaining the specified number of dimensions.
+pcaDenseMat :: DropDimensionFlag -> PCADim -> MatObsRow -> MatObsRow
+pcaDenseMat df (PCADim pcaDim) (MatObsRow matObs) =
+  MatObsRow
+    . hToSparseMat
+    . H.takeColumns pcaDim
+    . H.mul mat
+    . (\(u, _, _) -> u)
+    . H.svd
+    . H.unSym
+    . snd
+    . H.meanCov
+    $ mat
+  where
+    mat = sparseToHMat matObs
+    begin = bool 1 (pcaDim + 1) . unDropDimensionFlag $ df
+    end   = bool pcaDim (S.ncols matObs - pcaDim)
+          . unDropDimensionFlag
+          $ df
+
 -- | Conduct SVD on a matrix, retaining the specified number of dimensions.
-pcaSparseMat :: PCADim -> MatObsRow -> MatObsRow
-pcaSparseMat (PCADim pcaDim) (MatObsRow mat) =
+pcaSparseMat :: DropDimensionFlag -> PCADim -> MatObsRow -> MatObsRow
+pcaSparseMat df (PCADim pcaDim) (MatObsRow mat) =
   MatObsRow
     . (S.#~#) scaled
     . S.fromRowsL
-    . sparseRightSVD 1 pcaDim
+    . sparseRightSVD begin end
     $ scaled
   where
     scaled = S.fromColsL
@@ -508,17 +530,37 @@ pcaSparseMat (PCADim pcaDim) (MatObsRow mat) =
            . S.toRowsL -- Scale features for PCA
            . S.transpose
            $ mat
+    begin = bool 1 (pcaDim + 1) . unDropDimensionFlag $ df
+    end   = bool pcaDim (S.ncols mat - pcaDim) . unDropDimensionFlag $ df
 
 -- | Conduct LSA on a matrix, retaining the specified number of dimensions.
-lsaSparseMat :: LSADim -> MatObsRow -> MatObsRow
-lsaSparseMat (LSADim lsaDim) =
+lsaSparseMat :: DropDimensionFlag -> LSADim -> MatObsRow -> MatObsRow
+lsaSparseMat df (LSADim lsaDim) (MatObsRow mat) =
   MatObsRow
     . S.fromRowsL
-    . S.secondLeft 1 lsaDim
+    . S.secondLeft begin end
     . unB2
     . b1ToB2
     . B1
-    . unMatObsRow
+    $ mat
+  where
+    begin = bool 1 (lsaDim + 1) . unDropDimensionFlag $ df
+    end   = bool lsaDim (S.ncols mat - lsaDim) . unDropDimensionFlag $ df
+
+-- | Conduct SVD on a matrix, retaining the specified number of dimensions.
+svdSparseMat :: DropDimensionFlag -> SVDDim -> MatObsRow -> MatObsRow
+svdSparseMat df (SVDDim svdDim) (MatObsRow mat) =
+  MatObsRow
+    . S.fromRowsL
+    . S.secondLeft begin end
+    . S.fromRowsL
+    . fmap centerScaleSparseCell
+    . S.toRowsL
+    $ mat
+  where
+    begin = bool 1 (svdDim + 1) . unDropDimensionFlag $ df
+    end   = bool svdDim (S.ncols mat - svdDim) . unDropDimensionFlag $ df
+
 
 -- | Shift features to positive values.
 shiftPositiveMat :: MatObsRow -> MatObsRow

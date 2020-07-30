@@ -57,7 +57,6 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
         updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
         delimiter'     =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        normalization'    = getNormalization opts
 
     scRes <- loadAllSSM opts
     let mat = fmap fst scRes

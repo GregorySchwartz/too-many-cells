@@ -68,6 +68,7 @@ differentialMain opts = do
         separateNodes' = SeparateNodes . unHelpful . plotSeparateNodes $ opts
         separateLabels' = SeparateLabels . unHelpful . plotSeparateLabels $ opts
         violinFlag' = ViolinFlag . unHelpful . plotViolin $ opts
+        noOutlierFlag' = NoOutlierFlag . unHelpful . plotNoOutlier $ opts
         updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
         noEdger' = NoEdger . unHelpful . noEdger $ opts
         labels'   = fmap ( DiffLabels
@@ -145,6 +146,7 @@ differentialMain opts = do
           diffPlot <- getSingleDiff
                        False
                        violinFlag'
+                       noOutlierFlag'
                        aggregate'
                        separateNodes'
                        separateLabels'
@@ -165,6 +167,7 @@ differentialMain opts = do
           diffNormPlot <- getSingleDiff
                             True
                             violinFlag'
+                            noOutlierFlag'
                             aggregate'
                             separateNodes'
                             separateLabels'

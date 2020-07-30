@@ -14,32 +14,30 @@ For more information about =too-many-cells=:
 
 See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version.
 
-See [[https://www.biorxiv.org/content/10.1101/519660v1][the bioRxiv paper]] for more information about the algorithm.
+See [[https://doi.org/10.1038/s41592-020-0748-5][the publication]] (and please cite!) for more information about the algorithm.
 
 * Install =too-many-cells=
 
 ** Install =too-many-cells=
 
 Follow instructions on https://gregoryschwartz.github.io/too-many-cells/ for
-details. First, install listed dependences.
-
-Next, clone the =too-many-cells= repository.
+details. First, clone the =too-many-cells= repository.
 
 #+begin_src sh
 git clone https://github.com/GregorySchwartz/too-many-cells.git
 #+end_src
 
-Enter the folder and install.
+Enter the folder and install with [[https://nixos.org/nix/][nix]].
 
 #+begin_src sh
 cd ./too-many-cells
-stack install
+nix-env -f default.nix -i too-many-cells
 #+end_src
 
-** Adding to path
+** Adding to path (with stack installation)
 
-The resulting binary will install to =~/.local/bin=. Add to =$PATH= so you can
-invoke the command from anywhere!
+If using stack, the resulting binary will install to =~/.local/bin=. Add to
+=$PATH= so you can invoke the command from anywhere!
 
 #+begin_src sh
 export PATH=$HOME/.local/bin:$PATH
@@ -63,17 +61,21 @@ too-many-cells -h
 too-many-cells, Gregory W. Schwartz. Clusters and analyzes single cell data.
 
 Usage: too-many-cells (make-tree | interactive | differential | diversity |
-                      paths)
+                      paths | classify | peaks | motifs | matrix-output)
 
 Available options:
   -h,--help                Show this help text
 
 Available commands:
-  make-tree
-  interactive
-  differential
-  diversity
-  paths
+  make-tree                
+  interactive              
+  differential             
+  diversity                
+  paths                    
+  classify                 
+  peaks                    
+  motifs                   
+  matrix-output 
 #+end_example
 
 * Data download
@@ -195,6 +197,7 @@ automatically.
 too-many-cells make-tree \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --output out \
   > clusters.csv
 
@@ -375,6 +378,7 @@ only the counts, but rather normalized counts. Let's look neuron cell marker
 too-many-cells make-tree \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --normalization "UQNorm" \
   --draw-leaf "DrawItem (DrawContinuous [\"ENSMUSG00000025576\"])" \
@@ -398,6 +402,7 @@ Can't see too well? Let's up the saturation!
 too-many-cells make-tree \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --normalization "UQNorm" \
   --draw-leaf "DrawItem (DrawContinuous [\"ENSMUSG00000025576\"])" \
@@ -423,6 +428,7 @@ column:
 too-many-cells make-tree \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
@@ -448,6 +454,7 @@ What about heart?
 too-many-cells make-tree \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
@@ -473,6 +480,7 @@ What about *both*!?
 too-many-cells make-tree \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
@@ -500,6 +508,7 @@ for unimportant cases!
 too-many-cells make-tree \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
@@ -552,6 +561,7 @@ differential expression of 94 / 121.
 too-many-cells differential \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --nodes "([121], [94])" \
   > ./out/94_vs_121.csv
@@ -573,6 +583,7 @@ multiple nodes to each other:
 too-many-cells differential \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \
@@ -596,6 +607,7 @@ the brain cells to heart cells in their "respective" cluster?
 too-many-cells differential \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --labels-file ./labels.csv \
   --feature-column 2 \
@@ -621,6 +633,7 @@ We can do some basic plotting as well for specific genes, such as =Gata6= and
 too-many-cells differential \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --labels-file ./labels.csv \
   --prior out \
   --feature-column 2 \
@@ -649,6 +662,7 @@ analyses!
 too-many-cells differential \
   --matrix-path ./data/brain/filtered_feature_bc_matrix/ \
   --matrix-path ./data/heart/filtered_feature_bc_matrix/ \
+  --filter-thresholds "(250, 1)" \
   --prior out \
   --feature-column 2 \
   --normalization "UQNorm" \

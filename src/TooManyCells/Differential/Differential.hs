@@ -288,6 +288,7 @@ scToEntities aggregate features cellGroups sc =
 -- by average) over statuses, filtered by labels.
 getSingleDiff :: Bool
               -> ViolinFlag
+              -> NoOutlierFlag
               -> Aggregate
               -> SeparateNodes
               -> SeparateLabels
@@ -298,7 +299,7 @@ getSingleDiff :: Bool
               -> [Feature]
               -> ClusterGraph CellInfo
               -> R.R s (R.SomeSEXP s)
-getSingleDiff normalize (ViolinFlag vf) aggregate sn sl lm sc v1 v2 features gr = do
+getSingleDiff normalize (ViolinFlag vf) (NoOutlierFlag noOutlierF) aggregate sn sl lm sc v1 v2 features gr = do
   let splitNodeGroup (!ns, !ls) = fmap (\ !x -> ([x], ls)) ns
       splitLabelGroup (!ns, !ls) =
         maybe
@@ -319,7 +320,7 @@ getSingleDiff normalize (ViolinFlag vf) aggregate sn sl lm sc v1 v2 features gr 
                         gr
       entities = scToEntities aggregate features cellGroups sc
 
-  Diff.plotSingleDiff normalize vf entities
+  Diff.plotSingleDiff normalize vf noOutlierF entities
 
 -- | Combine nodes and labels.
 combineNodesLabels

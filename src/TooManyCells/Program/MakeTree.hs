@@ -92,7 +92,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
               . eigenGroup
               $ opts
         dense'            = DenseFlag . unHelpful . dense $ opts
-        normalization'    = getNormalization opts
+        normalizations'   = getNormalization opts
         numEigen'         = fmap NumEigen . unHelpful . numEigen $ opts
         numRuns'          = fmap NumRuns . unHelpful . numRuns $ opts
         minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
@@ -248,7 +248,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     originalClusterResults <- case prior' of
         Nothing -> do
             (fullCr, _) <-
-                  hSpecClust dense' eigenGroup' normalization' numEigen' minModularity' numRuns'
+                  hSpecClust dense' eigenGroup' numEigen' minModularity' numRuns'
                     . extractSc
                     $ processedSc
 

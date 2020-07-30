@@ -46,7 +46,8 @@ let
       birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/f4838c361485e91ff381448395179c5429b7d9d2.tar.gz;
       sparse-linear-algebra = builtins.fetchTarball https://github.com/ocramz/sparse-linear-algebra/archive/dbad792f6c6a04e4de23806b676cb3e76d36a65b.tar.gz;
       spectral-clustering = builtins.fetchTarball https://github.com/GregorySchwartz/spectral-clustering/archive/8d735caeb26266beda299d7886b5586dc7d7e7b1.tar.gz;
-      differential = builtins.fetchTarball https://github.com/GregorySchwartz/differential/archive/fa6f49c38e9f78a3eced224f603fc0f0a9f7b9f6.tar.gz;
+      # differential = builtins.fetchTarball https://github.com/GregorySchwartz/differential/archive/fa6f49c38e9f78a3eced224f603fc0f0a9f7b9f6.tar.gz;
+      differential = /mnt/data1/gw/code/utility/differential;
     };
     overrides = self: super: (with pkgs.haskell.lib; with pkgs.haskellPackages; {
       BiobaseNewick = doJailbreak super.BiobaseNewick;

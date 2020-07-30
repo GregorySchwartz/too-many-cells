@@ -24,11 +24,13 @@ import Control.Monad.Trans (liftIO)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Data.Bool (bool)
 import Data.Either (isRight)
+import Data.List (foldl')
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import GHC.Conc (getNumCapabilities)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Options.Generic
 import System.IO (hPutStrLn, stderr)
+import Text.Read (readMaybe)
 import qualified Control.Lens as L
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Map.Strict as Map
@@ -149,11 +151,11 @@ loadSSM opts matrixPath' = do
 loadAllSSM :: Options -> IO (Maybe (SingleCells, Maybe LabelMap))
 loadAllSSM opts = runMaybeT $ do
   let matrixPaths'       = unHelpful . matrixPath $ opts
-      normalization'     = getNormalization opts
+      normalizations'    = getNormalization opts
       pca'               = fmap PCADim . unHelpful . pca $ opts
       lsa'               = fmap LSADim . unHelpful . lsa $ opts
       svd'               = fmap SVDDim . unHelpful . svd $ opts
-      noFilterFlag'      = NoFilterFlag . unHelpful . noFilter $ opts
+      dropDimensionFlag' = DropDimensionFlag . unHelpful . dropDimension $ opts
       binarizeFlag'      = BinarizeFlag . unHelpful . binarize $ opts
       binWidth'          = fmap BinWidth . unHelpful . binwidth $ opts
       shiftPositiveFlag' =
@@ -167,8 +169,9 @@ loadAllSSM opts = runMaybeT $ do
                     . unHelpful
                     . customLabel
                     $ opts
-      filterThresholds'  = FilterThresholds
-                         . maybe (250, 1) read
+      readOrErr err = fromMaybe (error err) . readMaybe
+      filterThresholds'  = fmap FilterThresholds
+                         . fmap (readOrErr "Cannot read --filter-thresholds")
                          . unHelpful
                          . filterThresholds
                          $ opts
@@ -178,7 +181,7 @@ loadAllSSM opts = runMaybeT $ do
                      . customRegion
                      $ opts
 
-  liftIO $ when ((isJust pca' || isJust lsa' || isJust svd') && (elem normalization' [TfIdfNorm, BothNorm])) $
+  liftIO $ when ((isJust pca' || isJust lsa' || isJust svd') && (elem TfIdfNorm normalizations')) $
     hPutStrLn stderr "\nWarning: Dimensionality reduction (creating negative numbers) with tf-idf\
                      \ normalization may lead to NaNs or 0s before spectral\
                      \ clustering (leading to svdlibc to hang or dense SVD\
@@ -202,29 +205,29 @@ loadAllSSM opts = runMaybeT $ do
                   . fmap (fmap (fastBinJoinCols binWidth' True) . loadSSM opts)  -- Load matrices, possible preparing for fast bin joining
                   $ matrixPaths'
 
-  let sc = bool
-            (filterNumSparseMat filterThresholds')
+  let sc = maybe
             id
-            (unNoFilterFlag noFilterFlag')
+            (\x -> filterNumSparseMat x)
+            filterThresholds'
          $ whitelistSc
-      normMat TfIdfNorm      = id -- Normalize during clustering.
+      normMat TfIdfNorm      = tfidfScaleSparseMat
       normMat UQNorm         = uqScaleSparseMat
       normMat MedNorm        = medScaleSparseMat
       normMat TotalMedNorm   = scaleSparseMat
       normMat TotalNorm      = totalScaleSparseMat
-      normMat BothNorm       = scaleSparseMat -- TF-IDF comes later.
       normMat (LogCPMNorm b) = logCPMSparseMat b
       normMat QuantileNorm   = quantileScaleSparseMat
       normMat NoneNorm       = id
+      applyNorms mat = foldl' (\acc norm -> L.over matrix (normMat norm) acc) mat normalizations'
       processSc = L.over matrix (MatObsRow . S.sparsifySM . unMatObsRow)
                 . L.over matrix ( bool id shiftPositiveMat
                                 $ unShiftPositiveFlag shiftPositiveFlag'
                                 )
-                . (\m -> maybe m (flip pcaSparseSc m) pca')
-                . (\m -> maybe m (flip lsaSparseSc m) lsa')
-                . (\m -> maybe m (flip svdSparseSc m) svd')
+                . (\m -> maybe m (flip (pcaSparseSc dropDimensionFlag') m) pca')
+                . (\m -> maybe m (flip (lsaSparseSc dropDimensionFlag') m) lsa')
+                . (\m -> maybe m (flip (svdSparseSc dropDimensionFlag') m) svd')
                 . bool (transformChrRegions customRegions') id (null $ unCustomRegions customRegions')
-                . L.over matrix (normMat normalization')
+                . applyNorms
                 . bool id binarizeSc (unBinarizeFlag binarizeFlag')
       processedSc = processSc sc
       -- Filter label map if necessary.

@@ -80,6 +80,7 @@ newtype BinWidth = BinWidth { unBinWidth :: Int}
 newtype NoBinarizeFlag = NoBinarizeFlag { unNoBinarizeFlag :: Bool }
 newtype BinarizeFlag = BinarizeFlag { unBinarizeFlag :: Bool }
 newtype TransposeFlag = TransposeFlag { unTransposeFlag :: Bool }
+newtype DropDimensionFlag = DropDimensionFlag { unDropDimensionFlag :: Bool }
 newtype BinIdx = BinIdx { unBinIdx :: Int} deriving (Eq, Ord, Read, Show, Generic) deriving newtype (Num)
 newtype RangeIdx = RangeIdx { unRangeIdx :: Int} deriving (Eq, Ord, Read, Show, Generic) deriving newtype (Num)
 newtype CellWhitelist = CellWhitelist
@@ -96,9 +97,6 @@ newtype LSADim = LSADim
 newtype SVDDim = SVDDim
     { unSVDDim :: Int
     } deriving (Eq,Ord,Read,Show)
-newtype NoFilterFlag = NoFilterFlag
-    { unNoFilterFlag :: Bool
-    } deriving (Read,Show)
 newtype ShiftPositiveFlag = ShiftPositiveFlag
     { unShiftPositiveFlag :: Bool
     } deriving (Read,Show)
@@ -355,7 +353,6 @@ data NormType = TfIdfNorm
               | MedNorm
               | TotalMedNorm
               | TotalNorm
-              | BothNorm
               | LogCPMNorm Double
               | QuantileNorm
               | NoneNorm

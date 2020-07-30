@@ -7,6 +7,7 @@ Utility functions for the command line program.
 module TooManyCells.Program.Utility where
 
 -- Remote
+import Data.Bool (bool)
 import Data.List (isInfixOf)
 import Data.Maybe (fromMaybe)
 import Options.Generic
@@ -24,25 +25,22 @@ readOrErr :: (Read a) => String -> String -> a
 readOrErr err = fromMaybe (error err) . readMaybe
 
 -- | Normalization defaults.
-getNormalization :: Options -> NormType
+getNormalization :: Options -> [NormType]
 getNormalization opts@(MakeTree{}) =
-  maybe
-    TfIdfNorm
-    (readOrErr "Cannot read --normalization.")
+  (\x -> if null x then [TfIdfNorm] else x)
+    . fmap (readOrErr "Cannot read --normalization.")
     . unHelpful
     . normalization
     $ opts
 getNormalization opts@(Interactive{}) =
-  maybe
-    TfIdfNorm
-    (readOrErr "Cannot read --normalization.")
+  (\x -> if null x then [TfIdfNorm] else x)
+    . fmap (readOrErr "Cannot read --normalization.")
     . unHelpful
     . normalization
     $ opts
 getNormalization opts =
-  maybe
-    NoneNorm
-    (readOrErr "Cannot read --normalization.")
+  (\x -> if null x then [NoneNorm] else x)
+    . fmap (readOrErr "Cannot read --normalization.")
     . unHelpful
     . normalization
     $ opts

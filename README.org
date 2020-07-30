@@ -40,6 +40,7 @@ without additional parameters or runs. See below for a full list of features.
 - Output transformed matrix with =matrix-output=.
 - Bypass =labels.csv= with =-Z= quick labels.
 - MADs-from-median-based thresholds for multi-gene overlay plots
+- Multiple normalization application
 - And much more!
 
 * New features since initial launch
@@ -368,14 +369,15 @@ is a short description of each file.
 
 *** Outline with options
 
-The basic outline of the *default* pre-processing pipeline with some relevant
-options is as follows (there are many additional options including cell
-whitelists and PCA that can be seen using =too-many-cells make-tree -h=):
+The basic outline of the *default* matrix pre-processing pipeline with some
+relevant options is as follows (there are many additional options including cell
+whitelists that can be seen using =too-many-cells make-tree -h=):
 
 1. Read matrix.
-2. Remove cells with less than 250 counts (=--filter-thresholds=, =--no-filter=).
-3. Remove features with less than 1 count (=--filter-thresholds=, =--no-filter=).
+2. Optionally remove cells with less than X counts (=--filter-thresholds=).
+3. Optionally remove features with less than X count (=--filter-thresholds=).
 4. Term frequency-inverse document frequency normalization (=--normalization=).
+4. Optionally use dimensionality reduction (=--lsa=).
 5. Finish.
 
 *** Example
@@ -400,7 +402,7 @@ instead. *You don't need to use scRNA-seq data!* You can use any data that has
 observations (cells) and features (genes), as long as you agree that the
 observations are related by their feature abundances. <<preprocessedData>> If
 you do upstream batch effect correction, PCA, normalization, or anything else,
-be sure to use =--no-filter --normalization NoneNorm= (and =--shift-positive=
+be sure to use =--normalization NoneNorm= (and =--shift-positive=
 for PCA) to avoid wrong filters and scalings! *If using dimensionality reduction
 such as PCA and t-SNE*, we highly recommend generating your own similarity
 matrix for use with our =cluster-tree= program and plot with =birch-beer=, as we
@@ -515,13 +517,15 @@ aggr=.
 
 We can now run the =too-many-cells= algorithm on our data. The resulting cells
 with assigned clusters will be printed to =stdout= (don't forget to use
-=--no-filter= and =--normalization NoneNorm= on preprocessed data, as stated
-[[preprocessedData][here]]).
+=--normalization NoneNorm= on preprocessed data, as stated [[preprocessedData][here]]). While older
+versions had default filter thresholds for (MINCELL, MINFEATURE) counts, since
+=v2.0.0.0= the default is now no filtering to account for multiple assay types.
 
 #+BEGIN_SRC sh
 too-many-cells make-tree \
     --matrix-path input \
     --labels-file labels.csv \
+    --filter-thresholds "(250, 1)" \
     --draw-collection "PieRing" \
     --output out \
     > clusters.csv
@@ -671,6 +675,7 @@ too-many-cells make-tree \
     --prior out \
     --matrix-path input \
     --labels-file labels.csv \
+    --filter-thresholds "(250, 1)" \
     --smart-cutoff 4 \
     --min-size 1 \
     --feature-column 2 \
@@ -695,6 +700,7 @@ too-many-cells make-tree \
     --prior out \
     --matrix-path input \
     --labels-file labels.csv \
+    --filter-thresholds "(250, 1)" \
     --smart-cutoff 4 \
     --min-size 1 \
     --feature-column 2 \
@@ -722,6 +728,7 @@ too-many-cells make-tree \
     --prior out \
     --matrix-path input \
     --labels-file labels.csv \
+    --filter-thresholds "(250, 1)" \
     --smart-cutoff 4 \
     --min-size 1 \
     --feature-column 2 \
@@ -745,6 +752,7 @@ and leaves.
 too-many-cells make-tree \
     --prior out \
     --matrix-path input \
+    --filter-thresholds "(250, 1)" \
     --labels-file labels.csv \
     --smart-cutoff 4 \
     --min-size 1 \
@@ -795,6 +803,7 @@ tuple containing two lists: ([89, 1], [98]). Then our differential genes for
 #+BEGIN_SRC sh
 too-many-cells differential \
     --matrix-path input \
+    --filter-thresholds "(250, 1)" \
     -n "([89, 1], [98])" \
     > differential.csv
 #+END_SRC
@@ -806,6 +815,7 @@ liver cells from all other subtrees, we can use the =--labels= argument:
 too-many-cells differential \
     --matrix-path input \
     --labels-file labels.csv \
+    --filter-thresholds "(250, 1)" \
     -n "([89, 1], [98])" \
     --labels "([\"Liver\"], [\"Liver\"])" \
     > differential_liver.csv
@@ -823,6 +833,7 @@ compare all nodes to all other cells using 8 OS threads:
 #+BEGIN_SRC sh
 too-many-cells differential \
     --matrix-path input \
+    --filter-thresholds "(250, 1)" \
     -n "([], [])" \
     --normalization "UQNorm" \
     +RTS -N8
@@ -908,9 +919,8 @@ too-many-cells make-tree\
 
 *Note*: We use =--lsa= and =--normalization NoneNorm= for latent semantic
 analysis dimensionality reduction as there are many features in scATAC-seq, so
-we try to overcome a potential issue where all cells are considered outliers. We
-also change the =--filter-thresholds= as the default thresholds are for
-scRNA-seq. To blacklist known biased regions in the genome, we can call
+we try to overcome a potential issue where all cells are considered outliers. To
+blacklist known biased regions in the genome, we can call
 =--blacklist-regions-file=. The =--fragments-output= and =--labels-output= go
 hand-in-hand with =-Z= in order to keep the renamed barcodes and labels (found
 in the output folder). =too-many-cells= will binarize the data by default unless
@@ -926,7 +936,6 @@ appropriate fragments for quantification and visualization of peaks.
 #+BEGIN_SRC sh
 too-many-cells peaks \
     -f ./out/fragments.tsv.gz \
-    -F \
     --prior ./out \
     --genome human.hg19.genome \
     --bedgraph \
@@ -1006,7 +1015,6 @@ too-many-cells classify \
     --reference-file ./memoryB.bdg \
     --reference-file ./plasmaB.bdg \
     -m ./mat \
-    -F \
     --normalization "NoneNorm" \
     --blacklist-regions-file "mm9-blacklist.bed.gz" \
     > labels.csv
