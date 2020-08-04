@@ -19,7 +19,7 @@ the relationships between cell clades. This includes new ways of clustering,
 plotting, choosing differential expression comparisons, and more! While
 =too-many-cells= was intended for single cell RNA-seq, any abundance data in any
 domain can be used. Rather than opt for a unique positioning of each cell using
-dimensionality reduction approaches like t-SNE, UMAP, and PCA, =too-many-cells=
+dimensionality reduction approaches like t-SNE, UMAP, and LSA, =too-many-cells=
 recursively divides cells into clusters and relates clusters rather than
 individual cells. In fact, by recursively dividing until further dividing would
 be considered noise or random partitioning, we can eliminate noisy relationships
@@ -31,12 +31,12 @@ without additional parameters or runs. See below for a full list of features.
 
 * New features for v2.0.0.0
 
-- Support for scATAC-seq for chromatin state relationships.
+- Support for scATAC-seq for chromatin state relationships with [[too-many-peaks][ =too-many-peaks= ]]!
 - Find enchriched regions as peaks for scATAC-seq with =peaks=.
 - Find motifs from differential chromatin state using =motifs=.
 - Linear relationships across the tree as pseudotime with =paths=.
 - Classify single-cell data from bulk with =classify=.
-- New dimensionality reductions.
+- New dimensionality reductions with =--lsa=.
 - Output transformed matrix with =matrix-output=.
 - Bypass =labels.csv= with =-Z= quick labels.
 - MADs-from-median-based thresholds for multi-gene overlay plots
@@ -401,9 +401,9 @@ folder which has =matrix.mtx.gz=, =features.tsv.gz=, and =barcodes.tsv.gz= files
 instead. *You don't need to use scRNA-seq data!* You can use any data that has
 observations (cells) and features (genes), as long as you agree that the
 observations are related by their feature abundances. <<preprocessedData>> If
-you do upstream batch effect correction, PCA, normalization, or anything else,
+you do upstream batch effect correction, LSA, normalization, or anything else,
 be sure to use =--normalization NoneNorm= (and =--shift-positive=
-for PCA) to avoid wrong filters and scalings! *If using dimensionality reduction
+for LSA) to avoid wrong filters and scalings! *If using dimensionality reduction
 such as PCA and t-SNE*, we highly recommend generating your own similarity
 matrix for use with our =cluster-tree= program and plot with =birch-beer=, as we
 emphasize a feature matrix in =too-many-cells= and dimensionality reduction
@@ -883,14 +883,14 @@ too-many-cells paths\
     -o out_paths
 #+END_SRC
 
-** Working with scATAC-seq data
+** Working with scATAC-seq data using =too-many-peaks= <<too-many-peaks>>
 
 scATAC-seq is a powerful technology for quantifying chromatin accessibility for
 individual cells. =too-many-cells= now supports scATAC-seq to generate cell clade
-relationships from chromatin state information. All of the previous analyses
-used with gene-product features now work with genomic regions in the form
-=chrN:START-END=, where =N= is the chromosome number, =START= is the start of
-the region and =END= is the end base of the region.
+relationships from chromatin state information through =too-many-peaks=. All of
+the previous analyses used with gene-product features now work with genomic
+regions in the form =chrN:START-END=, where =N= is the chromosome number,
+=START= is the start of the region and =END= is the end base of the region.
 
 Matrices in this format can be read from either =CSV= or =matrix-market= as
 above but with the correctly formatted features, or you can load in directly
@@ -969,7 +969,7 @@ with =--peak-node=, we just look at the peaks for each node in the list (but
 requested node. =--genome= tells the peak finding program where the genome file
 is (containing the effective genome sizes of chromosomes in tab-delimited format
 of =chrN\tSIZE= used in the MACS2 program). Here, the =-f= =fragments.tsv.gz=
-and =labels.csv= was from the [[Working with scATAC-seq data][previous scATAC-seq section]], where we
+and =labels.csv= was from the [[too-many-peaks][previous scATAC-seq section]], where we
 automatically generated the correctly renamed barcodes and labels. Lastly, =+RTS
 -N6= tells =too-many-cells= to use six cores for the calculation. These output
 files, especially the merged peak files, can be used for differential
@@ -1000,7 +1000,7 @@ homer to be much faster. The prior command shows the use of another program to
 find the motifs, making sure the =%s= for input and output are in the right
 locations (check =too-many-cells motifs -h=).
 
-** classify
+** =classify=
 
 To identify potential cell type candidates from sorted bulk data,
 =too-many-cells classify= uses cosine-similarity to provide scores for each bulk
@@ -1028,7 +1028,7 @@ file as a single reference matrix. The output will be identical to a normal
 =too-many-cells= =labels.csv= file, but with an additional column =score= which
 provides the value of the highest cosine-similarity label.
 
-** matrix-output
+** =matrix-output=
 
 A simple entrypoint to output the transformed matrix =too-many-cells= uses
 before clustering. Saves to =--mat-output=.

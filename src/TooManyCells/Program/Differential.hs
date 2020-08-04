@@ -19,14 +19,15 @@ module TooManyCells.Program.Differential where
 import BirchBeer.Load
 import BirchBeer.Types
 import BirchBeer.Utility
-import Control.Monad (join)
+import Control.Monad (when, join)
 import Control.Monad.Trans (liftIO)
 import Data.Bool (bool)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Options.Generic
+import System.IO (hPutStrLn, stderr)
 import Text.Read (readMaybe)
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -83,6 +84,9 @@ differentialMain opts = do
                   $ opts
         (combined1, combined2) = combineNodesLabels nodes' labels'
         plotOutputR = fromMaybe "out.pdf" . unHelpful . plotOutput $ opts
+
+    when (isNothing labelsFile' && isJust labels') $
+      hPutStrLn stderr "Warning: labels requested with no label file, ignoring labels..."
 
     scRes <- loadAllSSM opts
     let processedSc = fmap fst scRes
