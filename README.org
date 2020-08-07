@@ -6,7 +6,7 @@
 
 [[https://gregoryschwartz.github.io/too-many-cells/][Website]]
 
-See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version. See [[too-many-peaks][
+See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version. See [[#too-many-peaks][
 =too-many-peaks= ]] for more information about scATAC-seq usage.
 
 See [[https://doi.org/10.1038/s41592-020-0748-5][the publication]] (and please cite!) for more information about the algorithm.
@@ -32,7 +32,7 @@ without additional parameters or runs. See below for a full list of features.
 
 * New features for v2.0.0.0
 
-- Support for scATAC-seq for chromatin state relationships with [[too-many-peaks][ =too-many-peaks= ]]!
+- Support for scATAC-seq for chromatin state relationships with [[#too-many-peaks][ =too-many-peaks= ]]!
 - Find enchriched regions as peaks for scATAC-seq with =peaks=.
 - Find motifs from differential chromatin state using =motifs=.
 - Linear relationships across the tree as pseudotime with =paths=.
@@ -163,7 +163,9 @@ file. For a quick =yaml= configuration, refer to
 [[https://github.com/GregorySchwartz/too-many-cells/blob/master/stack.yaml.old]].
 
 **** macOS
-<<macOS>>
+:PROPERTIES:
+:CUSTOM_ID: macOS
+:END:
 
 We recommend using [[Docker][docker]] on macOS. The following is written for
 =too-many-cells < v2.0.0.0=. If you must compile
@@ -310,8 +312,9 @@ At any point, use =-h= to see the help of each entry point.
 Also, check out [[https://github.com/GregorySchwartz/tooManyCellsR][tooManyCellsR]] for an R wrapper!
 
 ** =make-tree=
-
-<<makeTreeUsage>>
+:PROPERTIES:
+:CUSTOM_ID: makeTreeUsage
+:END:
 
 =too-many-cells make-tree= generates a binary tree using hierarchical spectral
 clustering. We start with all cells in a single node. Spectral clustering
@@ -321,7 +324,7 @@ hierarchical spectral clustering. If not, then there is only a single community
 and we do not partition -- the resulting node is a leaf and is considered the
 finest-grain cluster.
 
-*The most important argument is the =--prior= argument.* Making the tree may
+*The most important argument is the --prior argument.* Making the tree may
 take some time, so if the tree was already generated and other analysis or
 visualizations need to be run on the tree, point the =--prior= argument to the
 output folder from a previous run of =too-many-cells=. If you do not use
@@ -383,6 +386,9 @@ whitelists that can be seen using =too-many-cells make-tree -h=):
 *** Example
 
 **** Setup
+:PROPERTIES:
+:CUSTOM_ID: preprocessedData
+:END:
 
 We start with our input matrix. Here,
 
@@ -400,7 +406,7 @@ above) or a file (a =csv= file). You can also point to a =cellranger= >= 3.0
 folder which has =matrix.mtx.gz=, =features.tsv.gz=, and =barcodes.tsv.gz= files
 instead. *You don't need to use scRNA-seq data!* You can use any data that has
 observations (cells) and features (genes), as long as you agree that the
-observations are related by their feature abundances. <<preprocessedData>> If
+observations are related by their feature abundances. If
 you do upstream batch effect correction, LSA, normalization, or anything else,
 be sure to use =--normalization NoneNorm= (and =--shift-positive=
 for LSA) to avoid wrong filters and scalings! *If using dimensionality reduction
@@ -517,7 +523,7 @@ aggr=.
 
 We can now run the =too-many-cells= algorithm on our data. The resulting cells
 with assigned clusters will be printed to =stdout= (don't forget to use
-=--normalization NoneNorm= on preprocessed data, as stated [[preprocessedData][here]]). While older
+=--normalization NoneNorm= on preprocessed data, as stated [[#preprocessedData][here]]). While older
 versions had default filter thresholds for (MINCELL, MINFEATURE) counts, since
 =v2.0.0.0= the default is now no filtering to account for multiple assay types.
 
@@ -883,7 +889,7 @@ too-many-cells paths\
     -o out_paths
 #+END_SRC
 
-** Working with scATAC-seq data using =too-many-peaks= <<too-many-peaks>>
+** Working with scATAC-seq data using =too-many-peaks=
 :PROPERTIES:
 :CUSTOM_ID: too-many-peaks
 :END:
@@ -972,7 +978,7 @@ with =--peak-node=, we just look at the peaks for each node in the list (but
 requested node. =--genome= tells the peak finding program where the genome file
 is (containing the effective genome sizes of chromosomes in tab-delimited format
 of =chrN\tSIZE= used in the MACS2 program). Here, the =-f= =fragments.tsv.gz=
-and =labels.csv= was from the [[too-many-peaks][previous scATAC-seq section]], where we
+and =labels.csv= was from the [[#too-many-peaks][previous scATAC-seq section]], where we
 automatically generated the correctly renamed barcodes and labels. Lastly, =+RTS
 -N6= tells =too-many-cells= to use six cores for the calculation. These output
 files, especially the merged peak files, can be used for differential
@@ -1071,4 +1077,4 @@ Available commands:
 * Demo
 
 Check out an instructional example of using =too-many-cells= [[file:workshop/workshop.html][here]] when finished
-looking at the brief [[makeTreeUsage][feature overview]].
+looking at the brief [[#makeTreeUsage][feature overview]].
