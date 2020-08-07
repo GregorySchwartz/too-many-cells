@@ -84,7 +84,7 @@ cd too-many-cells
 nix-env -f default.nix -i too-many-cells
 #+END_SRC
 
-** Stack (unsupported in =too-many-cells > v2.0.0.0=, use nix)
+** Stack (unsupported in ~too-many-cells >= v2.0.0.0~, use nix)
 *** Dependencies
 
 You may require the following dependencies to build and run (from Ubuntu 14.04,
@@ -149,10 +149,10 @@ stack install
 
 We only require =stack= (or =cabal=), you do not need to download any source
 code (but you might need the stack.yaml.old dependency versions), just run the
-following command to place =too-many-cells= in your =~/.local/bin/=:
+following command to place =too-many-cells < v2.0.0.0= in your =~/.local/bin/=:
 
 #+BEGIN_SRC sh
-mv stack.yaml.old stack.yaml
+mv stack.yaml.preV2 stack.yaml
 stack install too-many-cells
 #+END_SRC
 
