@@ -148,19 +148,19 @@ stack install
 **** Online
 
 We only require =stack= (or =cabal=), you do not need to download any source
-code (but you might need the stack.yaml dependency versions), just run the
+code (but you might need the stack.yaml.old dependency versions), just run the
 following command to place =too-many-cells= in your =~/.local/bin/=:
 
 #+BEGIN_SRC sh
+mv stack.yaml.old stack.yaml
 stack install too-many-cells
 #+END_SRC
 
 If you run into errors like =Error: While constructing the build plan, the
-following exceptions were encountered:=, then follow it's advice. Usually you
+following exceptions were encountered:=, then follow the advice. Usually you
 just need to follow the suggestion and add the dependencies to the specified
 file. For a quick =yaml= configuration, refer to
-[[https://github.com/GregorySchwartz/too-many-cells/blob/master/stack.yaml]]. Relies
-on =eigen-3.3.4.1= right now.
+[[https://github.com/GregorySchwartz/too-many-cells/blob/master/stack.yaml.old]].
 
 **** macOS
 <<macOS>>
