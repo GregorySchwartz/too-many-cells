@@ -156,8 +156,8 @@ getDEGraphKruskalWallis (TopN topN) lm sc v1 v2 gr
              . partition ((== 1) . L.view (L._3 . L._1))
              $ cellGroups
 
--- | Get the differential expression of each cluster to each other cluster using
--- KruskalWallis.
+-- | Get the differential expression of each cluster to all other cells in the
+-- data set using KruskalWallis.
 getAllDEGraphKruskalWallis :: TopN
                     -> Maybe LabelMap
                     -> DiffLabels
@@ -173,8 +173,8 @@ getAllDEGraphKruskalWallis topN lm ls sc gr =
     nodes = filter (/= 0) . G.nodes . unClusterGraph $ gr -- Don't want to look at root.
     mat = S.transpose . unMatObsRow . L.view matrix $ sc
 
--- | Get the differential expression of a cluster (n) to all other clusters (ns)
--- using KruskalWallis such that n / ns.
+-- | Get the differential expression of a cluster (n) to all other cells in the
+-- data set (ns) using KruskalWallis such that n / ns.
 compareClusterToOthersKruskalWallis
   :: G.Node
   -> TopN
