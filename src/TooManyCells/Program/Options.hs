@@ -66,6 +66,7 @@ data Options
                , drawScaleSaturation :: Maybe Double <?> "([Nothing] | DOUBLE) Multiply the saturation value all nodes by this number in the HSV model. Useful for seeing more visibly the continuous colors by making the colors deeper against a gray scale."
                , drawItemLineWeight :: Maybe Double <?> "([0.1] | DOUBLE) The line weight for items in the leaves if shown. Supplied as if there are too many items, the collection may look like a black box. Set to 0 to disable outlines of items to avoid this."
                , drawFont :: Maybe String <?> "([Arial] | FONT) Specify the font to use for the labels when plotting."
+               , drawBarBounds :: Bool <?> "Whether to plot only the minimum and maximum ticks for the color bars."
                , pca :: Maybe Int <?> "([Nothing] | INT) Not recommended, as it makes cosine similarity less meaningful (therefore less accurate -- instead, consider making your own similarity matrix and using cluster-tree, our sister algorithm, to cluster the matrix and plot with birch-beer). The number of dimensions to keep for PCA dimensionality reduction before clustering. Default is no PCA at all in order to keep all information. Should use with --shift-positive to ensure no negative values (as --pca will center and scale). Consider changing the modularity cutoff to a lower value (such as --min-modularity -0.5)."
                , lsa :: Maybe Int <?> "([Nothing] | INT) The number of dimensions to keep for LSA dimensionality reduction. Uses TD-IDF followed by SVD before clustering, same warnings as --pca apply, including the use of --shift-positive with possible --min-modularity -0.5."
                , svd :: Maybe Int <?> "([Nothing] | INT) The number of dimensions to keep for SVD dimensionality reduction. Will center and scale, same warnings as --pca apply, including the use of --shift-positive with possible --min-modularity -0.5."
@@ -246,6 +247,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "drawNodeNumber"        = Just 'N'
     short "drawPalette"           = Just 'Y'
     short "drawScaleSaturation"   = Just 'V'
+    short "drawBarBounds"         = Nothing
     short "dropDimension"         = Nothing
     short "eigenGroup"            = Just 'B'
     short "elbowCutoff"           = Nothing

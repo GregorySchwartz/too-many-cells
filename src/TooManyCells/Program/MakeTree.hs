@@ -193,6 +193,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                             . drawItemLineWeight
                             $ opts
         drawFont' = fmap DrawFont . unHelpful . drawFont $ opts
+        drawBarBounds' = DrawBarBounds . unHelpful . drawBarBounds $ opts
         order'            = Order . fromMaybe 1 . unHelpful . order $ opts
         clumpinessMethod' =
             maybe Clump.Majority (readOrErr "Cannot read --clumpiness-method.")
@@ -306,6 +307,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                     , _birchDrawScaleSaturation = drawScaleSaturation'
                     , _birchDrawFont            = drawFont'
                     , _birchDrawItemLineWeight  = drawItemLineWeight'
+                    , _birchDrawBarBounds       = drawBarBounds'
                     , _birchTree = _clusterDend originalClusterResults
                     , _birchMat = birchMat
                     , _birchSimMat = birchSimMat
