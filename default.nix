@@ -103,6 +103,8 @@ in (pkg.overrideAttrs(attrs: {
               --prefix 'PATH' ':' "${pkgs.graphviz}/bin/" \
               --prefix 'PATH' ':' "${pkgs.bedtools}/bin/" \
               --prefix 'PATH' ':' "${kent}/bin/" \
+              --prefix 'PATH' ':' "${macs2}/bin/" \
+              --prefix 'PATH' ':' "${meme}/bin/" \
               --prefix-contents 'R_LIBS_SITE' ':' "$out/paths/r_path.txt" \
               --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \
