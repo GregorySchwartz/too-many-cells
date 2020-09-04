@@ -272,6 +272,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "minSize"               = Just 'M'
     short "motifCommand"          = Nothing
     short "motifGenome"           = Nothing
+    short "noBinarize"            = Nothing
     short "noEdger"               = Nothing
     short "normalization"         = Just 'z'
     short "numEigen"              = Just 'G'
