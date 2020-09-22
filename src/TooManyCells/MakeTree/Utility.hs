@@ -46,7 +46,6 @@ updateTreeRowBool :: UpdateTreeRowsFlag
                   -> Tree (TreeNode (V.Vector CellInfo))
                   -> Tree (TreeNode (V.Vector CellInfo))
 updateTreeRowBool (UpdateTreeRowsFlag False) _ tree = tree
-updateTreeRowBool (UpdateTreeRowsFlag True) Nothing _ =
-  error "Cannot update tree for use with new matrix without a --matrix-path."
+updateTreeRowBool (UpdateTreeRowsFlag True) Nothing tree = tree
 updateTreeRowBool (UpdateTreeRowsFlag True) (Just sc) tree =
   updateTreeRowIndex sc tree
