@@ -83,7 +83,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         prior'            =
             fmap PriorPath . unHelpful . prior $ opts
         updateTreeRows'   =
-          UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
+          UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
         delimiter'        =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
         eigenGroup'       =

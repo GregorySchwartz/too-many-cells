@@ -54,7 +54,8 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
                        . unHelpful
                        . prior
                        $ opts
-        updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
+        updateTreeRows' =
+          UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
         delimiter'     =
             Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
 

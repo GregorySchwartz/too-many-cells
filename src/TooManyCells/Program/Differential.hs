@@ -70,7 +70,7 @@ differentialMain opts = do
         separateLabels' = SeparateLabels . unHelpful . plotSeparateLabels $ opts
         violinFlag' = ViolinFlag . unHelpful . plotViolin $ opts
         noOutlierFlag' = NoOutlierFlag . unHelpful . plotNoOutlier $ opts
-        updateTreeRows' = UpdateTreeRowsFlag . unHelpful . updateTreeRows $ opts
+        updateTreeRows' = UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
         noEdger' = NoEdger . unHelpful . noEdger $ opts
         labels'   = fmap ( DiffLabels
                          . L.over L.both ( (\x -> bool (Just x) Nothing . Set.null $ x)
