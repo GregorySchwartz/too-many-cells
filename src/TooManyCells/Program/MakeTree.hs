@@ -220,19 +220,6 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
 
-    -- Get the label map from either a file or from expression thresholds.
-    labelMap <- case drawLeaf' of
-                    (DrawItem (DrawThresholdContinuous gs)) ->
-                        return
-                            . Just
-                            . getLabelMapThresholdContinuous
-                                (fmap (L.over L._1 Feature) gs)
-                            . extractSc
-                            $ processedSc
-                    _ -> if isJust labelsFile'
-                          then mapM (loadLabelData delimiter') labelsFile'
-                          else return customLabelMap
-
     -- Increment  progress bar.
     Progress.incProgress pb 1
 
@@ -261,6 +248,34 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
             -- Strict loading in order to avoid locked file.
             fmap (L.over clusterDend (updateTreeRowBool updateTreeRows' processedSc))
               $ loadClusterResultsFiles clInput treeInput
+
+    projectionMap <- mapM loadProjectionMap projectionFile'
+
+    -- Only used for proximity labels for now.
+    let oldGr = treeToGraph
+              . updateTreeRowBool updateTreeRows' processedSc
+              . _clusterDend
+              $ originalClusterResults
+
+    -- Get the label map from either a file or from expression thresholds.
+    labelMap <- case drawLeaf' of
+                    (DrawItem (DrawThresholdContinuous gs)) ->
+                        return
+                            . Just
+                            . getLabelMapThresholdContinuous
+                                (fmap (L.over L._1 Feature) gs)
+                            . extractSc
+                            $ processedSc
+                    (DrawItem (DrawProximity ps)) -> return $ do
+                      coordMap <- fmap projectionMapToCoordinateMap projectionMap
+                      return $ getLabelMapProximity
+                                oldGr
+                                coordMap
+                                ps
+                    _ -> if isJust labelsFile'
+                          then mapM (loadLabelData delimiter') labelsFile'
+                          else return customLabelMap
+
 
     -- Increment  progress bar.
     Progress.incProgress pb 1
@@ -472,15 +487,12 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         H.io $ Progress.incProgress pb 1
 
         -- Plot clustering of the projections.
-        case projectionFile' of
+        case projectionMap of
           Nothing  -> return ()
-          (Just f) -> do
-            -- Load projection map if provided.
-            projectionMap <- H.io $ loadProjectionMap f
-
+          (Just pm) -> do
             plotClustersR
               (unOutputDirectory output' FP.</> "projection.pdf")
-              projectionMap
+              pm
               . _clusterList
               $ clusterResults
 
@@ -489,7 +501,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                 (Just lm, Just icm) ->
                     plotLabelClustersR
                         (unOutputDirectory output' FP.</> "label_projection.pdf")
-                        projectionMap
+                        pm
                         lm
                         icm
                         (_clusterList clusterResults)

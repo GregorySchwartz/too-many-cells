@@ -10,6 +10,7 @@ Collects utility functions for the tree.
 module TooManyCells.MakeTree.Utility
     ( updateTreeRowIndex
     , updateTreeRowBool
+    , projectionMapToCoordinateMap
     ) where
 
 -- Remote
@@ -18,6 +19,9 @@ import Data.Maybe (fromMaybe)
 import Data.Tree (Tree)
 import qualified Control.Lens as L
 import qualified Data.HashMap.Strict as HMap
+import qualified Data.List as List
+import qualified Data.Map.Strict as Map
+import qualified Data.Sparse.Common as S
 import qualified Data.Vector as V
 
 -- Local
@@ -49,3 +53,10 @@ updateTreeRowBool (UpdateTreeRowsFlag False) _ tree = tree
 updateTreeRowBool (UpdateTreeRowsFlag True) Nothing tree = tree
 updateTreeRowBool (UpdateTreeRowsFlag True) (Just sc) tree =
   updateTreeRowIndex sc tree
+
+-- | Convert ProjectionMap to CoordinateMap for birch-beer.
+projectionMapToCoordinateMap :: ProjectionMap -> CoordinateMap
+projectionMapToCoordinateMap = CoordinateMap
+  . Map.map (L.over L._2 (\(X !x, Y !y) -> S.fromListDenseSV 2 [x, y]))
+  . Map.mapKeys (Id . unCell)
+  . unProjectionMap

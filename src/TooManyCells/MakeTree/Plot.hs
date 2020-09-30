@@ -70,7 +70,7 @@ getProjections :: ProjectionMap
                -> Maybe (Double, Double, String)
 getProjections (ProjectionMap pm) (CellInfo { _barcode = !b }, Cluster !c) = do
     p <- Map.lookup b pm
-    return $ (unX . fst $ p, unY . snd $ p, show c)
+    return $ (unX . fst . snd $ p, unY . snd . snd $ p, show c)
 
 -- | Get the projections and label with colors for a cell.
 getProjectionsColor :: LabelMap
@@ -90,7 +90,7 @@ getProjectionsColor
       l = T.unpack . unLabel . barcodeToLabel . getId $ cell
       c = barcodeToColor . getId $ cell
 
-  return $ (unX . fst $ p, unY . snd $ p, l, c)
+  return $ (unX . fst . snd $ p, unY . snd . snd $ p, l, c)
 
 -- | Plot clusters.
 plotClustersR :: String -> ProjectionMap -> [(CellInfo, [Cluster])] -> R s ()

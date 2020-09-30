@@ -410,21 +410,30 @@ loadProjectionMap =
     fmap (\ x -> ProjectionMap
                . Map.fromList
                . V.toList
-               . either
-                  error
-                  (fmap getProjection . V.drop 1)
-               $ (CSV.decode CSV.NoHeader x :: Either String (Vector [T.Text]))
+               . either error (fmap getProjection . snd)
+               $ ( CSV.decodeByName x
+                :: Either String (CSV.Header, V.Vector (Map.Map T.Text T.Text))
+                 )
          )
         . BL.readFile
         . unProjectionFile
   where
-    getProjection [b, x, y] = ( Cell b
-                              , ( X . either error fst . T.double $ x
-                                , Y . either error fst . T.double $ y
-                                )
-                              )
-    getProjection xs        =
-        error $ "\nUnrecognized projection row: " <> show xs
+    getProjection m = ( Cell $ lookupErr "barcode" m
+                      , ( fmap Sample $ Map.lookup "sample" m
+                        , ( X . either error fst . T.double . lookupErr "x" $ m
+                          , Y . either error fst . T.double . lookupErr "y" $ m
+                          )
+                        )
+                      )
+    lookupErr col m = Map.findWithDefault
+                        ( error
+                        $ "\nUnrecognized projection row "
+                       <> show col
+                       <> " in row: "
+                       <> show m
+                        )
+                        col
+                        m
 
 -- | Decide to use first two values as the projection.
 toPoint :: HS.SpVector Double -> (X, Y)

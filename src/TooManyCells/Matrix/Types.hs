@@ -126,7 +126,7 @@ newtype Y = Y
     { unY :: Double
     } deriving (Eq,Ord,Read,Show,Generic) deriving newtype (Num) deriving anyclass (A.ToJSON,A.FromJSON)
 newtype ProjectionMap = ProjectionMap
-  { unProjectionMap :: Map.Map Cell (X, Y)
+  { unProjectionMap :: Map.Map Cell (Maybe Sample, (X, Y))
   }
 newtype RMat s          = RMat { unRMat :: R.SomeSEXP s }
 newtype RMatObsRow s    = RMatObsRow { unRMatObsRow :: R.SomeSEXP s }
