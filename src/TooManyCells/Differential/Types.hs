@@ -26,3 +26,5 @@ newtype SeparateNodes = SeparateNodes { unSeparateNodes :: Bool }
 newtype SeparateLabels = SeparateLabels { unSeparateLabels :: Bool }
 newtype ViolinFlag = ViolinFlag { unViolinFlag :: Bool }
 newtype NoOutlierFlag = NoOutlierFlag { unNoOutlierFlag :: Bool }
+newtype Seed = Seed { unSeed :: Int }
+newtype Subsample = Subsample { unSubsample :: Int } deriving (Eq)

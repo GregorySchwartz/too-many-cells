@@ -60,6 +60,7 @@ library
                      , IntervalMap
                      , SVGFonts
                      , aeson
+                     , async
                      , async-pool
                      , attoparsec
                      , birch-beer
@@ -91,6 +92,7 @@ library
                      , matrix-market-attoparsec
                      , modularity
                      , mtl
+                     , mwc-random
                      , optparse-generic
                      , palette
                      , parallel

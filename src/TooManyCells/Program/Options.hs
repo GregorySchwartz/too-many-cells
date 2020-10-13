@@ -127,6 +127,8 @@ data Options
                    , nodes :: String <?> "([NODE], [NODE]) Find the differential expression between cells belonging downstream of a list of nodes versus another list of nodes. Directionality is \"([1], [2])\" -> 2 / 1. \"([], [])\" switches the process to instead find the log2 average division between all nodes with all other cells in the provided data set matrix regardless of whether they are present within the tree (node / other cells) using the Kruskal-Wallis Test (--features does not work for this, --labels works, and UQNorm for the normalization is recommended. Only returns nodes where the comparison had both groups containing at least five cells.). If not using --no-update-tree-rows, remember to filter the matrix for cells outside of the tree if you only want to compare against other nodes within the tree."
                    , labels :: Maybe String <?> "([Nothing] | ([LABEL], [LABEL])) Use --labels-file to restrict the differential analysis to cells with these labels. Same format as --nodes, so the first list in --nodes and --labels gets the cells within that list of nodes with this list of labels. The same for the second list. For instance, --nodes \"([1], [2])\" --labels \"([\\\"A\\\"], [\\\"B\\\"])\" will compare cells from node 1 of label \"A\" only with cells from node 2 of label \"B\" only. To use all cells for that set of nodes, use an empty list, i.e. --labels \"([], [\\\"A\\\"])\". When comparing all nodes with all other cells, remember that the notation would be ([Other Cells], [Node]), so to compare cells of label X in Node with cells of label Y in Other Cells, use --labels \"([\\\"Y\\\", \\\"X\\\"])\". Requires both --labels and --labels-file, otherwise will include all labels."
                    , topN :: Maybe Int <?> "([100] | INT ) The top INT differentially expressed features."
+                   , seed :: Maybe Int <?> "([0] | INT) The seed to use for subsampling. See --subsample-groups."
+                   , subsampleGroups :: Maybe Int <?> "([Nothing] | INT) Whether to subsample each group in the differential comparison. Subsets the specified number of cells. When set to 0, subsamples the larger group to equal the size of the smaller group. When using with --nodes \"([], [])\" to compare all nodes against each other, note that the compared nodes may be resampled. Highly experimental at this stage, use with caution. See --seed."
                    , features :: [T.Text] <?> "([Nothing] | FEATURE) List of features (e.g. genes) to plot for all cells within selected nodes. Invoked by --features CD4 --features CD8 etc. When this argument is supplied, only the plot is outputted and edgeR differential expression is ignored. Outputs to --output."
                    , aggregate :: Bool <?> "([False] | True) Whether to plot the aggregate (mean here) of features for each cell from \"--features\" instead of plotting different distributions for each feature."
                    , plotSeparateNodes :: Bool <?> "([False] | True) Whether to plot each node separately. This will plot each node provided in --nodes from both entries in the tuple (as they may be different from --labels)."
@@ -289,9 +291,11 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "priors"                = Just 'P'
     short "projectionFile"        = Just 'j'
     short "rootCut"               = Nothing
+    short "seed"                  = Nothing
     short "shallowStart"          = Nothing
     short "shiftPositive"         = Nothing
     short "singleReferenceMatrix" = Nothing
+    short "subsampleGroups"       = Nothing
     short "svd"                   = Nothing
     short "noUpdateTreeRows"      = Nothing
     short x                       = firstLetter x

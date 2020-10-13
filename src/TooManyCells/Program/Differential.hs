@@ -72,6 +72,8 @@ differentialMain opts = do
         noOutlierFlag' = NoOutlierFlag . unHelpful . plotNoOutlier $ opts
         updateTreeRows' = UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
         noEdger' = NoEdger . unHelpful . noEdger $ opts
+        subsampleGroups' = fmap Subsample . unHelpful . subsampleGroups $ opts
+        seed' = Seed . fromMaybe 0 . unHelpful . seed $ opts
         labels'   = fmap ( DiffLabels
                          . L.over L.both ( (\x -> bool (Just x) Nothing . Set.null $ x)
                                          . Set.fromList
@@ -112,12 +114,15 @@ differentialMain opts = do
         [] -> do
           case nodes' of
             (DiffNodes ([], [])) -> do
-              let res = getAllDEGraphKruskalWallis
-                          topN'
-                          labelMap
-                          (maybe (DiffLabels (Nothing, Nothing)) id labels')
-                          (extractSc processedSc)
-                      $ gr
+              res <- H.io
+                       . getAllDEGraphKruskalWallis
+                           seed'
+                           subsampleGroups'
+                           topN'
+                           labelMap
+                           (maybe (DiffLabels (Nothing, Nothing)) id labels')
+                           (extractSc processedSc)
+                       $ gr
 
               H.io . B.putStrLn . getAllDEStringKruskalWallis $ res
             (DiffNodes ([], _)) -> error "Need other nodes to compare with. If every node should be compared to all other nodes using Mann-Whitney U, use \"([], [])\"."
@@ -125,17 +130,22 @@ differentialMain opts = do
             _ -> do
               if unNoEdger noEdger'
                 then do
-                  let res = getDEGraphKruskalWallis
-                             topN'
-                             labelMap
-                             (extractSc processedSc)
-                             combined1
-                             combined2
-                             gr
+                  res <- H.io
+                       $ getDEGraphKruskalWallis
+                           seed'
+                           subsampleGroups'
+                           topN'
+                           labelMap
+                           (extractSc processedSc)
+                           combined1
+                           combined2
+                           gr
 
                   H.io . B.putStrLn . getDEStringKruskalWallis $ res
                 else do
                   res <- getDEGraph
+                          seed'
+                          subsampleGroups'
                           topN'
                           labelMap
                           (extractSc processedSc)
@@ -148,6 +158,8 @@ differentialMain opts = do
           let outputCsvR = FP.replaceExtension plotOutputR ".csv"
 
           diffPlot <- getSingleDiff
+                       seed'
+                       subsampleGroups'
                        False
                        violinFlag'
                        noOutlierFlag'
@@ -169,6 +181,8 @@ differentialMain opts = do
               normOutputCsvR = FP.replaceExtension normOutputR ".csv"
 
           diffNormPlot <- getSingleDiff
+                            seed'
+                            subsampleGroups'
                             True
                             violinFlag'
                             noOutlierFlag'

@@ -22,11 +22,12 @@ module TooManyCells.Differential.Differential
     ) where
 
 -- Remote
+import Data.Bool (bool)
 import BirchBeer.Types
 import BirchBeer.Utility (getGraphLeaves, getGraphLeafItems)
 import Control.Monad (join, mfilter)
 import Data.Function (on)
-import Data.List (sort, sortBy, genericLength, partition, foldl')
+import Data.List (sort, sortBy, groupBy, genericLength, partition, foldl')
 import Data.Maybe (fromMaybe, catMaybes, isJust)
 import Data.Monoid ((<>))
 import Language.R as R
@@ -36,6 +37,7 @@ import Control.Parallel.Strategies (parMap, withStrategy, parBuffer, rdeepseq)
 import qualified "differential" Differential as Diff
 import qualified "differential" Plot as Diff
 import qualified "differential" Types as Diff
+import qualified Control.Concurrent.Async as Async
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -47,7 +49,10 @@ import qualified Data.Set as Set
 import qualified Data.Sparse.Common as S
 import qualified Data.Text as T
 import qualified Data.Vector as V
+import qualified H.Prelude as H
 import qualified System.FilePath as FP
+import qualified System.Random.MWC as MWC
+import qualified System.Random.MWC.Distributions as MWC
 
 -- Local
 import TooManyCells.Differential.Types
@@ -92,6 +97,18 @@ getStatuses lm gs (ClusterGraph gr) =
     statusName vs (Just ls) =
       (T.intercalate " " . fmap unLabel . Set.toAscList $ ls) <> " " <> showt vs
 
+-- | Get the indices and statuses for a list of groups of nodes and subsample if
+-- desired.
+subsampleGetStatuses
+    :: Seed
+    -> Maybe Subsample
+    -> Maybe LabelMap
+    -> [([G.Node], Maybe (Set.Set Label))]
+    -> ClusterGraph CellInfo
+    -> IO [(Int, Cell, (Int, Diff.Status))]
+subsampleGetStatuses seed subN lm gs gr =
+  maybe return (subsampleGroups seed) subN $ getStatuses lm gs gr
+
 -- | Filter barcodes by labels.
 validCellInfo :: Maybe LabelMap -> Maybe (Set.Set Label) -> CellInfo -> Bool
 validCellInfo Nothing _ = const True
@@ -114,61 +131,70 @@ validCell (Just (LabelMap lm)) (Just ls) =
     . unCell
 
 -- | Get the differential expression of two sets of cells, filtered by labels.
-getDEGraph :: TopN
+getDEGraph :: Seed
+           -> Maybe Subsample
+           -> TopN
            -> Maybe LabelMap
            -> SingleCells
            -> ([G.Node], Maybe (Set.Set Label))
            -> ([G.Node], Maybe (Set.Set Label))
            -> ClusterGraph CellInfo
            -> R.R s [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
-getDEGraph (TopN topN) lm sc v1 v2 gr = do
-    let cellGroups = getStatuses lm [v1, v2] gr
-        mat        = scToTwoD cellGroups sc
+getDEGraph seed subN (TopN topN) lm sc v1 v2 gr = do
+    cellGroups <- H.io $ subsampleGetStatuses seed subN lm [v1, v2] gr
+
+    let mat        = scToTwoD cellGroups sc
 
     Diff.edgeR topN mat
 
 -- | Get the differential expression using Kruskall-Wallis of two sets of cells,
 -- filtered by labels.
 getDEGraphKruskalWallis
-  :: TopN
+  :: Seed
+  -> Maybe Subsample
+  -> TopN
   -> Maybe LabelMap
   -> SingleCells
   -> ([G.Node], Maybe (Set.Set Label))
   -> ([G.Node], Maybe (Set.Set Label))
   -> ClusterGraph CellInfo
-  -> [(Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
-getDEGraphKruskalWallis (TopN topN) lm sc v1 v2 gr
-  | fastFiveCheck as || fastFiveCheck bs = error "Less than five cells in one node to compare."
-  | otherwise = take topN . sortBy (compare `on` L.view L._3) $ res
-  where
-    fastFiveCheck = (< 5) . length . take 5
-    res = filter (isJust . L.view L._3)
-        . zipWith
-              (\name (!x, !y, !z) -> (name, x, y, z))
-              (V.toList . L.view colNames $ sc)
-        . Diff.differentialMatrixFeatRow as bs
-        . S.transpose
-        . unMatObsRow
-        . L.view matrix
-        $ sc
-    cellGroups = getStatuses lm [v1, v2] gr
-    (as, bs) = L.over L.both (fmap (L.view L._1))
-             . partition ((== 1) . L.view (L._3 . L._1))
-             $ cellGroups
+  -> IO [(Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+getDEGraphKruskalWallis seed subN (TopN topN) lm sc v1 v2 gr = do
+  cellGroups <- subsampleGetStatuses seed subN lm [v1, v2] gr
+
+  let fastFiveCheck = (< 5) . length . take 5
+      res = filter (isJust . L.view L._3)
+          . zipWith
+                (\name (!x, !y, !z) -> (name, x, y, z))
+                (V.toList . L.view colNames $ sc)
+          . Diff.differentialMatrixFeatRow as bs
+          . S.transpose
+          . unMatObsRow
+          . L.view matrix
+          $ sc
+      (as, bs) = L.over L.both (fmap (L.view L._1))
+               . partition ((== 1) . L.view (L._3 . L._1))
+               $ cellGroups
+  if fastFiveCheck as || fastFiveCheck bs
+    then error "Less than five cells in one node to compare."
+    else return . take topN . sortBy (compare `on` L.view L._3) $ res
 
 -- | Get the differential expression of each cluster to all other cells in the
 -- data set using KruskalWallis.
-getAllDEGraphKruskalWallis :: TopN
-                    -> Maybe LabelMap
-                    -> DiffLabels
-                    -> SingleCells
-                    -> ClusterGraph CellInfo
-                    -> [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
-getAllDEGraphKruskalWallis topN lm ls sc gr =
+getAllDEGraphKruskalWallis
+  :: Seed
+  -> Maybe Subsample
+  -> TopN
+  -> Maybe LabelMap
+  -> DiffLabels
+  -> SingleCells
+  -> ClusterGraph CellInfo
+  -> IO [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+getAllDEGraphKruskalWallis seed subN topN lm ls sc gr =
   mconcat
     . catMaybes
-    . parMap rdeepseq (\n -> compareClusterToOthersKruskalWallis n topN lm ls sc mat gr)
-    $ nodes
+  <$> Async.mapConcurrently (\n -> compareClusterToOthersKruskalWallis n seed subN topN lm ls sc mat gr)
+        nodes
   where
     nodes = filter (/= 0) . G.nodes . unClusterGraph $ gr -- Don't want to look at root.
     mat = S.transpose . unMatObsRow . L.view matrix $ sc
@@ -177,36 +203,51 @@ getAllDEGraphKruskalWallis topN lm ls sc gr =
 -- data set (ns) using KruskalWallis such that n / ns.
 compareClusterToOthersKruskalWallis
   :: G.Node
+  -> Seed
+  -> Maybe Subsample
   -> TopN
   -> Maybe LabelMap
   -> DiffLabels
   -> SingleCells
   -> S.SpMatrix Double
   -> ClusterGraph CellInfo
-  -> Maybe [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
-compareClusterToOthersKruskalWallis n (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr
-  | fastFiveCheck nCells || fastFiveCheck nsCells = Nothing
-  | otherwise = Just . take topN . sortBy (compare `on` (L.view L._4)) $ res
-  where
-    fastFiveCheck = (< 5) . length . take 5
-    nCells' = F.toList $ getGraphLeafItems gr n
-    nCellsSet = Set.fromList . fmap (L.view barcode) $ nCells'
-    nCells = fmap (unRow . L.view cellRow)
-           . filter (validCellInfo lm ls2)
-           $ nCells' -- All cells from node and labels
-    nsCells =
-      fmap fst
-        . filter (\ (_, !x) -> validCell lm ls1 x && not (Set.member x nCellsSet)) -- All cells outside of node and from labels
-        . zip [0..]
-        . V.toList
-        . L.view rowNames
-        $ sc
-    res = filter (isJust . L.view L._4)
-        . ( zipWith
-              (\name (!x, !y, !z) -> (n, name, x, y, z))
-              (V.toList . L.view colNames $ sc)
-          )
-        $ Diff.differentialMatrixFeatRow nsCells nCells mat -- Here the matrix rows are features
+  -> IO (Maybe [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)])
+compareClusterToOthersKruskalWallis n (Seed seed) subN (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr = do
+  let fastFiveCheck = (< 5) . length . take 5
+      nCells' = F.toList $ getGraphLeafItems gr n
+      nCellsSet = Set.fromList . fmap (L.view barcode) $ nCells'
+      nCells = fmap (unRow . L.view cellRow)
+             . filter (validCellInfo lm ls2)
+             $ nCells' -- All cells from node and labels
+      nsCells =
+        fmap fst
+          . filter (\ (_, !x) -> validCell lm ls1 x && not (Set.member x nCellsSet)) -- All cells outside of node and from labels
+          . zip [0..]
+          . V.toList
+          . L.view rowNames
+          $ sc
+      sample n x =
+        maybe
+          return
+          (\s -> fmap (take s . V.toList) . flip MWC.uniformShuffle x . V.fromList)
+          n
+      subN' = bool (min (length nCells) (length nsCells)) (maybe 0 unSubsample subN)
+            . (/= Subsample 0)
+          <$> subN
+  g <- MWC.restore . MWC.toSeed $ V.fromList [fromIntegral seed]
+  nCellsFinal  <- sample subN' g nCells
+  nsCellsFinal <- sample subN' g nsCells
+
+  let res = filter (isJust . L.view L._4)
+          . ( zipWith
+                (\name (!x, !y, !z) -> (n, name, x, y, z))
+                (V.toList . L.view colNames $ sc)
+            )
+          $ Diff.differentialMatrixFeatRow nsCellsFinal nCellsFinal mat -- Here the matrix rows are features
+
+  if fastFiveCheck nCellsFinal || fastFiveCheck nsCellsFinal
+    then return Nothing
+    else return . Just . take topN . sortBy (compare `on` (L.view L._4)) $ res
 
 -- | Get the differential expression of two sets of cells.
 getDEString :: [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
@@ -286,7 +327,9 @@ scToEntities aggregate features cellGroups sc =
 
 -- | Get the differential expression plot of features (or aggregate of features
 -- by average) over statuses, filtered by labels.
-getSingleDiff :: Bool
+getSingleDiff :: Seed
+              -> Maybe Subsample
+              -> Bool
               -> ViolinFlag
               -> NoOutlierFlag
               -> Aggregate
@@ -299,26 +342,24 @@ getSingleDiff :: Bool
               -> [Feature]
               -> ClusterGraph CellInfo
               -> R.R s (R.SomeSEXP s)
-getSingleDiff normalize (ViolinFlag vf) (NoOutlierFlag noOutlierF) aggregate sn sl lm sc v1 v2 features gr = do
+getSingleDiff seed subN normalize (ViolinFlag vf) (NoOutlierFlag noOutlierF) aggregate sn sl lm sc v1 v2 features gr = do
   let splitNodeGroup (!ns, !ls) = fmap (\ !x -> ([x], ls)) ns
       splitLabelGroup (!ns, !ls) =
         maybe
           [(ns, ls)]
           (fmap (\ !l -> (ns, Just $ Set.singleton l)) . Set.toAscList)
           ls
-      cellGroups = case (unSeparateNodes sn, unSeparateLabels sl) of
-                    (False, False) -> getStatuses lm [v1, v2] gr
-                    (True, False)  -> getStatuses lm (concatMap splitNodeGroup [v1, v2]) gr
-                    (False, True)  -> getStatuses lm (concatMap splitLabelGroup [v1, v2]) gr
-                    (True, True)  ->
-                      getStatuses
-                        lm
-                        ( concatMap splitNodeGroup
-                        . concatMap splitLabelGroup
-                        $ [v1, v2]
-                        )
-                        gr
-      entities = scToEntities aggregate features cellGroups sc
+      groupsAssign' = case (unSeparateNodes sn, unSeparateLabels sl) of
+                        (False, False) -> [v1, v2]
+                        (True, False)  -> concatMap splitNodeGroup [v1, v2]
+                        (False, True)  -> concatMap splitLabelGroup [v1, v2]
+                        (True, True)  -> concatMap splitNodeGroup
+                                       . concatMap splitLabelGroup
+                                       $ [v1, v2]
+
+  cellGroups <- H.io $ subsampleGetStatuses seed subN lm groupsAssign' gr
+
+  let entities = scToEntities aggregate features cellGroups sc
 
   Diff.plotSingleDiff normalize vf noOutlierF entities
 
@@ -330,3 +371,23 @@ combineNodesLabels
 combineNodesLabels (DiffNodes (v1, v2)) Nothing = ((v1, Nothing), (v2, Nothing))
 combineNodesLabels (DiffNodes (v1, v2)) (Just (DiffLabels (l1, l2))) =
   ((v1, l1), (v2, l2))
+
+-- | Subsample a cell group list with provided subsampling number or the
+-- smallest of the two groups if not provided.
+subsampleGroups :: Seed
+                -> Subsample
+                -> [(Int, Cell, (Int, Diff.Status))]
+                -> IO [(Int, Cell, (Int, Diff.Status))]
+subsampleGroups (Seed seed) subN xs = do
+  g <- MWC.restore . MWC.toSeed $ V.fromList [fromIntegral seed]
+
+  let sample n x = fmap (take n . V.toList) . flip MWC.uniformShuffle x
+      grouped = fmap V.fromList
+              . groupBy ((==) `on` L.view (L._3 . L._1))
+              . sortBy (compare `on` L.view (L._3 . L._1))
+              $ xs
+      subN' = bool (minimum . fmap V.length $ grouped) (unSubsample subN)
+            . (/= 0)
+            $ unSubsample subN
+
+  fmap mconcat $ mapM (sample subN' g) grouped
