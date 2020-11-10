@@ -62,6 +62,7 @@ let
                   pkgs.zlib.out
                   pkgs.blas
                   pkgs.bedtools
+                  pkgs.coreutils
                   pkgs.liblapack
                   pkgs.gfortran.cc.lib
                   pkgs.cairo
@@ -69,6 +70,7 @@ let
                   pkgs.gmp
                   pkgs.gsl
                   pkgs.gtk2
+                  pkgs.gzip
                   pkgs.pango
                   pkgs.graphviz
                   pkgs.pkg-config
@@ -96,6 +98,8 @@ in (pkg.overrideAttrs(attrs: {
 
             wrapProgram $out/bin/too-many-cells \
               --prefix 'PATH' ':' "${pkgs.Renv}/bin/" \
+              --prefix 'PATH' ':' "${pkgs.gzip}/bin/" \
+              --prefix 'PATH' ':' "${pkgs.coreutils}/bin/" \
               --prefix 'PATH' ':' "${pkgs.graphviz}/bin/" \
               --prefix 'PATH' ':' "${pkgs.bedtools}/bin/" \
               --prefix 'PATH' ':' "${pkgs.kent}/bin/" \
