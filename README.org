@@ -2,7 +2,7 @@
 #+AUTHOR: Gregory W. Schwartz
 #+OPTIONS: date:nil creator:nil timestamp:nil toc:t
 
-#+SETUPFILE: https://fniessen.github.io/org-html-themes/setup/theme-readtheorg.setup
+#+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
 
 [[https://gregoryschwartz.github.io/too-many-cells/][Website]]
 
