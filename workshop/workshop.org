@@ -2,7 +2,7 @@
 #+AUTHOR: Gregory W. Schwartz
 #+OPTIONS: date:nil creator:nil timestamp:nil toc:t ^:nil
 
-#+SETUPFILE: https://fniessen.github.io/org-html-themes/setup/theme-readtheorg.setup
+#+SETUPFILE: https://fniessen.github.io/org-html-themes/org/theme-readtheorg.setup
 
 This is an instructional example of using =too-many-cells= meant to demonstrate
 typical usage, originally presented in the IFI Advanced Computational Biology
