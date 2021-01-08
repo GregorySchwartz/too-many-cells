@@ -158,14 +158,20 @@ getDEGraphKruskalWallis
   -> ([G.Node], Maybe (Set.Set Label))
   -> ([G.Node], Maybe (Set.Set Label))
   -> ClusterGraph CellInfo
-  -> IO [(Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+  -> IO [ ( Feature
+          , Diff.Log2Diff
+          , Maybe Diff.PValue
+          , Maybe Diff.FDR
+          , Maybe Diff.QValue
+          )
+        ]
 getDEGraphKruskalWallis seed subN (TopN topN) lm sc v1 v2 gr = do
   cellGroups <- subsampleGetStatuses seed subN lm [v1, v2] gr
 
   let fastFiveCheck = (< 5) . length . take 5
       res = filter (isJust . L.view L._3)
           . zipWith
-                (\name (!x, !y, !z) -> (name, x, y, z))
+                (\name (!a, !b, !c, !d) -> (name, a, b, c, d))
                 (V.toList . L.view colNames $ sc)
           . Diff.differentialMatrixFeatRow as bs
           . S.transpose
@@ -189,7 +195,7 @@ getAllDEGraphKruskalWallis
   -> DiffLabels
   -> SingleCells
   -> ClusterGraph CellInfo
-  -> IO [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)]
+  -> IO [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR, Maybe Diff.QValue)]
 getAllDEGraphKruskalWallis seed subN topN lm ls sc gr =
   mconcat
     . catMaybes
@@ -211,7 +217,7 @@ compareClusterToOthersKruskalWallis
   -> SingleCells
   -> S.SpMatrix Double
   -> ClusterGraph CellInfo
-  -> IO (Maybe [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)])
+  -> IO (Maybe [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR, Maybe Diff.QValue)])
 compareClusterToOthersKruskalWallis n (Seed seed) subN (TopN topN) lm (DiffLabels (ls1, ls2)) sc mat gr = do
   let fastFiveCheck = (< 5) . length . take 5
       nCells' = F.toList $ getGraphLeafItems gr n
@@ -240,7 +246,7 @@ compareClusterToOthersKruskalWallis n (Seed seed) subN (TopN topN) lm (DiffLabel
 
   let res = filter (isJust . L.view L._4)
           . ( zipWith
-                (\name (!x, !y, !z) -> (n, name, x, y, z))
+                (\name (!a, !b, !c, !d) -> (n, name, a, b, c, d))
                 (V.toList . L.view colNames $ sc)
             )
           $ Diff.differentialMatrixFeatRow nsCellsFinal nCellsFinal mat -- Here the matrix rows are features
@@ -265,12 +271,14 @@ getDEString xs = header <> "\n" <> body
 -- | Get the differential expression of each node to all other nodes using
 -- KruskalWallis.
 getAllDEStringKruskalWallis
-  :: [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)] -> B.ByteString
+  :: [(G.Node, Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR, Maybe Diff.QValue)]
+  -> B.ByteString
 getAllDEStringKruskalWallis xs = header <> "\n" <> body
   where
     header = "node,feature,log2FC,pVal,FDR"
     body   = CSV.encode
-           . fmap ( L.over L._5 (maybe "NA" (showt . Diff.unFDR))
+           . fmap ( L.over L._6 (maybe "NA" (showt . Diff.unQValue))
+                  . L.over L._5 (maybe "NA" (showt . Diff.unFDR))
                   . L.over L._4 (maybe "NA" (showt . Diff.unPValue))
                   . L.over L._3 Diff.unLog2Diff
                   . L.over L._2 unFeature
@@ -280,12 +288,14 @@ getAllDEStringKruskalWallis xs = header <> "\n" <> body
 -- | Get the differential expression string between two sets of nodes using
 -- KruskalWallis.
 getDEStringKruskalWallis
-  :: [(Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR)] -> B.ByteString
+  :: [(Feature, Diff.Log2Diff, Maybe Diff.PValue, Maybe Diff.FDR, Maybe Diff.QValue)]
+  -> B.ByteString
 getDEStringKruskalWallis xs = header <> "\n" <> body
   where
-    header = "feature,log2FC,pVal,FDR"
+    header = "feature,log2FC,pVal,FDR,qVal"
     body   = CSV.encode
-           . fmap ( L.over L._4 (maybe "NA" (showt . Diff.unFDR))
+           . fmap ( L.over L._5 (maybe "NA" (showt . Diff.unQValue))
+                  . L.over L._4 (maybe "NA" (showt . Diff.unFDR))
                   . L.over L._3 (maybe "NA" (showt . Diff.unPValue))
                   . L.over L._2 Diff.unLog2Diff
                   . L.over L._1 unFeature
