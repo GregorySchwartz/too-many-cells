@@ -17,6 +17,8 @@ import qualified Turtle as TU
 -- Basic
 
 newtype DiffFile = DiffFile { unDiffFile :: TU.FilePath }
+newtype BackgroundDiffFile =
+  BackgroundDiffFile { unBackgroundDiffFile :: TU.FilePath }
 newtype OutputPath = OutputPath { unOutputPath :: TU.FilePath }
 newtype GenomeFile = GenomeFile { unGenomeFile :: T.Text }
 newtype MotifCommand = MotifCommand { unMotifCommand :: String }

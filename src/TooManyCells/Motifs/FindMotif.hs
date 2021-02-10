@@ -15,7 +15,7 @@ module TooManyCells.Motifs.FindMotif
 
 -- Remote
 import Control.Monad (mfilter)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes, fromMaybe, isJust)
 import TextShow (showt)
 import qualified Control.Foldl as Fold
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -83,16 +83,15 @@ getNodes (DiffFile df)
       . readCsv
       $ df
 
-getMotif :: DiffFile
-         -> OutputPath
-         -> MotifCommand
-         -> GenomeFile
-         -> TopN
-         -> Maybe Node
-         -> IO ()
-getMotif diffFile outPath mc gf (TopN topN) node = TU.sh $ do
+-- | Make a temporary fasta file for input into the motif command.
+mkTmpFasta :: TU.FilePath
+           -> DiffFile
+           -> GenomeFile
+           -> TopN
+           -> Maybe Node
+           -> TU.Shell ()
+mkTmpFasta tmpFasta diffFile gf (TopN topN) node = TU.sh $ do
   tmpBed <- TU.mktempfile "/tmp" "motif_input.bed"
-  tmpFasta <- TU.mktempfile "/tmp" "motif_input.fasta"
 
   (=<<) (TU.output tmpBed . TU.select)
     . TU.reduce (Fold.lastN topN)
@@ -113,12 +112,37 @@ getMotif diffFile outPath mc gf (TopN topN) node = TU.sh $ do
                            ]
     $ mempty
 
-  TU.stdout
-    . TU.inshell
-        ( T.pack
-        $ TP.printf
-            (unMotifCommand mc)
-            (TU.format TU.fp tmpFasta)
-            (TU.format TU.fp . unOutputPath $ outPath)
-        )
-    $ mempty
+getMotif :: DiffFile
+         -> Maybe BackgroundDiffFile
+         -> OutputPath
+         -> MotifCommand
+         -> GenomeFile
+         -> TopN
+         -> Maybe Node
+         -> IO ()
+getMotif diffFile bgDiffFile outPath mc gf topN node = TU.sh $ do
+  tmpFasta <- TU.mktempfile "/tmp" "motif_input.fasta"
+  mkTmpFasta tmpFasta diffFile gf topN node
+
+  tmpBgFasta <- TU.mktempfile "/tmp" "motif_bg_input.fasta"
+  maybe
+    (return ())
+    (\x -> mkTmpFasta tmpBgFasta (DiffFile . unBackgroundDiffFile $ x) gf topN node)
+    bgDiffFile
+
+  let cmd = if isJust bgDiffFile
+              then
+                T.pack $
+                  TP.printf
+                    (unMotifCommand mc)
+                    (TU.format TU.fp tmpFasta)
+                    (TU.format TU.fp . unOutputPath $ outPath)
+                    (TU.format TU.fp tmpBgFasta)
+              else
+                T.pack $
+                  TP.printf
+                    (unMotifCommand mc)
+                    (TU.format TU.fp tmpFasta)
+                    (TU.format TU.fp . unOutputPath $ outPath)
+
+  TU.stdout . TU.inshell cmd $ mempty

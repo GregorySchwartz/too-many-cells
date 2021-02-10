@@ -26,13 +26,17 @@ import TooManyCells.Program.Options
 motifsMain :: Options -> IO ()
 motifsMain opts = do
   let genome' = GenomeFile . unHelpful . motifGenome $ opts
-      topN' = TopN . fromMaybe 1000 . unHelpful . topN $ opts
+      topN' = TopN . fromMaybe 100 . unHelpful . topN $ opts
       motifCommand' = MotifCommand
                     . fromMaybe "meme %s -nmotifs 50 -oc %s"
                     . unHelpful
                     . motifCommand
                     $ opts
       diffFile' = DiffFile . TU.fromText . unHelpful . diffFile $ opts
+      backgroundDiffFile' = fmap (BackgroundDiffFile . TU.fromText)
+                          . unHelpful
+                          . backgroundDiffFile
+                          $ opts
       outDir = OutputDirectory
              . fromMaybe "out"
              . unHelpful
@@ -49,4 +53,12 @@ motifsMain opts = do
                 $ (TU.fromText . T.pack $ unOutputDirectory outDir)
            TU.</> (maybe mempty (TU.fromText . ("node_" <>) . showt . unNode) node)
 
-    TU.liftIO $ getMotif diffFile' outPath motifCommand' genome' topN' node
+    TU.liftIO
+      $ getMotif
+          diffFile'
+          backgroundDiffFile'
+          outPath
+          motifCommand'
+          genome'
+          topN'
+          node
