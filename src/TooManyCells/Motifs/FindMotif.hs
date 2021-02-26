@@ -16,6 +16,7 @@ module TooManyCells.Motifs.FindMotif
 -- Remote
 import Control.Monad (mfilter)
 import Data.Maybe (catMaybes, fromMaybe, isJust)
+import System.Directory (getTemporaryDirectory)
 import TextShow (showt)
 import qualified Control.Foldl as Fold
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -33,6 +34,10 @@ import TooManyCells.Motifs.Types
 
 newtype ColMatch = ColMatch T.Text
 newtype Match = Match T.Text
+
+-- | Get the temporary directory.
+getTmpDir :: IO TU.FilePath
+getTmpDir = fmap (TU.fromText . T.pack) getTemporaryDirectory
 
 -- | Read a CSV to a shell.
 readCsv :: TU.FilePath -> TU.Shell (Map.Map T.Text T.Text)
@@ -91,7 +96,8 @@ mkTmpFasta :: TU.FilePath
            -> Maybe Node
            -> TU.Shell ()
 mkTmpFasta tmpFasta diffFile gf (TopN topN) node = TU.sh $ do
-  tmpBed <- TU.mktempfile "/tmp" "motif_input.bed"
+  tmpDir <- TU.liftIO getTmpDir
+  tmpBed <- TU.mktempfile tmpDir "motif_input.bed"
 
   (=<<) (TU.output tmpBed . TU.select)
     . TU.reduce (Fold.lastN topN)
@@ -121,10 +127,11 @@ getMotif :: DiffFile
          -> Maybe Node
          -> IO ()
 getMotif diffFile bgDiffFile outPath mc gf topN node = TU.sh $ do
-  tmpFasta <- TU.mktempfile "/tmp" "motif_input.fasta"
+  tmpDir <- TU.liftIO getTmpDir
+  tmpFasta <- TU.mktempfile tmpDir "motif_input.fasta"
   mkTmpFasta tmpFasta diffFile gf topN node
 
-  tmpBgFasta <- TU.mktempfile "/tmp" "motif_bg_input.fasta"
+  tmpBgFasta <- TU.mktempfile tmpDir "motif_bg_input.fasta"
   maybe
     (return ())
     (\x -> mkTmpFasta tmpBgFasta (DiffFile . unBackgroundDiffFile $ x) gf topN node)
