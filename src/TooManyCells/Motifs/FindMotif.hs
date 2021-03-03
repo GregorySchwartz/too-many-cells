@@ -10,11 +10,13 @@ Collects functions pertaining to finding motifs per cluster.
 
 module TooManyCells.Motifs.FindMotif
     ( getMotif
+    , getMotifGenome
     , getNodes
     ) where
 
 -- Remote
 import Control.Monad (mfilter)
+import Data.List (foldl')
 import Data.Maybe (catMaybes, fromMaybe, isJust)
 import System.Directory (getTemporaryDirectory)
 import TextShow (showt)
@@ -118,6 +120,32 @@ mkTmpFasta tmpFasta diffFile gf (TopN topN) node = TU.sh $ do
                            ]
     $ mempty
 
+-- | Make a temporary bed file for input into the genome motif command.
+mkTmpBed :: TU.FilePath
+           -> DiffFile
+           -> TopN
+           -> Maybe Node
+           -> TU.Shell ()
+mkTmpBed tmpBed diffFile (TopN topN) node = TU.sh $ do
+  tmpDir <- TU.liftIO getTmpDir
+
+  let formatRow xs =  -- Format recommended by findMotifsGenome.pl
+        TU.unsafeTextToLine
+          $ foldl' (\acc x -> T.replace x "\t" acc) (TU.lineToText xs) [":", "-"]
+         <> "\t"
+         <> TU.lineToText xs
+         <> "\t\t+"
+
+  (=<<) (TU.output tmpBed . TU.select)
+    . TU.reduce (Fold.lastN topN)
+    . fmap (formatRow . fromMaybe (error "feature column not found."))
+    . csvCut "feature"
+    . csvNumSort "log2FC"
+    . csvMatch (ColMatch "node") (Match $ maybe "0" (showt . unNode) node)
+    . readCsv
+    . unDiffFile
+    $ diffFile
+
 getMotif :: DiffFile
          -> Maybe BackgroundDiffFile
          -> OutputPath
@@ -150,6 +178,44 @@ getMotif diffFile bgDiffFile outPath mc gf topN node = TU.sh $ do
                   TP.printf
                     (unMotifCommand mc)
                     (TU.format TU.fp tmpFasta)
+                    (TU.format TU.fp . unOutputPath $ outPath)
+
+  TU.stdout . TU.inshell cmd $ mempty
+
+getMotifGenome :: DiffFile
+               -> Maybe BackgroundDiffFile
+               -> OutputPath
+               -> MotifGenomeCommand
+               -> GenomeFile
+               -> TopN
+               -> Maybe Node
+               -> IO ()
+getMotifGenome diffFile bgDiffFile outPath mc gf topN node = TU.sh $ do
+  tmpDir <- TU.liftIO getTmpDir
+  tmpBed <- TU.mktempfile tmpDir "motif_input.bed"
+  mkTmpBed tmpBed diffFile topN node
+
+  tmpBgBed <- TU.mktempfile tmpDir "motif_bg_input.bed"
+  maybe
+    (return ())
+    (\x -> mkTmpBed tmpBgBed (DiffFile . unBackgroundDiffFile $ x) topN node)
+    bgDiffFile
+
+  let cmd = if isJust bgDiffFile
+              then
+                T.pack $
+                  TP.printf
+                    (unMotifGenomeCommand mc)
+                    (TU.format TU.fp tmpBed)
+                    (unGenomeFile gf)
+                    (TU.format TU.fp . unOutputPath $ outPath)
+                    (TU.format TU.fp tmpBgBed)
+              else
+                T.pack $
+                  TP.printf
+                    (unMotifGenomeCommand mc)
+                    (TU.format TU.fp tmpBed)
+                    (unGenomeFile gf)
                     (TU.format TU.fp . unOutputPath $ outPath)
 
   TU.stdout . TU.inshell cmd $ mempty

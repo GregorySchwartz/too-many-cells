@@ -32,6 +32,10 @@ motifsMain opts = do
                     . unHelpful
                     . motifCommand
                     $ opts
+      motifGenomeCommand' = fmap MotifGenomeCommand
+                          . unHelpful
+                          . motifGenomeCommand
+                          $ opts
       diffFile' = DiffFile . TU.fromText . unHelpful . diffFile $ opts
       backgroundDiffFile' = fmap (BackgroundDiffFile . TU.fromText)
                           . unHelpful
@@ -53,12 +57,22 @@ motifsMain opts = do
                 $ (TU.fromText . T.pack $ unOutputDirectory outDir)
            TU.</> (maybe mempty (TU.fromText . ("node_" <>) . showt . unNode) node)
 
-    TU.liftIO
-      $ getMotif
-          diffFile'
-          backgroundDiffFile'
-          outPath
-          motifCommand'
-          genome'
-          topN'
-          node
+    case motifGenomeCommand' of
+      Nothing -> TU.liftIO
+               $ getMotif
+                   diffFile'
+                   backgroundDiffFile'
+                   outPath
+                   motifCommand'
+                   genome'
+                   topN'
+                   node
+      (Just x) -> TU.liftIO
+                $ getMotifGenome
+                    diffFile'
+                    backgroundDiffFile'
+                    outPath
+                    x
+                    genome'
+                    topN'
+                    node

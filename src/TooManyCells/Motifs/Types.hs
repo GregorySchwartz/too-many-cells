@@ -22,5 +22,6 @@ newtype BackgroundDiffFile =
 newtype OutputPath = OutputPath { unOutputPath :: TU.FilePath }
 newtype GenomeFile = GenomeFile { unGenomeFile :: T.Text }
 newtype MotifCommand = MotifCommand { unMotifCommand :: String }
+newtype MotifGenomeCommand = MotifGenomeCommand { unMotifGenomeCommand :: String }
 newtype TopN = TopN { unTopN :: Int }
 newtype Node = Node { unNode :: Int } deriving (Eq, Ord)
