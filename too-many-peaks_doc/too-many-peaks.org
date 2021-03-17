@@ -1,4 +1,4 @@
-#+TITLE: =too-many-cells= Workshop
+#+TITLE: =too-many-peaks= Walkthrough
 #+AUTHOR: Gregory W. Schwartz
 #+OPTIONS: date:nil creator:nil timestamp:nil toc:t ^:nil
 
