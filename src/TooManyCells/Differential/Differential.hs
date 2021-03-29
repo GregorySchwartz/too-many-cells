@@ -260,7 +260,7 @@ getDEString :: [(Diff.Name, Double, Diff.PValue, Diff.FDR)]
             -> B.ByteString
 getDEString xs = header <> "\n" <> body
   where
-    header = "feature,log2FC,pVal,FDR"
+    header = "feature,log2FC,pVal,qVal"  -- edgeR calls q-values FDR
     body   = CSV.encode
            . fmap ( L.over L._1 Diff.unName
                   . L.over L._3 Diff.unPValue
@@ -275,10 +275,10 @@ getAllDEStringKruskalWallis
   -> B.ByteString
 getAllDEStringKruskalWallis xs = header <> "\n" <> body
   where
-    header = "node,feature,log2FC,pVal,FDR"
+    header = "node,feature,log2FC,pVal,qVal"
     body   = CSV.encode
-           . fmap ( L.over L._6 (maybe "NA" (showt . Diff.unQValue))
-                  . L.over L._5 (maybe "NA" (showt . Diff.unFDR))
+           . fmap ( (\(!a, !b, !c, !d, !e, !f) -> (a,b,c,d,f))
+                  . L.over L._6 (maybe "NA" (showt . Diff.unQValue))
                   . L.over L._4 (maybe "NA" (showt . Diff.unPValue))
                   . L.over L._3 Diff.unLog2Diff
                   . L.over L._2 unFeature
@@ -292,9 +292,10 @@ getDEStringKruskalWallis
   -> B.ByteString
 getDEStringKruskalWallis xs = header <> "\n" <> body
   where
-    header = "feature,log2FC,pVal,FDR,qVal"
+    header = "feature,log2FC,pVal,qVal"
     body   = CSV.encode
-           . fmap ( L.over L._5 (maybe "NA" (showt . Diff.unQValue))
+           . fmap ( (\(!a, !b, !c, !d, !e) -> (a,b,c,e))
+                  . L.over L._5 (maybe "NA" (showt . Diff.unQValue))
                   . L.over L._4 (maybe "NA" (showt . Diff.unFDR))
                   . L.over L._3 (maybe "NA" (showt . Diff.unPValue))
                   . L.over L._2 Diff.unLog2Diff

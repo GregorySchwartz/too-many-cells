@@ -17,7 +17,7 @@ import qualified Data.Set as Set
 
 -- Basic
 newtype TopN = TopN { unTopN :: Int }
-newtype NoEdger = NoEdger { unNoEdger :: Bool }
+newtype Edger = Edger { unEdger :: Bool }
 newtype DiffNodes = DiffNodes {unDiffNodes :: ([G.Node], [G.Node])}
 newtype DiffLabels =
   DiffLabels { unDiffLabels :: (Maybe (Set.Set Label), Maybe (Set.Set Label)) }

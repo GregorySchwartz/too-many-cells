@@ -71,7 +71,7 @@ differentialMain opts = do
         violinFlag' = ViolinFlag . unHelpful . plotViolin $ opts
         noOutlierFlag' = NoOutlierFlag . unHelpful . plotNoOutlier $ opts
         updateTreeRows' = UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
-        noEdger' = NoEdger . unHelpful . noEdger $ opts
+        edger' = Edger . unHelpful . edger $ opts
         subsampleGroups' = fmap Subsample . unHelpful . subsampleGroups $ opts
         seed' = Seed . fromMaybe 0 . unHelpful . seed $ opts
         labels'   = fmap ( DiffLabels
@@ -128,7 +128,7 @@ differentialMain opts = do
             (DiffNodes ([], _)) -> error "Need other nodes to compare with. If every node should be compared to all other nodes using Mann-Whitney U, use \"([], [])\"."
             (DiffNodes (_, [])) -> error "Need other nodes to compare with. If every node should be compared to all other nodes using Mann-Whitney U, use \"([], [])\"."
             _ -> do
-              if unNoEdger noEdger'
+              if not $ unEdger edger'
                 then do
                   res <- H.io
                        $ getDEGraphKruskalWallis
