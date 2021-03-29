@@ -263,27 +263,189 @@ too-many-cells matrix-output \
 For more information about the capabilities of visualization and differential
 expression, check out [[https://gregoryschwartz.github.io/too-many-cells/]]!
 
-* Motifs
-
-=too-many-peaks= can also identify motifs from differential expression analyses
-using tools such as MEME and homer. For instance, with homer's
-=findMotifsGenome.pl= in your path, you can use the input from
-=too-many-peaks='s differential accessibility output from
-=too-many-cells differential= to find enriched motifs:
-
-# too-many-cells motifs --diff-file tmp.csv --motif-genome ~/research/genomes/hg19.fa --top-n 10000000000 -o motifs_homer_1_sustained_vs_28_untreated --motif-command "/mnt/data1/apps/homer/homer-4.9/bin/findMotifs.pl %s fasta %s"
 #+header: :exports both
 #+header: :results file
 #+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz \
+  --draw-leaf "DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])" \
+  --custom-region "chr19:51874860-51875969" \
+  --draw-mark "MarkModularity" \
+  --dendrogram-output "NKG7_sat_10_union.svg" \
+  --draw-scale-saturation 10 \
+  --output out_test \
+  > test
+#+end_src
+
+#+RESULTS:
+: f9b4dec5336a11a5109a73b70636c10a
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --matrix-path ./data/pbmc/atac_v1_pbmc_5k_fragments.tsv.gz \
+  --filter-thresholds "(1000, 1)" \
+  --binwidth 5000 \
+  --output out_no_lsa \
+  --matrix-output mat \
+  > clusters_no_lsa.csv
+#+end_src
+
+#+RESULTS:
+: 5ea178cae47c2c3f67d6a77bfa6222a8
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out_no_lsa \
+  -m ./out_no_lsa/mat \
+  --draw-leaf "DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])" \
+  --custom-region "chr19:51874860-51875969" \
+  --draw-mark "MarkModularity" \
+  --dendrogram-output "NKG7.svg" \
+  --draw-scale-saturation 15 \
+  --output out_no_lsa \
+  > clusters_no_lsa.csv
+#+end_src
+
+#+RESULTS:
+[[file:]]
+
+* Identify NK cells
+
+Now that we have a base tree with higher resolution peaks, we can now try
+searching for known cell populations such as NK cells. While we can use the
+=classify= entry point of =too-many-cells= to link bulk reference data with
+single-cell data, we will use basic known markers to exemplify the visualization
+features of the tree. Here, we will only focus on the =NKG7= region for NK
+cells. So, let's look at what that accessibility looks like on the tree at that
+region, making sure to overlay node numbers for easy reference! For maximum
+resolution, we'll use the full tree rather than the pruned tree.
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz \
+  --draw-leaf "DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])" \
+  --custom-region "chr19:51874860-51875969" \
+  --draw-mark "MarkModularity" \
+  --dendrogram-output "NKG7.svg" \
+  --draw-node-number \
+  --draw-scale-saturation 10 \
+  --output out \
+  > clusters.csv
+
+printf "./out/NKG7.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/NKG7.svg]]
+
+Here, =--custom-region= tells =too-many-peaks= to create a new feature within
+that specific region. We can also use the original fragments to see the
+accessibility on the tree before peak finding and filtering.
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells make-tree \
+  --prior out \
+  -m ./data/pbmc/atac_v1_pbmc_5k_fragments.tsv.gz \
+  --draw-leaf "DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])" \
+  --custom-region "chr19:51874860-51875969" \
+  --draw-mark "MarkModularity" \
+  --dendrogram-output "NKG7_raw.svg" \
+  --draw-node-number \
+  --draw-scale-saturation 10 \
+  --output out \
+  > clusters.csv
+
+printf "./out/NKG7_raw.svg"
+#+end_src
+
+#+RESULTS:
+[[file:./out/NKG7_raw.svg]]
+
+Based on the coloring and the node number overlay,
+there seems to be a high level of accessibility within node 85.
+To further investigate, let's see what the differential accessibility is between
+node 85 and the rest of the tree (seeing more than the top 100 features and without
+using =edgeR= for scATAC-seq):
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells differential \
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz \
+  --prior out \
+  --nodes "([118,1], [85])" \
+  --normalization "TotalNorm" \
+  --top-n 1000000000 \
+  > ./out/NK_vs_other.csv
+
+printf "./out/NK_vs_other.csv"
+#+end_src
+
+#+RESULTS:
+[[file:./out/NK_vs_other.csv]]
+
+These results are liable to change with the inclusion of
+=--blacklist-regions-file=, which should filter out unwanted regions (as noted
+above). We can also see just our specific region:
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+too-many-cells differential \
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz \
+  --prior out \
+  --nodes "([118,1], [85])" \
+  --normalization "TotalNorm" \
+  --custom-region "chr19:51874860-51875969" \
+  > ./out/NK_vs_other_NKG7.csv
+
+printf "./out/NK_vs_other_NKG7.csv"
+#+end_src
+
+#+RESULTS:
+[[file:./out/NK_vs_other_NKG7.csv]]
+
+As expected, there's some difference at the =NKG7= locus. Now we can see what
+motifs may be enriched in this differential.
+
+* Motifs
+
+=too-many-peaks= can also identify motifs from differential expression analyses
+using tools such as MEME and HOMER. For instance, with HOMER's
+=findMotifsGenome.pl= in your path, you can use the input from
+=too-many-peaks='s differential accessibility output from
+=too-many-cells differential= that we just calculated to find enriched motifs
+(getting rid of infinity fold changes, or "divide by zero"):
+
+#+header: :exports both
+#+header: :results file
+#+begin_src shell :async
+cat ./out/NK_vs_other.csv | csvsql --query "SELECT * FROM stdin WHERE qVal < 0.05 AND log2FC > 0" | grep -v inf | grep -v Infinity > tmp.csv
+
 too-many-cells motifs \
-  --diff-file diff.csv \
-  --motif-genome /path/to/hg19.fa \
-  --top-n 1000 \
+  --diff-file tmp.csv \
+  --motif-genome hg19 \
+  --top-n 100000000 \
   -o homer_out \
   --motif-genome-command "findMotifsGenome.pl %s %s %s"
 #+end_src
 
-This command would output motifs in the =homer_out= directory found using
-=findMotifsGenome.pl= on the top 1000 differentially accessible sites from
-=diff.csv= which was output from a =too-many-cells differential= run. Usually,
-this file would be filtered from significant peaks in a certain direction.
+This command outputs motifs in the =homer_out= directory found using
+=findMotifsGenome.pl= on the significant and positive differentially accessible
+sites from =./out/BLANK_vs_BLANK.csv= which was output from our =too-many-cells
+differential= run, (so we set =--top-n= to a high number to include all sites
+instead of just the top sites).
+
+These kinds of analyses and more are all available using =too-many-peaks=, which
+makes full use of the =too-many-cells= suite of tools so be sure to [[https://gregoryschwartz.github.io/too-many-cells/][check it
+out!]]

@@ -228,30 +228,31 @@
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org93e2b85">Install <code>too-many-peaks</code></a>
+<li><a href="#orgf1baf01">Install <code>too-many-peaks</code></a>
 <ul>
-<li><a href="#orgce736ae">Install <code>too-many-cells</code></a></li>
-<li><a href="#orgbeeed85">Adding to path (with stack installation)</a></li>
-<li><a href="#org2a88fbb">Testing the installation</a></li>
+<li><a href="#org5f68094">Install <code>too-many-cells</code></a></li>
+<li><a href="#orgd9b6bf6">Adding to path (with stack installation)</a></li>
+<li><a href="#org9804d72">Testing the installation</a></li>
 </ul>
 </li>
-<li><a href="#orgd74dacc">Data download</a>
+<li><a href="#orgf248a48">Data download</a>
 <ul>
-<li><a href="#org2d42ca0">Download peripheral blood mononuclear cells</a></li>
+<li><a href="#org87e5454">Download peripheral blood mononuclear cells</a></li>
 </ul>
 </li>
-<li><a href="#orgffb8999">Tree creation with <code>too-many-peaks</code></a>
+<li><a href="#orgd6d275d">Tree creation with <code>too-many-peaks</code></a>
 <ul>
-<li><a href="#org771e5d2">Initial tree creation</a></li>
+<li><a href="#orga888833">Initial tree creation</a></li>
 </ul>
 </li>
-<li><a href="#orgcd5906a">Finding peaks</a>
+<li><a href="#org3e3ddd4">Finding peaks</a>
 <ul>
-<li><a href="#org48c27b1">Pruning the tree</a></li>
-<li><a href="#orgc5b69bb">Peak calling</a></li>
+<li><a href="#orgff48649">Pruning the tree</a></li>
+<li><a href="#orgf21a8db">Peak calling</a></li>
 </ul>
 </li>
-<li><a href="#org1378c98">Motifs</a></li>
+<li><a href="#org3fc6e34">Identify NK cells</a></li>
+<li><a href="#org465e72c">Motifs</a></li>
 </ul>
 </div>
 </div>
@@ -272,13 +273,13 @@ For more information about <code>too-many-peaks</code> and <code>too-many-cells<
 See <a href="https://github.com/GregorySchwartz/too-many-cells">https://github.com/GregorySchwartz/too-many-cells</a> for latest version.
 </p>
 
-<div id="outline-container-org93e2b85" class="outline-2">
-<h2 id="org93e2b85">Install <code>too-many-peaks</code></h2>
-<div class="outline-text-2" id="text-org93e2b85">
+<div id="outline-container-orgf1baf01" class="outline-2">
+<h2 id="orgf1baf01">Install <code>too-many-peaks</code></h2>
+<div class="outline-text-2" id="text-orgf1baf01">
 </div>
-<div id="outline-container-orgce736ae" class="outline-3">
-<h3 id="orgce736ae">Install <code>too-many-cells</code></h3>
-<div class="outline-text-3" id="text-orgce736ae">
+<div id="outline-container-org5f68094" class="outline-3">
+<h3 id="org5f68094">Install <code>too-many-cells</code></h3>
+<div class="outline-text-3" id="text-org5f68094">
 <p>
 <code>too-many-peaks</code> is an extension included in <code>too-many-cells</code>, so you should
 follow instructions on <a href="https://gregoryschwartz.github.io/too-many-cells/">https://gregoryschwartz.github.io/too-many-cells/</a> for
@@ -302,9 +303,9 @@ nix-env -f default.nix -i too-many-cells
 </div>
 </div>
 
-<div id="outline-container-orgbeeed85" class="outline-3">
-<h3 id="orgbeeed85">Adding to path (with stack installation)</h3>
-<div class="outline-text-3" id="text-orgbeeed85">
+<div id="outline-container-orgd9b6bf6" class="outline-3">
+<h3 id="orgd9b6bf6">Adding to path (with stack installation)</h3>
+<div class="outline-text-3" id="text-orgd9b6bf6">
 <p>
 If using stack, the resulting binary will install to <code>~/.local/bin</code>. Add to
 <code>$PATH</code> so you can invoke the command from anywhere!
@@ -322,9 +323,9 @@ add the previous line to <code>~/.bashrc</code> or <code>~/.profile</code>.
 </div>
 </div>
 
-<div id="outline-container-org2a88fbb" class="outline-3">
-<h3 id="org2a88fbb">Testing the installation</h3>
-<div class="outline-text-3" id="text-org2a88fbb">
+<div id="outline-container-org9804d72" class="outline-3">
+<h3 id="org9804d72">Testing the installation</h3>
+<div class="outline-text-3" id="text-org9804d72">
 <p>
 Test to see if the installation worked when in path:
 </p>
@@ -334,7 +335,7 @@ Test to see if the installation worked when in path:
 </pre>
 </div>
 
-<pre class="example" id="org7bf82d1">
+<pre class="example" id="org3cc9f14">
 too-many-cells, Gregory W. Schwartz. Clusters and analyzes single cell data.
 
 Usage: too-many-cells (make-tree | interactive | differential | diversity |
@@ -363,13 +364,13 @@ Here, seeing <code>too-many-cells peaks</code> denotes the correct version of
 </div>
 </div>
 
-<div id="outline-container-orgd74dacc" class="outline-2">
-<h2 id="orgd74dacc">Data download</h2>
-<div class="outline-text-2" id="text-orgd74dacc">
+<div id="outline-container-orgf248a48" class="outline-2">
+<h2 id="orgf248a48">Data download</h2>
+<div class="outline-text-2" id="text-orgf248a48">
 </div>
-<div id="outline-container-org2d42ca0" class="outline-3">
-<h3 id="org2d42ca0">Download peripheral blood mononuclear cells</h3>
-<div class="outline-text-3" id="text-org2d42ca0">
+<div id="outline-container-org87e5454" class="outline-3">
+<h3 id="org87e5454">Download peripheral blood mononuclear cells</h3>
+<div class="outline-text-3" id="text-org87e5454">
 <p>
 We are going to see if we can identify T cells in a collection of peripheral
 blood mononuclear cells. We'll need data from 10x, specifically
@@ -393,13 +394,13 @@ wget <span style="color: #afaf00;">"https://cf.10xgenomics.com/samples/cell-atac
 </div>
 </div>
 
-<div id="outline-container-orgffb8999" class="outline-2">
-<h2 id="orgffb8999">Tree creation with <code>too-many-peaks</code></h2>
-<div class="outline-text-2" id="text-orgffb8999">
+<div id="outline-container-orgd6d275d" class="outline-2">
+<h2 id="orgd6d275d">Tree creation with <code>too-many-peaks</code></h2>
+<div class="outline-text-2" id="text-orgd6d275d">
 </div>
-<div id="outline-container-org771e5d2" class="outline-3">
-<h3 id="org771e5d2">Initial tree creation</h3>
-<div class="outline-text-3" id="text-org771e5d2">
+<div id="outline-container-orga888833" class="outline-3">
+<h3 id="orga888833">Initial tree creation</h3>
+<div class="outline-text-3" id="text-orga888833">
 <p>
 We now have everything we need for initial runs with <code>too-many-peaks</code>! Let's begin
 by building a tree (ignore <code>printf</code> throughout this document, they are just
@@ -424,7 +425,7 @@ coloring, labels, and joining together multiple data sets.
 </div>
 
 
-<div id="org064c856" class="figure">
+<div id="org448e28b" class="figure">
 <p><object type="image/svg+xml" data="./out/dendrogram.svg" class="org-svg">
 Sorry, your browser does not support SVG.</object>
 </p>
@@ -455,13 +456,13 @@ subsequent steps faster as we can just input that matrix path.
 </div>
 </div>
 
-<div id="outline-container-orgcd5906a" class="outline-2">
-<h2 id="orgcd5906a">Finding peaks</h2>
-<div class="outline-text-2" id="text-orgcd5906a">
+<div id="outline-container-org3e3ddd4" class="outline-2">
+<h2 id="org3e3ddd4">Finding peaks</h2>
+<div class="outline-text-2" id="text-org3e3ddd4">
 </div>
-<div id="outline-container-org48c27b1" class="outline-3">
-<h3 id="org48c27b1">Pruning the tree</h3>
-<div class="outline-text-3" id="text-org48c27b1">
+<div id="outline-container-orgff48649" class="outline-3">
+<h3 id="orgff48649">Pruning the tree</h3>
+<div class="outline-text-3" id="text-orgff48649">
 <p>
 Now we want to define more precise features for each leaf, so we will trade in
 our bins for peaks. Before that, however, many peak finding algorithms require a
@@ -484,7 +485,7 @@ again. This argument makes things much faster!
 </div>
 
 
-<div id="orgdd37798" class="figure">
+<div id="org46d9f1c" class="figure">
 <p><object type="image/svg+xml" data="./out_min_200/dendrogram.svg" class="org-svg">
 Sorry, your browser does not support SVG.</object>
 </p>
@@ -492,9 +493,9 @@ Sorry, your browser does not support SVG.</object>
 </div>
 </div>
 
-<div id="outline-container-orgc5b69bb" class="outline-3">
-<h3 id="orgc5b69bb">Peak calling</h3>
-<div class="outline-text-3" id="text-orgc5b69bb">
+<div id="outline-container-orgf21a8db" class="outline-3">
+<h3 id="orgf21a8db">Peak calling</h3>
+<div class="outline-text-3" id="text-orgf21a8db">
 <p>
 Now we are ready to call our peaks using MACS2 (or any other program specified
 by <code>--peak-call-command</code>).
@@ -627,36 +628,222 @@ output matrix rather than all of the fragments:
 For more information about the capabilities of visualization and differential
 expression, check out <a href="https://gregoryschwartz.github.io/too-many-cells/">https://gregoryschwartz.github.io/too-many-cells/</a>!
 </p>
+
+<div class="org-src-container">
+<pre class="src src-shell">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+  --prior out <span style="color: #afaf00;">\</span>
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz <span style="color: #afaf00;">\</span>
+  --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])"</span> <span style="color: #afaf00;">\</span>
+  --custom-region <span style="color: #afaf00;">"chr19:51874860-51875969"</span> <span style="color: #afaf00;">\</span>
+  --draw-mark <span style="color: #afaf00;">"MarkModularity"</span> <span style="color: #afaf00;">\</span>
+  --dendrogram-output <span style="color: #afaf00;">"NKG7_sat_10_union.svg"</span> <span style="color: #afaf00;">\</span>
+  --draw-scale-saturation <span style="color: #d787af;">10</span> <span style="color: #afaf00;">\</span>
+  --output out_test <span style="color: #afaf00;">\</span>
+  &gt; test
+</pre>
+</div>
+
+<pre class="example">
+f9b4dec5336a11a5109a73b70636c10a
+</pre>
+
+
+<div class="org-src-container">
+<pre class="src src-shell">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+  --matrix-path ./data/pbmc/atac_v1_pbmc_5k_fragments.tsv.gz <span style="color: #afaf00;">\</span>
+  --filter-thresholds <span style="color: #afaf00;">"(1000, 1)"</span> <span style="color: #afaf00;">\</span>
+  --binwidth <span style="color: #d787af;">5000</span> <span style="color: #afaf00;">\</span>
+  --output out_no_lsa <span style="color: #afaf00;">\</span>
+  --matrix-output mat <span style="color: #afaf00;">\</span>
+  &gt; clusters_no_lsa.csv
+</pre>
+</div>
+
+<pre class="example">
+5ea178cae47c2c3f67d6a77bfa6222a8
+</pre>
+
+
+<div class="org-src-container">
+<pre class="src src-shell">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+  --prior out_no_lsa <span style="color: #afaf00;">\</span>
+  -m ./out_no_lsa/mat <span style="color: #afaf00;">\</span>
+  --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])"</span> <span style="color: #afaf00;">\</span>
+  --custom-region <span style="color: #afaf00;">"chr19:51874860-51875969"</span> <span style="color: #afaf00;">\</span>
+  --draw-mark <span style="color: #afaf00;">"MarkModularity"</span> <span style="color: #afaf00;">\</span>
+  --dendrogram-output <span style="color: #afaf00;">"NKG7.svg"</span> <span style="color: #afaf00;">\</span>
+  --draw-scale-saturation <span style="color: #d787af;">15</span> <span style="color: #afaf00;">\</span>
+  --output out_no_lsa <span style="color: #afaf00;">\</span>
+  &gt; clusters_no_lsa.csv
+</pre>
+</div>
+
+<p>
+<a href=""></a>
+</p>
 </div>
 </div>
 </div>
 
-<div id="outline-container-org1378c98" class="outline-2">
-<h2 id="org1378c98">Motifs</h2>
-<div class="outline-text-2" id="text-org1378c98">
+<div id="outline-container-org3fc6e34" class="outline-2">
+<h2 id="org3fc6e34">Identify NK cells</h2>
+<div class="outline-text-2" id="text-org3fc6e34">
 <p>
-<code>too-many-peaks</code> can also identify motifs from differential expression analyses
-using tools such as MEME and homer. For instance, with homer's
-<code>findMotifsGenome.pl</code> in your path, you can use the input from
-<code>too-many-peaks</code>'s differential accessibility output from
-<code>too-many-cells differential</code> to find enriched motifs:
+Now that we have a base tree with higher resolution peaks, we can now try
+searching for known cell populations such as NK cells. While we can use the
+<code>classify</code> entry point of <code>too-many-cells</code> to link bulk reference data with
+single-cell data, we will use basic known markers to exemplify the visualization
+features of the tree. Here, we will only focus on the <code>NKG7</code> region for NK
+cells. So, let's look at what that accessibility looks like on the tree at that
+region, making sure to overlay node numbers for easy reference! For maximum
+resolution, we'll use the full tree rather than the pruned tree.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-shell">too-many-cells motifs <span style="color: #afaf00;">\</span>
-  --diff-file diff.csv <span style="color: #afaf00;">\</span>
-  --motif-genome /path/to/hg19.fa <span style="color: #afaf00;">\</span>
-  --top-n <span style="color: #d787af;">1000</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-shell">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+  --prior out <span style="color: #afaf00;">\</span>
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz <span style="color: #afaf00;">\</span>
+  --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])"</span> <span style="color: #afaf00;">\</span>
+  --custom-region <span style="color: #afaf00;">"chr19:51874860-51875969"</span> <span style="color: #afaf00;">\</span>
+  --draw-mark <span style="color: #afaf00;">"MarkModularity"</span> <span style="color: #afaf00;">\</span>
+  --dendrogram-output <span style="color: #afaf00;">"NKG7.svg"</span> <span style="color: #afaf00;">\</span>
+  --draw-node-number <span style="color: #afaf00;">\</span>
+  --draw-scale-saturation <span style="color: #d787af;">10</span> <span style="color: #afaf00;">\</span>
+  --output out <span style="color: #afaf00;">\</span>
+  &gt; clusters.csv
+
+<span style="color: #ff8700;">printf</span> <span style="color: #afaf00;">"./out/NKG7.svg"</span>
+</pre>
+</div>
+
+
+<div id="orgd917a3b" class="figure">
+<p><object type="image/svg+xml" data="./out/NKG7.svg" class="org-svg">
+Sorry, your browser does not support SVG.</object>
+</p>
+</div>
+
+<p>
+Here, <code>--custom-region</code> tells <code>too-many-peaks</code> to create a new feature within
+that specific region. We can also use the original fragments to see the
+accessibility on the tree before peak finding and filtering.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell">too-many-cells make-tree <span style="color: #afaf00;">\</span>
+  --prior out <span style="color: #afaf00;">\</span>
+  -m ./data/pbmc/atac_v1_pbmc_5k_fragments.tsv.gz <span style="color: #afaf00;">\</span>
+  --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])"</span> <span style="color: #afaf00;">\</span>
+  --custom-region <span style="color: #afaf00;">"chr19:51874860-51875969"</span> <span style="color: #afaf00;">\</span>
+  --draw-mark <span style="color: #afaf00;">"MarkModularity"</span> <span style="color: #afaf00;">\</span>
+  --dendrogram-output <span style="color: #afaf00;">"NKG7_raw.svg"</span> <span style="color: #afaf00;">\</span>
+  --draw-node-number <span style="color: #afaf00;">\</span>
+  --draw-scale-saturation <span style="color: #d787af;">10</span> <span style="color: #afaf00;">\</span>
+  --output out <span style="color: #afaf00;">\</span>
+  &gt; clusters.csv
+
+<span style="color: #ff8700;">printf</span> <span style="color: #afaf00;">"./out/NKG7_raw.svg"</span>
+</pre>
+</div>
+
+
+<div id="org38b832b" class="figure">
+<p><object type="image/svg+xml" data="./out/NKG7_raw.svg" class="org-svg">
+Sorry, your browser does not support SVG.</object>
+</p>
+</div>
+
+<p>
+Based on the coloring and the node number overlay,
+there seems to be a high level of accessibility within node 85.
+To further investigate, let's see what the differential accessibility is between
+node 85 and the rest of the tree (seeing more than the top 100 features and without
+using <code>edgeR</code> for scATAC-seq):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell">too-many-cells differential <span style="color: #afaf00;">\</span>
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz <span style="color: #afaf00;">\</span>
+  --prior out <span style="color: #afaf00;">\</span>
+  --nodes <span style="color: #afaf00;">"([118,1], [85])"</span> <span style="color: #afaf00;">\</span>
+  --normalization <span style="color: #afaf00;">"TotalNorm"</span> <span style="color: #afaf00;">\</span>
+  --top-n <span style="color: #d787af;">1000000000</span> <span style="color: #afaf00;">\</span>
+  &gt; ./out/NK_vs_other.csv
+
+<span style="color: #ff8700;">printf</span> <span style="color: #afaf00;">"./out/NK_vs_other.csv"</span>
+</pre>
+</div>
+
+<p>
+<a href="./out/NK_vs_other.csv">./out/NK_vs_other.csv</a>
+</p>
+
+<p>
+These results are liable to change with the inclusion of
+<code>--blacklist-regions-file</code>, which should filter out unwanted regions (as noted
+above). We can also see just our specific region:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell">too-many-cells differential <span style="color: #afaf00;">\</span>
+  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz <span style="color: #afaf00;">\</span>
+  --prior out <span style="color: #afaf00;">\</span>
+  --nodes <span style="color: #afaf00;">"([118,1], [85])"</span> <span style="color: #afaf00;">\</span>
+  --normalization <span style="color: #afaf00;">"TotalNorm"</span> <span style="color: #afaf00;">\</span>
+  --custom-region <span style="color: #afaf00;">"chr19:51874860-51875969"</span> <span style="color: #afaf00;">\</span>
+  &gt; ./out/NK_vs_other_NKG7.csv
+
+<span style="color: #ff8700;">printf</span> <span style="color: #afaf00;">"./out/NK_vs_other_NKG7.csv"</span>
+</pre>
+</div>
+
+<p>
+<a href="./out/NK_vs_other_NKG7.csv">./out/NK_vs_other_NKG7.csv</a>
+</p>
+
+<p>
+As expected, there's some difference at the <code>NKG7</code> locus. Now we can see what
+motifs may be enriched in this differential.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org465e72c" class="outline-2">
+<h2 id="org465e72c">Motifs</h2>
+<div class="outline-text-2" id="text-org465e72c">
+<p>
+<code>too-many-peaks</code> can also identify motifs from differential expression analyses
+using tools such as MEME and HOMER. For instance, with HOMER's
+<code>findMotifsGenome.pl</code> in your path, you can use the input from
+<code>too-many-peaks</code>'s differential accessibility output from
+<code>too-many-cells differential</code> that we just calculated to find enriched motifs
+(getting rid of infinity fold changes, or "divide by zero"):
+</p>
+
+<div class="org-src-container">
+<pre class="src src-shell">cat ./out/NK_vs_other.csv | csvsql --query <span style="color: #afaf00;">"SELECT * FROM stdin WHERE qVal &lt; 0.05 AND log2FC &gt; 0"</span> | grep -v inf | grep -v Infinity &gt; tmp.csv
+
+too-many-cells motifs <span style="color: #afaf00;">\</span>
+  --diff-file tmp.csv <span style="color: #afaf00;">\</span>
+  --motif-genome hg19 <span style="color: #afaf00;">\</span>
+  --top-n <span style="color: #d787af;">100000000</span> <span style="color: #afaf00;">\</span>
   -o homer_out <span style="color: #afaf00;">\</span>
   --motif-genome-command <span style="color: #afaf00;">"findMotifsGenome.pl %s %s %s"</span>
 </pre>
 </div>
 
 <p>
-This command would output motifs in the <code>homer_out</code> directory found using
-<code>findMotifsGenome.pl</code> on the top 1000 differentially accessible sites from
-<code>diff.csv</code> which was output from a <code>too-many-cells differential</code> run. Usually,
-this file would be filtered from significant peaks in a certain direction.
+This command outputs motifs in the <code>homer_out</code> directory found using
+<code>findMotifsGenome.pl</code> on the significant and positive differentially accessible
+sites from <code>./out/BLANK_vs_BLANK.csv</code> which was output from our <code>too-many-cells
+differential</code> run, (so we set <code>--top-n</code> to a high number to include all sites
+instead of just the top sites).
+</p>
+
+<p>
+These kinds of analyses and more are all available using <code>too-many-peaks</code>, which
+makes full use of the <code>too-many-cells</code> suite of tools so be sure to <a href="https://gregoryschwartz.github.io/too-many-cells/">check it
+out!</a>
 </p>
 </div>
 </div>

@@ -29,6 +29,14 @@ different perspective of single cells, using our [[http://github.com/GregorySchw
 and tree measures to describe simultaneously large and small populations,
 without additional parameters or runs. See below for a full list of features.
 
+* New features for v2.2.0.0
+
+- =--no-edger= replaced with =--edger= as the default is now Kruskal-Wallis.
+- Can now use backgrounds for motifs.
+- Can specify motif for genome analysis (i.e. =findMotifsGenome.pl= from HOMER).
+- Temporary directories are now variables to correctly specify location.
+- Added q-values for differential.
+- Updated documentation for =too-many-peaks=.
 
 * New features for v2.0.0.0
 
@@ -1004,10 +1012,10 @@ too-many-cells motifs \
 
 In this example, we use the output from a differential expression analysis using
 =too-many-cells differential= from our merged peaks. Using a complete genome
-file used by our motif program of choice (here homer, but defaults to MEME) with
+file used by our motif program of choice (here HOMER, but defaults to MEME) with
 =--motif-genome=, we want to provide the motif program with the top 1000 most
 differential peaks using =--top-n=. Lastly, while the default uses MEME, we find
-homer to be much faster. The prior command shows the use of another program to
+HOMER to be much faster. The prior command shows the use of another program to
 find the motifs, making sure the =%s= for input and output are in the right
 locations (check =too-many-cells motifs -h=).
 
