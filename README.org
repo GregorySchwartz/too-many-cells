@@ -902,7 +902,7 @@ too-many-cells paths\
 :CUSTOM_ID: too-many-peaks
 :END:
 
-For more information, check out [[file:too-many-peaks_doc/too-many-peaks.html][ =too-many-peaks= ]] 
+For more information, check out the [[file:too-many-peaks_doc/too-many-peaks.html][ =too-many-peaks= walkthrough]].
 
 scATAC-seq is a powerful technology for quantifying chromatin accessibility for
 individual cells. =too-many-cells= now supports scATAC-seq to generate cell clade

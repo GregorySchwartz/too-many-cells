@@ -263,57 +263,6 @@ too-many-cells matrix-output \
 For more information about the capabilities of visualization and differential
 expression, check out [[https://gregoryschwartz.github.io/too-many-cells/]]!
 
-#+header: :exports both
-#+header: :results file
-#+begin_src shell :async
-too-many-cells make-tree \
-  --prior out \
-  -m ./out_min_200_peaks/cluster_peaks/union_fragments.tsv.gz \
-  --draw-leaf "DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])" \
-  --custom-region "chr19:51874860-51875969" \
-  --draw-mark "MarkModularity" \
-  --dendrogram-output "NKG7_sat_10_union.svg" \
-  --draw-scale-saturation 10 \
-  --output out_test \
-  > test
-#+end_src
-
-#+RESULTS:
-: f9b4dec5336a11a5109a73b70636c10a
-
-#+header: :exports both
-#+header: :results file
-#+begin_src shell :async
-too-many-cells make-tree \
-  --matrix-path ./data/pbmc/atac_v1_pbmc_5k_fragments.tsv.gz \
-  --filter-thresholds "(1000, 1)" \
-  --binwidth 5000 \
-  --output out_no_lsa \
-  --matrix-output mat \
-  > clusters_no_lsa.csv
-#+end_src
-
-#+RESULTS:
-: 5ea178cae47c2c3f67d6a77bfa6222a8
-
-#+header: :exports both
-#+header: :results file
-#+begin_src shell :async
-too-many-cells make-tree \
-  --prior out_no_lsa \
-  -m ./out_no_lsa/mat \
-  --draw-leaf "DrawItem (DrawContinuous [\"chr19:51874860-51875969\"])" \
-  --custom-region "chr19:51874860-51875969" \
-  --draw-mark "MarkModularity" \
-  --dendrogram-output "NKG7.svg" \
-  --draw-scale-saturation 15 \
-  --output out_no_lsa \
-  > clusters_no_lsa.csv
-#+end_src
-
-#+RESULTS:
-[[file:]]
-
 * Identify NK cells
 
 Now that we have a base tree with higher resolution peaks, we can now try
