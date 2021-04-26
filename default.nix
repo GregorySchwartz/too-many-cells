@@ -1,5 +1,5 @@
 # default.nix
-{ compilerVersion ? "ghc865", pkgsLink ? (builtins.fetchTarball https://github.com/NixOS/nixpkgs/archive/1e90c46c2d98f9391df79954a74d14f263cad729.tar.gz)}:
+{ compilerVersion ? "ghc8104", pkgsLink ? (builtins.fetchTarball https://github.com/NixOS/nixpkgs/archive/7124e24a47d3c3f3329e80ca7a143ee9f37a6817.tar.gz)}:
 let
   # Packages
   config = { allowBroken = true;
@@ -27,37 +27,32 @@ let
     fontDirectories = [];
   };
 
-  # Additional dependencies
-  kent = pkgs.callPackage (pkgs.fetchurl { url = "https://raw.githubusercontent.com/NixOS/nixpkgs/5482754fde6fb7ae4797951227201a7e9a14a07a/pkgs/applications/science/biology/kent/default.nix"; sha256 = "28267b39ddb19eb260bd43902f52f7870d0ab0a5b0b87cad5dbec00598eed204"; } ) {};
-  macs2 = pkgs.callPackage ./deps/macs2.nix {};
-  meme = pkgs.callPackage ./deps/meme.nix {};
-
-  # Haskell compilier
+  # Haskell compiler
   compiler = pkgs.haskell.packages."${compilerVersion}";
 
   # TooManyCells package
   pkg = compiler.developPackage {
     root = ./.;
     source-overrides = {
-      inline-r = "0.10.2";
       terminal-progress-bar = "0.4.1";
-      turtle = builtins.fetchTarball https://github.com/Gabriel439/Haskell-Turtle-Library/archive/ef0f4b15f82ac03708132726515c6bb59a0d2c07.tar.gz;
-      elbow = builtins.fetchTarball https://github.com/GregorySchwartz/elbow/archive/03fff043c88b8c3de83b08f1638963f46e604c90.tar.gz;
       birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/54b1e54b07b267be3e9bf7ca8084a7fd8930a501.tar.gz;
       sparse-linear-algebra = builtins.fetchTarball https://github.com/ocramz/sparse-linear-algebra/archive/dbad792f6c6a04e4de23806b676cb3e76d36a65b.tar.gz;
-      spectral-clustering = builtins.fetchTarball https://github.com/GregorySchwartz/spectral-clustering/archive/8d735caeb26266beda299d7886b5586dc7d7e7b1.tar.gz;
-      differential = builtins.fetchTarball https://github.com/GregorySchwartz/differential/archive/3fa64d17e744e0b3a2f152c4bd9f3e595c7e7527.tar.gz;
     };
     overrides = self: super: (with pkgs.haskell.lib; with pkgs.haskellPackages; {
       BiobaseNewick = doJailbreak super.BiobaseNewick;
       birch-beer = dontHaddock super.birch-beer;
       clustering = dontBenchmark (dontCheck (addExtraLibraries super.clustering [pkgs.Renv]));
+      diagrams-cairo = doJailbreak super.diagrams-cairo;
       diagrams-graphviz = doJailbreak super.diagrams-graphviz;
+      diagrams-gtk = doJailbreak super.diagrams-gtk;
       differential = addExtraLibraries super.differential [pkgs.Renv];
       fgl = doJailbreak super.fgl;
       hmatrix-svdlibc = dontCheck (doJailbreak super.hmatrix-svdlibc);
+      palette = doJailbreak super.palette;
       pipes-text = doJailbreak super.pipes-text;
       streaming-cassava = doJailbreak super.streaming-cassava;
+      streaming-utils = doJailbreak super.streaming-utils;
+      streaming-with = doJailbreak super.streaming-with;
       typed-spreadsheet = doJailbreak super.typed-spreadsheet;
     });
   };
@@ -82,9 +77,9 @@ let
                   pkgs.glibcLocales
                   pkgs.ghcid
                   pkgs.cabal-install
-                  (pkgs.python3.withPackages (p: with p; [ numpy macs2 ]))
-                  kent
-                  meme
+                  pkgs.MACS2
+                  pkgs.kent
+                  pkgs.meme-suite
                ];
 in (pkg.overrideAttrs(attrs: {
   buildInputs = attrs.buildInputs ++ buildInputs;
@@ -102,9 +97,9 @@ in (pkg.overrideAttrs(attrs: {
               --prefix 'PATH' ':' "${pkgs.Renv}/bin/" \
               --prefix 'PATH' ':' "${pkgs.graphviz}/bin/" \
               --prefix 'PATH' ':' "${pkgs.bedtools}/bin/" \
-              --prefix 'PATH' ':' "${kent}/bin/" \
-              --prefix 'PATH' ':' "${macs2}/bin/" \
-              --prefix 'PATH' ':' "${meme}/bin/" \
+              --prefix 'PATH' ':' "${pkgs.kent}/bin/" \
+              --prefix 'PATH' ':' "${pkgs.MACS2}/bin/" \
+              --prefix 'PATH' ':' "${pkgs.meme-suite}/bin/" \
               --prefix-contents 'R_LIBS_SITE' ':' "$out/paths/r_path.txt" \
               --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \
