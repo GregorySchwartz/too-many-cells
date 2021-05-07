@@ -156,6 +156,7 @@ data Options
     | Classify { matrixPath :: [String] <?> "(PATH) The path to the input directory containing the matrix output of cellranger (cellranger < 3 (matrix.mtx, genes.tsv, and barcodes.tsv) or cellranger >= 3 (matrix.mtx.gz, features.tsv.gz, and barcodes.tsv.gz) or an input csv file containing feature row names and cell column names. scATAC-seq is supported if input file contains \"fragments\", ends with \".tsv.gz\" (such as \"fragments.tsv.gz\" or \"sample1_fragments.tsv.gz\"), and is in the SORTED (sort -k1,1 -k2,2n) 10x fragments format (see also --binwidth, --no-binarize). If given as a list (--matrix-path input1 --matrix-path input2 etc.) then will join all matrices together. Assumes the same number and order of features in each matrix, so only cells are added."
                , referenceFile :: [String] <?> "(PATH) The path to the reference file to compare each cell to. Every transformation (e.g. filters and normalizations) applied to --matrix-path apply here as well."
                , singleReferenceMatrix :: Bool <?> "Treat the reference file as a single matrix such that each observation (barcode) is an aggregated reference population."
+               , skipAggregation :: Bool <?> "If there is more than one reference file, treat each reference file as a bulk population. Useful when comparing to bulk populations for BigWig or BedGraph reference files where each file is a separate population."
                , matrixTranspose :: Bool <?> "Whether to transpose the matrix before all processing (observations become features and vice-versa). Will be affected by other options (check your filtering thresholds, normalizations, etc!)"
                , binwidth :: Maybe Int <?> "(Nothing | BINSIZE) If input data has region features in the format of `chrN:START-END`, BINSIZE input is required to convert ranges to fixed width bins."
                , noBinarize :: Bool <?> "If a fragments.tsv.gz file, do not binarize data."
@@ -278,6 +279,7 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "motifGenome"           = Nothing
     short "noBinarize"            = Nothing
     short "edger"                 = Nothing
+    short "noUpdateTreeRows"      = Nothing
     short "normalization"         = Just 'z'
     short "numEigen"              = Just 'G'
     short "numRuns"               = Nothing
@@ -297,9 +299,9 @@ modifiers = lispCaseModifiers { shortNameModifier = short }
     short "shallowStart"          = Nothing
     short "shiftPositive"         = Nothing
     short "singleReferenceMatrix" = Nothing
+    short "skipAggregation"       = Nothing
     short "subsampleGroups"       = Nothing
     short "svd"                   = Nothing
-    short "noUpdateTreeRows"      = Nothing
     short x                       = firstLetter x
 
 instance ParseRecord Options where

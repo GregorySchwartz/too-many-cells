@@ -12,6 +12,7 @@ module TooManyCells.Program.Classify where
 -- Remote
 import BirchBeer.Types (Label (..))
 import Control.Monad (unless, when)
+import Data.Bool (bool)
 import Data.Maybe (fromMaybe)
 import Options.Generic
 import Safe (headMay)
@@ -38,8 +39,9 @@ classifyMain opts = do
                 . referenceFile
                 $ opts
       singleRefMatFlag' = unHelpful . singleReferenceMatrix $ opts
+      skipAggregation' = unHelpful . skipAggregation $ opts
       getRef x = AggReferenceMat
-               . aggSc
+               . bool aggSc AggSingleCells skipAggregation'
                . fst
                . fromMaybe (error $ "Could not load file in required field --matrix-path:" <> show x)
              <$> loadAllSSM (opts { matrixPath = Helpful [x] })
