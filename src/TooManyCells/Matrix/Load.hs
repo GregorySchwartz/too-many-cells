@@ -44,7 +44,7 @@ import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
-import qualified Data.ByteString.Streaming.Char8 as BS
+import qualified Streaming.ByteString.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HMap
@@ -241,7 +241,7 @@ loadSparseMatrixDataStream (Delimiter delim) (MatrixFile mf) = do
                 . (S.store gS)
                 . (S.store mS)
                 . S.decode S.NoHeader
-                $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
+                $ (contents :: BS.ByteStream (ExceptT S.CsvParseException Managed) ())
 
         let finalMat = MatObsRow . HS.sparsifySM . HS.fromColsL $ m -- We want observations as rows
 

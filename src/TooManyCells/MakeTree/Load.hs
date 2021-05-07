@@ -29,7 +29,7 @@ import Safe
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.ByteString.Streaming.Char8 as BS
+import qualified Streaming.ByteString.Char8 as BS
 import qualified Data.Csv as CSV
 import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map

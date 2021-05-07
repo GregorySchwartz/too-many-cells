@@ -27,7 +27,7 @@ import TextShow (showt)
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.ByteString.Streaming.Char8 as BS
+import qualified Streaming.ByteString.Char8 as BS
 import qualified Data.Foldable as F
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -77,7 +77,7 @@ loadPopulationCsv file = do
                     . S.toList_
                     . S.map getCols
                     . S.decodeByName
-                    $ (contents :: BS.ByteString (ExceptT S.CsvParseException Managed) ())
+                    $ (contents :: BS.ByteStream (ExceptT S.CsvParseException Managed) ())
 
         return population
 

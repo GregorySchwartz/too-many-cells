@@ -39,7 +39,7 @@ import Turtle.Line
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
 import qualified Data.ByteString.Lazy.Char8 as B
-import qualified Data.ByteString.Streaming.Char8 as BS
+import qualified Streaming.ByteString.Char8 as BS
 import qualified Data.HashMap.Strict as HMap
 import qualified Data.IntMap.Strict as IMap
 import qualified Data.IntSet as ISet

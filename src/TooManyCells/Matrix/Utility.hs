@@ -57,7 +57,7 @@ import qualified Control.Lens as L
 import qualified Data.Attoparsec.Text as A
 import qualified Data.ByteString.Char8 as B
 import qualified Data.ByteString.Lazy.Char8 as BL
-import qualified Data.ByteString.Streaming.Char8 as BS
+import qualified Streaming.ByteString.Char8 as BS
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
 import qualified Data.HashSet as HSet
@@ -220,7 +220,7 @@ writeSparseMatrixLike (MatrixTranspose mt) (MatrixFolder folder) mat = do
 printDenseMatrixLike :: (MatrixLike a, Monad m)
                      => MatrixTranspose
                      -> a
-                     -> BS.ByteString m ()
+                     -> BS.ByteStream m ()
 printDenseMatrixLike (MatrixTranspose mt) mat =
   Stream.encode (Just $ Stream.header header)
     . Stream.zipWith (:) rowN
@@ -295,7 +295,7 @@ hashNub = Fold.Fold step (HSet.empty, id) fin
 {-# INLINABLE hashNub #-}
 
 -- | Keep decompressing a compressed bytestream until exhaused.
-decompressStreamAll :: (MonadIO m) => WindowBits -> BS.ByteString m r -> BS.ByteString m r
+decompressStreamAll :: (MonadIO m) => WindowBits -> BS.ByteStream m r -> BS.ByteStream m r
 decompressStreamAll w bs = S.decompress' w bs >>= go
   where
     go (Left bs) = S.decompress' w bs >>= go
