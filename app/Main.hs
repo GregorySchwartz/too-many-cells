@@ -22,6 +22,7 @@ import TooManyCells.Program.Motifs
 import TooManyCells.Program.Options
 import TooManyCells.Program.Paths
 import TooManyCells.Program.Peaks
+import TooManyCells.Program.Spatial
 
 main :: IO ()
 main = do
@@ -38,3 +39,4 @@ main = do
         Peaks{}        -> peaksMain opts
         Motifs{}       -> motifsMain opts
         MatrixOutput{} -> matrixOutputMain opts
+        Spatial{}      -> spatialMain opts
