@@ -29,6 +29,17 @@ different perspective of single cells, using our [[http://github.com/GregorySchw
 and tree measures to describe simultaneously large and small populations,
 without additional parameters or runs. See below for a full list of features.
 
+* New features for v3.0.0.0
+
+- Added new =spatial= entry point for spatial analysis of cells! Can make
+  interactive plots of the cells in-situ with their features as well as quantify
+  spatial relationships between pairs of cells.
+- Overhauled the command line interface, so expect to find possible instability
+  with the options. Open an issue at
+  [[https://github.com/GregorySchwartz/too-many-cells/issues]] if you encounter any
+  expected errors or behavior!
+- Incompatibility: Projection file format changed "barcode" column to "item".
+
 * New features for v2.2.0.0
 
 - =--no-edger= replaced with =--edger= as the default is now Kruskal-Wallis.

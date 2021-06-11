@@ -10,7 +10,6 @@ module TooManyCells.Program.Utility where
 import Data.Bool (bool)
 import Data.List (isInfixOf)
 import Data.Maybe (fromMaybe)
-import Options.Generic
 import Text.Read (readMaybe)
 import qualified System.Directory as FP
 import qualified System.FilePath as FP
@@ -25,25 +24,12 @@ readOrErr :: (Read a) => String -> String -> a
 readOrErr err = fromMaybe (error err) . readMaybe
 
 -- | Normalization defaults.
-getNormalization :: Options -> [NormType]
-getNormalization opts@(MakeTree{}) =
-  (\x -> if null x then [TfIdfNorm] else x)
-    . fmap (readOrErr "Cannot read --normalization.")
-    . unHelpful
-    . normalization
-    $ opts
-getNormalization opts@(Interactive{}) =
-  (\x -> if null x then [TfIdfNorm] else x)
-    . fmap (readOrErr "Cannot read --normalization.")
-    . unHelpful
-    . normalization
-    $ opts
-getNormalization opts =
-  (\x -> if null x then [NoneNorm] else x)
-    . fmap (readOrErr "Cannot read --normalization.")
-    . unHelpful
-    . normalization
-    $ opts
+getNormalization :: Subcommand -> [NormType] -> [NormType]
+getNormalization (MakeTreeCommand opts) xs =
+  if null xs then [TfIdfNorm] else xs
+getNormalization (InteractiveCommand opts) xs =
+  if null xs then [TfIdfNorm] else xs
+getNormalization _ xs = if null xs then [NoneNorm] else xs
 
 -- | Get the file type of an input matrix. Returns either a left file (i.e. CSV)
 -- or a right matrix market.

@@ -12,6 +12,7 @@ Loading matrix for command line program.
 {-# LANGUAGE PackageImports    #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.LoadMatrix where
 
@@ -28,7 +29,6 @@ import Data.List (foldl')
 import Data.Maybe (fromMaybe, isJust, isNothing)
 import GHC.Conc (getNumCapabilities)
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
-import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import Text.Read (readMaybe)
 import qualified Control.Lens as L
@@ -53,8 +53,8 @@ import qualified Data.Sparse.Common as S
 import Control.Lens
 
 -- | Load the single cell matrix, post-whitelist-filtered cells.
-loadSSM :: Options -> FilePath -> IO SingleCells
-loadSSM opts matrixPath' = do
+loadSSM :: Subcommand -> LoadMatrixOptions -> FilePath -> IO SingleCells
+loadSSM sub opts matrixPath' = do
   fileExist      <- FP.doesFileExist matrixPath'
   directoryExist <- FP.doesDirectoryExist matrixPath'
   compressedFileExist <- FP.doesFileExist $ matrixPath' FP.</> "matrix.mtx.gz"
@@ -68,22 +68,19 @@ loadSSM opts matrixPath' = do
                   $ matrixPath'
              FP.</> (bool "barcodes.tsv" "barcodes.tsv.gz" compressedFileExist)
       delimiter'      =
-          Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-      transpose'      = TransposeFlag . unHelpful . matrixTranspose $ opts
-      featureColumn'  =
-          FeatureColumn . fromMaybe 1 . unHelpful . featureColumn $ opts
-      noBinarizeFlag' = NoBinarizeFlag . unHelpful . noBinarize $ opts
-      binWidth' = fmap BinWidth . unHelpful . binwidth $ opts
+          Delimiter . (delimiter :: LoadMatrixOptions -> Char) $ opts
+      transpose'      = TransposeFlag . matrixTranspose $ opts
+      featureColumn'  = FeatureColumn . featureColumn $ opts
+      noBinarizeFlag' = NoBinarizeFlag . noBinarize $ opts
+      binWidth' = fmap BinWidth . binwidth $ opts
       excludeFragments' = fmap (ExcludeFragments . T.pack)
-                        . unHelpful
                         . excludeMatchFragments
                         $ opts
       blacklistRegionsFile' = fmap BlacklistRegions
-                            . unHelpful
                             . blacklistRegionsFile
                             $ opts
       cellWhitelistFile' =
-            fmap CellWhitelistFile . unHelpful . cellWhitelistFile $ opts
+            fmap CellWhitelistFile . cellWhitelistFile $ opts
 
   cellWhitelist <- liftIO . sequence $ fmap getCellWhitelist cellWhitelistFile'
 
@@ -148,36 +145,33 @@ loadSSM opts matrixPath' = do
   fmap (windowSc binWidth' . whiteListFilter cellWhitelist . transposeFunc) unFilteredSc
 
 -- | Load all single cell matrices.
-loadAllSSM :: Options -> IO (Maybe (SingleCells, Maybe LabelMap))
-loadAllSSM opts = runMaybeT $ do
-  let matrixPaths'       = unHelpful . matrixPath $ opts
-      normalizations'    = getNormalization opts
-      pca'               = fmap PCADim . unHelpful . pca $ opts
-      lsa'               = fmap LSADim . unHelpful . lsa $ opts
-      svd'               = fmap SVDDim . unHelpful . svd $ opts
-      dropDimensionFlag' = DropDimensionFlag . unHelpful . dropDimension $ opts
-      binarizeFlag'      = BinarizeFlag . unHelpful . binarize $ opts
-      binWidth'          = fmap BinWidth . unHelpful . binwidth $ opts
+loadAllSSM :: Subcommand -> LoadMatrixOptions -> IO (Maybe (SingleCells, Maybe LabelMap))
+loadAllSSM sub opts = runMaybeT $ do
+  let matrixPaths'       = matrixPath $ opts
+      normalizations'    = getNormalization sub (normalization opts)
+      pca'               = fmap PCADim . pca $ opts
+      lsa'               = fmap LSADim . lsa $ opts
+      svd'               = fmap SVDDim . svd $ opts
+      dropDimensionFlag' = DropDimensionFlag . dropDimension $ opts
+      binarizeFlag'      = BinarizeFlag . binarize $ opts
+      binWidth'          = fmap BinWidth . binwidth $ opts
       shiftPositiveFlag' =
-        ShiftPositiveFlag . unHelpful . shiftPositive $ opts
+        ShiftPositiveFlag . shiftPositive $ opts
       customLabel' = (\ xs -> bool
                                 (fmap (Just . CustomLabel) xs)
                                 (repeat Nothing)
                             . null
                             $ xs
                       )
-                    . unHelpful
                     . customLabel
                     $ opts
       readOrErr err = fromMaybe (error err) . readMaybe
       filterThresholds'  = fmap FilterThresholds
                          . fmap (readOrErr "Cannot read --filter-thresholds")
-                         . unHelpful
                          . filterThresholds
                          $ opts
       customRegions' = CustomRegions
                      . fmap (either (\x -> error $ "Cannot parse region format `chrN:START-END` in: " <> x) id . parseChrRegion)
-                     . unHelpful
                      . customRegion
                      $ opts
 
@@ -202,7 +196,7 @@ loadAllSSM opts = runMaybeT $ do
                   . fmap wait
                   . mapReduce workers
                   . zipWith (\l -> fmap (labelRows l)) customLabel'  -- Depending on which axis to label from transpose.
-                  . fmap (fmap (fastBinJoinCols binWidth' True) . loadSSM opts)  -- Load matrices, possible preparing for fast bin joining
+                  . fmap (fmap (fastBinJoinCols binWidth' True) . loadSSM sub opts)  -- Load matrices, possible preparing for fast bin joining
                   $ matrixPaths'
 
   let sc = maybe

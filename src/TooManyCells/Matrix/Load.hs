@@ -387,22 +387,22 @@ loadBdgBW blacklist excludeFragments binWidth inFile = do
                   , _colNames = fmap Feature features
                   }
 
--- | Load a projection file to get a vector of projections.
-loadProjectionFile :: ProjectionFile -> IO (Vector (X, Y))
-loadProjectionFile =
-    fmap (\ x -> either
-                                error
-                                (fmap getProjection . V.drop 1)
-                                (CSV.decode CSV.NoHeader x :: Either String (Vector [T.Text]))
-         )
-        . BL.readFile
-        . unProjectionFile
-  where
-    getProjection [_, x, y] = ( X . either error fst . T.double $ x
-                              , Y . either error fst . T.double $ y
-                              )
-    getProjection xs        =
-        error $ "\nUnrecognized projection row: " <> show xs
+-- -- | Load a projection file to get a vector of projections. Legacy.
+-- loadProjectionFile :: ProjectionFile -> IO (Vector (X, Y))
+-- loadProjectionFile =
+--     fmap (\ x -> either
+--                                 error
+--                                 (fmap getProjection . V.drop 1)
+--                                 (CSV.decode CSV.NoHeader x :: Either String (Vector [T.Text]))
+--          )
+--         . BL.readFile
+--         . unProjectionFile
+--   where
+--     getProjection [_, x, y] = ( X . either error fst . T.double $ x
+--                               , Y . either error fst . T.double $ y
+--                               )
+--     getProjection xs        =
+--         error $ "\nUnrecognized projection row: " <> show xs
 
 -- | Load a projection file as a map.
 loadProjectionMap :: ProjectionFile -> IO ProjectionMap
@@ -418,7 +418,7 @@ loadProjectionMap =
         . BL.readFile
         . unProjectionFile
   where
-    getProjection m = ( Cell $ lookupErr "barcode" m
+    getProjection m = ( Cell $ lookupErr "item" m
                       , ( fmap Sample $ Map.lookup "sample" m
                         , ( X . either error fst . T.double . lookupErr "x" $ m
                           , Y . either error fst . T.double . lookupErr "y" $ m

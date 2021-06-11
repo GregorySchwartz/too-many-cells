@@ -5,11 +5,11 @@ MatrixOutput entrypoint into the program.
 -}
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.MatrixOutput where
 
 -- Remote
-import Options.Generic
 import qualified System.Directory as FP
 
 -- Local
@@ -19,13 +19,14 @@ import TooManyCells.File.Types
 import TooManyCells.Matrix.Utility
 import TooManyCells.Matrix.Types
 
-matrixOutputMain :: Options -> IO ()
-matrixOutputMain opts = do
-    let matOutput' = getMatrixOutputType . unHelpful . matOutput $ opts
+matrixOutputMain :: Subcommand -> IO ()
+matrixOutputMain sub@(MatrixOutputCommand opts) = do
+    let matOutput' = getMatrixOutputType . matOutput $ opts
 
     -- Load matrix once.
-    scRes <- loadAllSSM opts
+    scRes <- loadAllSSM sub $ (loadMatrixOptions :: MatrixOutput -> LoadMatrixOptions) opts
     let processedSc = fmap fst scRes
 
     -- Write matrix
     writeMatrixLike (MatrixTranspose False) matOutput' . extractSc $ processedSc
+matrixOutputMain _ = error "Wrong path in matrix-output, contact Gregory Schwartz for this error."

@@ -12,6 +12,7 @@ MakeTree entrypoint into the program.
 {-# LANGUAGE PackageImports    #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.MakeTree where
 
@@ -35,7 +36,6 @@ import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
 import Math.Modularity.Types (Q (..))
-import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import Text.Read (readMaybe, readEither)
 import TextShow (showt)
@@ -74,101 +74,77 @@ import TooManyCells.Program.LoadMatrix
 import TooManyCells.Program.Options
 import TooManyCells.Program.Utility
 
-makeTreeMain :: Options -> IO ()
-makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
+makeTreeMain :: Subcommand -> IO ()
+makeTreeMain sub@(MakeTreeCommand opts) = H.withEmbeddedR defaultConfig $ do
     let readOrErr err = fromMaybe (error err) . readMaybe
-        matrixPaths'      = unHelpful . matrixPath $ opts
+        matrixPaths'      = matrixPath . (loadMatrixOptions :: MakeTree -> LoadMatrixOptions) $ opts
         labelsFile'       =
-            fmap LabelFile . unHelpful . labelsFile $ opts
+            fmap LabelFile . (labelsFile :: MakeTree -> Maybe String) $ opts
         prior'            =
-            fmap PriorPath . unHelpful . prior $ opts
+            fmap PriorPath . (prior :: MakeTree -> Maybe String) $ opts
         updateTreeRows'   =
-          UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
-        delimiter'        =
-            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        eigenGroup'       =
-            maybe SignGroup (readOrErr "Cannot read --eigen-group.")
-              . unHelpful
-              . eigenGroup
-              $ opts
-        dense'            = DenseFlag . unHelpful . dense $ opts
-        normalizations'   = getNormalization opts
-        numEigen'         = fmap NumEigen . unHelpful . numEigen $ opts
-        numRuns'          = fmap NumRuns . unHelpful . numRuns $ opts
-        minSize'          = fmap MinClusterSize . unHelpful . minSize $ opts
-        maxStep'          = fmap MaxStep . unHelpful . maxStep $ opts
+          UpdateTreeRowsFlag . not . (noUpdateTreeRows :: MakeTree -> Bool) $ opts
+        delimiter'        = Delimiter
+                          . (delimiter :: LoadMatrixOptions -> Char)
+                          . (loadMatrixOptions :: MakeTree -> LoadMatrixOptions)
+                          $ opts
+        eigenGroup'       = eigenGroup opts
+        dense'            = DenseFlag . dense $ opts
+        normalizations'   = getNormalization sub
+                          . normalization
+                          $ (loadMatrixOptions :: MakeTree -> LoadMatrixOptions) opts
+        numEigen'         = fmap NumEigen . numEigen $ opts
+        numRuns'          = fmap NumRuns . numRuns $ opts
+        minSize'          = fmap MinClusterSize . minSize $ opts
+        maxStep'          = fmap MaxStep . maxStep $ opts
         maxProportion'    =
-            fmap MaxProportion . unHelpful . maxProportion $ opts
-        minDistance'       = fmap MinDistance . unHelpful . minDistance $ opts
-        minModularity'     = fmap Q . unHelpful . minModularity $ opts
-        minDistanceSearch' = fmap MinDistanceSearch . unHelpful . minDistanceSearch $ opts
-        smartCutoff'      = fmap SmartCutoff . unHelpful . smartCutoff $ opts
+            fmap MaxProportion . maxProportion $ opts
+        minDistance'       = fmap MinDistance . minDistance $ opts
+        minModularity'     = fmap Q . minModularity $ opts
+        minDistanceSearch' = fmap MinDistanceSearch . minDistanceSearch $ opts
+        smartCutoff'      = fmap SmartCutoff . smartCutoff $ opts
         elbowCutoff'      =
           fmap ( ElbowCutoff
                . readOrErr "Cannot read --elbow-cutoff."
                )
-            . unHelpful
             . elbowCutoff
             $ opts
-        customCut'        = CustomCut . Set.fromList . unHelpful . customCut $ opts
-        rootCut'          = fmap RootCut . unHelpful . rootCut $ opts
+        customCut'        = CustomCut . Set.fromList . customCut $ opts
+        rootCut'          = fmap RootCut . rootCut $ opts
         dendrogramOutput' = DendrogramFile
                           . fromMaybe "dendrogram.svg"
-                          . unHelpful
                           . dendrogramOutput
                           $ opts
         matrixOutput'     = fmap (getMatrixOutputType . (unOutputDirectory output' FP.</>))
-                          . unHelpful
                           . matrixOutput
                           $ opts
         labelMapOutputFlag' =
-            LabelMapOutputFlag . unHelpful . labelsOutput $ opts
+            LabelMapOutputFlag . labelsOutput $ opts
         fragmentsOutputFlag' =
-            FragmentsOutputFlag . unHelpful . fragmentsOutput $ opts
+            FragmentsOutputFlag . fragmentsOutput $ opts
         drawLeaf'         =
             maybe
               (maybe DrawText (const (DrawItem DrawLabel)) labelsFile')
               (readOrErr "Cannot read --draw-leaf. If using DrawContinuous, remember to put features in a list: DrawItem (DrawContinuous [\\\"FEATURE\\\"])")
-                . unHelpful
                 . drawLeaf
                 $ opts
-        drawCollection'   =
-            maybe PieChart (readOrErr "Cannot read --draw-collection.")
-              . unHelpful
-              . drawCollection
-              $ opts
-        drawMark'         = maybe MarkNone (readOrErr "Cannot read --draw-mark.")
-                          . unHelpful
-                          . drawMark
-                          $ opts
-        drawNodeNumber'   = DrawNodeNumber . unHelpful . drawNodeNumber $ opts
-        drawMaxNodeSize'  =
-            DrawMaxNodeSize . fromMaybe 72 . unHelpful . drawMaxNodeSize $ opts
+        drawCollection'   = drawCollection opts
+        drawMark'         = drawMark opts
+        drawNodeNumber'   = DrawNodeNumber . drawNodeNumber $ opts
+        drawMaxNodeSize'  = DrawMaxNodeSize . drawMaxNodeSize $ opts
         drawMaxLeafNodeSize' = DrawMaxLeafNodeSize
                              . fromMaybe (unDrawMaxNodeSize drawMaxNodeSize')
-                             . unHelpful
                              . drawMaxLeafNodeSize
                              $ opts
         drawNoScaleNodes' =
-            DrawNoScaleNodesFlag . unHelpful . drawNoScaleNodes $ opts
-        drawLegendSep'    = DrawLegendSep
-                          . fromMaybe 1
-                          . unHelpful
-                          . drawLegendSep
-                          $ opts
-        drawLegendAllLabels' =
-            DrawLegendAllLabels . unHelpful . drawLegendAllLabels $ opts
-        drawPalette' = maybe
-                        Set1
-                        (fromMaybe (error "Cannot read --palette.") . readMaybe)
-                     . unHelpful
-                     . drawPalette
-                     $ opts
+            DrawNoScaleNodesFlag . drawNoScaleNodes $ opts
+        drawLegendSep'    = DrawLegendSep . drawLegendSep $ opts
+        drawLegendAllLabels' = DrawLegendAllLabels . drawLegendAllLabels $ opts
+        drawPalette' = drawPalette opts
         drawColors'       = fmap ( CustomColors
                                  . fmap sRGB24read
                                  . (\x -> readOrErr "Cannot read --draw-colors." x :: [String])
                                  )
-                          . unHelpful
                           . drawColors
                           $ opts
         drawDiscretize' = (=<<) (\x -> either error Just
@@ -181,36 +157,31 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
                                     (Right . CustomColorMap . fmap sRGB24read)
                                 $ (readEither x :: Either String [String])
                                 )
-                        . unHelpful
                         . drawDiscretize
                         $ opts
           where
             finalError err x = "Error in draw-discretize: " <> err <> " " <> x
         drawScaleSaturation' =
-            fmap DrawScaleSaturation . unHelpful . drawScaleSaturation $ opts
+            fmap DrawScaleSaturation . drawScaleSaturation $ opts
         drawItemLineWeight' = fmap DrawItemLineWeight
-                            . unHelpful
                             . drawItemLineWeight
                             $ opts
-        drawFont' = fmap DrawFont . unHelpful . drawFont $ opts
-        drawBarBounds' = DrawBarBounds . unHelpful . drawBarBounds $ opts
-        order'            = Order . fromMaybe 1 . unHelpful . order $ opts
-        clumpinessMethod' =
-            maybe Clump.Majority (readOrErr "Cannot read --clumpiness-method.")
-              . unHelpful
-              . clumpinessMethod
-              $ opts
-        projectionFile' =
-            fmap ProjectionFile . unHelpful . projectionFile $ opts
-        output'           =
-            OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
+        drawFont' = fmap DrawFont . drawFont $ opts
+        drawBarBounds' = DrawBarBounds . drawBarBounds $ opts
+        order'            = Order . (order :: MakeTree -> Double) $ opts
+        clumpinessMethod' = clumpinessMethod opts
+        projectionFile' = fmap ProjectionFile
+                        . (projectionFile :: MakeTree -> Maybe String)
+                        $ opts
+        output' = OutputDirectory . (output :: MakeTree -> String) $ opts
 
     pb <- Progress.newProgressBar Progress.defStyle 10 (Progress.Progress 0 11 ())
     -- Increment  progress bar.
     Progress.incProgress pb 1
 
     -- Load matrix once.
-    scRes <- loadAllSSM opts
+    scRes <- loadAllSSM sub
+           $ (loadMatrixOptions :: MakeTree -> LoadMatrixOptions) opts
     let processedSc = fmap fst scRes
         customLabelMap = join . fmap snd $ scRes
 
@@ -282,7 +253,7 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
 
     let birchMat = processedSc
         birchSimMat =
-            case (not . null . unHelpful . matrixPath $ opts, drawCollection') of
+            case (not . null . matrixPath . (loadMatrixOptions :: MakeTree -> LoadMatrixOptions) $ opts, drawCollection') of
                 (True, CollectionGraph{} )  ->
                     Just
                         . B2Matrix
@@ -511,3 +482,4 @@ makeTreeMain opts = H.withEmbeddedR defaultConfig $ do
         H.io $ Progress.incProgress pb 1
 
         return ()
+makeTreeMain _ = error "Wrong path in make-tree, contact Gregory Schwartz for this error."

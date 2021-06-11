@@ -12,6 +12,7 @@ Diversity entry point into program.
 {-# LANGUAGE PackageImports    #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.Diversity where
 
@@ -24,7 +25,6 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid ((<>))
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
-import Options.Generic
 import qualified Data.ByteString.Lazy.Char8 as B
 import qualified Data.Colour.Palette.BrewerSet as D
 import qualified Data.Colour.Palette.Harmony as D
@@ -45,23 +45,23 @@ import TooManyCells.Diversity.Load
 import TooManyCells.Diversity.Plot
 import TooManyCells.Diversity.Types
 import TooManyCells.File.Types
-import TooManyCells.Program.Options
+import qualified TooManyCells.Program.Options as Opt
 
 -- | Diversity path.
-diversityMain :: Options -> IO ()
-diversityMain opts = do
+diversityMain :: Subcommand -> IO ()
+diversityMain (DiversityCommand opts) = do
     let priors'         =
-            fmap PriorPath . unHelpful . priors $ opts
+            fmap PriorPath . priors $ opts
         delimiter'     =
-            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+            Delimiter . (delimiter :: Opt.Diversity -> Char) $ opts
         labelsFile'       =
-            fmap LabelFile . unHelpful . labelsFile $ opts
+            fmap LabelFile . (labelsFile :: Opt.Diversity -> Maybe String) $ opts
         output'         =
-            OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
-        order'       = Order . fromMaybe 1 . unHelpful . order $ opts
-        start'       = Start . fromMaybe 0 . unHelpful . start $ opts
-        interval'    = Interval . fromMaybe 1 . unHelpful . interval $ opts
-        endMay'      = fmap End . unHelpful . end $ opts
+            OutputDirectory . (output :: Opt.Diversity -> String) $ opts
+        order'       = Order . (order :: Opt.Diversity -> Double) $ opts
+        start'       = Start . start $ opts
+        interval'    = Interval . interval $ opts
+        endMay'      = fmap End . end $ opts
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
@@ -127,3 +127,4 @@ diversityMain opts = do
         return ()
 
     return ()
+diversityMain _ = error "Wrong path in diversity, contact Gregory Schwartz for this error."

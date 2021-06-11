@@ -5,13 +5,13 @@ Motif entry point for command line program.
 -}
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.Motifs where
 
 -- Remote
 import Control.Monad (mfilter)
 import Data.Maybe (fromMaybe)
-import Options.Generic
 import TextShow (showt)
 import qualified Data.Text as T
 import qualified Turtle as TU
@@ -23,28 +23,23 @@ import TooManyCells.Motifs.Types
 import TooManyCells.Program.Options
 
 -- | Motif path.
-motifsMain :: Options -> IO ()
-motifsMain opts = do
-  let genome' = GenomeFile . unHelpful . motifGenome $ opts
-      topN' = TopN . fromMaybe 100 . unHelpful . topN $ opts
+motifsMain :: Subcommand -> IO ()
+motifsMain (MotifsCommand opts) = do
+  let genome' = GenomeFile . motifGenome $ opts
+      topN' = TopN . (topN :: Motifs -> Int) $ opts
       motifCommand' = MotifCommand
                     . fromMaybe "meme %s -nmotifs 50 -oc %s"
-                    . unHelpful
                     . motifCommand
                     $ opts
       motifGenomeCommand' = fmap MotifGenomeCommand
-                          . unHelpful
                           . motifGenomeCommand
                           $ opts
-      diffFile' = DiffFile . TU.fromText . unHelpful . diffFile $ opts
+      diffFile' = DiffFile . TU.fromText . diffFile $ opts
       backgroundDiffFile' = fmap (BackgroundDiffFile . TU.fromText)
-                          . unHelpful
                           . backgroundDiffFile
                           $ opts
       outDir = OutputDirectory
-             . fromMaybe "out"
-             . unHelpful
-             . output
+             . (output :: Motifs -> String)
              $ opts
 
   TU.mktree . TU.fromText . T.pack . unOutputDirectory $ outDir

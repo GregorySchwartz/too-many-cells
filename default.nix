@@ -32,7 +32,18 @@ let
 
   # TooManyCells package
   pkg = compiler.developPackage {
-    root = ./.;
+    name = "too-many-cells";
+    root = builtins.filterSource
+            (path: type:
+              baseNameOf path != ".git"
+              && baseNameOf path != "workshop"
+              && baseNameOf path != "too-many-peaks_doc"
+              && baseNameOf path != "dist-newstyle"
+              && baseNameOf path != "img"
+              && baseNameOf path != "stack-work-profile"
+              && baseNameOf path != ".stack-work"
+              && baseNameOf path != "dist")
+            ./.;  # Filter out directories. Is recursive, but excluding a directory excludes all paths below it too.
     source-overrides = {
       terminal-progress-bar = "0.4.1";
       #birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/54b1e54b07b267be3e9bf7ca8084a7fd8930a501.tar.gz;

@@ -12,6 +12,7 @@ Interactive entry point into program.
 {-# LANGUAGE PackageImports    #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.Interactive where
 
@@ -27,7 +28,6 @@ import Data.Tree (Tree (..))
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
 import Math.Clustering.Spectral.Sparse (b1ToB2, B1 (..), B2 (..))
-import Options.Generic
 import qualified Control.Lens as L
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -46,20 +46,20 @@ import TooManyCells.Program.Options
 import TooManyCells.Program.Utility
 
 -- | Interactive tree interface.
-interactiveMain :: Options -> IO ()
-interactiveMain opts = H.withEmbeddedR defaultConfig $ do
+interactiveMain :: Subcommand -> IO ()
+interactiveMain sub@(InteractiveCommand opts) = H.withEmbeddedR defaultConfig $ do
     let labelsFile'    =
-            fmap LabelFile . unHelpful . labelsFile $ opts
-        prior'         = maybe (error "\nRequires --prior") PriorPath
-                       . unHelpful
-                       . prior
-                       $ opts
+            fmap LabelFile . (labelsFile :: Interactive -> Maybe String) $ opts
+        prior'         = PriorPath . (prior :: Interactive -> String) $ opts
         updateTreeRows' =
-          UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
-        delimiter'     =
-            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+          UpdateTreeRowsFlag . not . (noUpdateTreeRows :: Interactive -> Bool) $ opts
+        delimiter'        = Delimiter
+                          . (delimiter :: LoadMatrixOptions -> Char)
+                          . (loadMatrixOptions :: Interactive -> LoadMatrixOptions)
+                          $ opts
 
-    scRes <- loadAllSSM opts
+    scRes <- loadAllSSM sub
+           $ (loadMatrixOptions :: Interactive -> LoadMatrixOptions) opts
     let mat = fmap fst scRes
         customLabelMap = join . fmap snd $ scRes
 
@@ -86,3 +86,4 @@ interactiveMain opts = H.withEmbeddedR defaultConfig $ do
         $ mat
 
     return ()
+interactiveMain _ = error "Wrong path in interactive, contact Gregory Schwartz for this error."

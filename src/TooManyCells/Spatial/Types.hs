@@ -11,6 +11,7 @@ module TooManyCells.Spatial.Types where
 -- Remote
 import BirchBeer.Types (Feature)
 import Data.Colour.Palette.BrewerSet (Kolor)
+import qualified Data.Map.Strict as Map
 
 -- Local
 

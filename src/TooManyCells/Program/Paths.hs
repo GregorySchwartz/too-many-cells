@@ -12,6 +12,7 @@ Paths entry point into program.
 {-# LANGUAGE PackageImports    #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.Paths where
 
@@ -24,7 +25,6 @@ import Data.Bool (bool)
 import Data.Maybe (fromMaybe)
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
-import Options.Generic
 import Text.Read (readMaybe)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -44,32 +44,25 @@ import TooManyCells.File.Types
 import TooManyCells.Matrix.Types
 
 -- | Paths path.
-pathsMain :: Options -> IO ()
-pathsMain opts = do
+pathsMain :: Subcommand -> IO ()
+pathsMain (PathsCommand opts) = do
     let readOrErr err = fromMaybe (error err) . readMaybe
         labelsFile'   =
             maybe (error "\nNeed a label file.") LabelFile
-                . unHelpful
-                . labelsFile
+                . (labelsFile :: Paths -> Maybe String)
                 $ opts
         prior'        =
             maybe (error "\nNeed a prior path containing tree.") PriorPath
-                . unHelpful
-                . prior
+                . (prior :: Paths -> Maybe String)
                 $ opts
-        delimiter'    =
-            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
-        bandwidth'    = Bandwidth . fromMaybe 1 . unHelpful . bandwidth $ opts
-        direction'    = FlipFlag . unHelpful . flipDirection $ opts
-        shallow'      = ShallowFlag . unHelpful . shallowStart $ opts
-        palette'      = maybe Set1 ( readOrErr "Cannot read --paths-palette")
-                      . unHelpful
-                      . pathsPalette
-                      $ opts
-        pathDistance' =
-            maybe PathStep read . unHelpful . pathDistance $ opts
+        delimiter'    = Delimiter . (delimiter :: Paths -> Char) $ opts
+        bandwidth'    = Bandwidth . bandwidth $ opts
+        direction'    = FlipFlag . flipDirection $ opts
+        shallow'      = ShallowFlag . shallowStart $ opts
+        palette'      = pathsPalette opts
+        pathDistance' = pathDistance opts
         output'       =
-            OutputDirectory . fromMaybe "out" . unHelpful . output $ opts
+            OutputDirectory . (output :: Paths -> String) $ opts
 
     -- Where to place output files.
     FP.createDirectoryIfMissing True . unOutputDirectory $ output'
@@ -100,3 +93,4 @@ pathsMain opts = do
         return ()
 
     return ()
+pathsMain _ = error "Wrong path in paths, contact Gregory Schwartz for this error."

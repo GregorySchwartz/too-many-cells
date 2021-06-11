@@ -12,6 +12,7 @@ Differential entry point for command line program.
 {-# LANGUAGE PackageImports    #-}
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE TupleSections     #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 
 module TooManyCells.Program.Differential where
 
@@ -26,7 +27,6 @@ import Data.Maybe (fromMaybe, isJust, isNothing)
 import Data.Monoid ((<>))
 import Language.R as R
 import Math.Clustering.Hierarchical.Spectral.Types (getClusterItemsDend, EigenGroup (..))
-import Options.Generic
 import System.IO (hPutStrLn, stderr)
 import Text.Read (readMaybe)
 import qualified Control.Lens as L
@@ -44,36 +44,33 @@ import TooManyCells.MakeTree.Types
 import TooManyCells.MakeTree.Utility
 import TooManyCells.File.Types
 import TooManyCells.Matrix.Utility
-import TooManyCells.Program.Options
 import TooManyCells.Program.LoadMatrix
 import TooManyCells.MakeTree.Load
 
 -- | Differential path.
-differentialMain :: Options -> IO ()
-differentialMain opts = do
+differentialMain :: Subcommand -> IO ()
+differentialMain sub@(DifferentialCommand opts) = do
     let readOrErr err = fromMaybe (error err) . readMaybe
-        delimiter'     =
-            Delimiter . fromMaybe ',' . unHelpful . delimiter $ opts
+        delimiter'        = Delimiter
+                          . (delimiter :: LoadMatrixOptions -> Char)
+                          . (loadMatrixOptions :: Differential -> LoadMatrixOptions)
+                          $ opts
         labelsFile' =
-            fmap LabelFile . unHelpful . labelsFile $ opts
+            fmap LabelFile . (labelsFile :: Differential -> Maybe String) $ opts
         nodes'    =
-          DiffNodes . readOrErr "Cannot read --nodes." . unHelpful . nodes $ opts
-        prior'    = PriorPath
-                  . fromMaybe (error "\nRequires a previous run to get the graph.")
-                  . unHelpful
-                  . prior
-                  $ opts
-        topN'     = TopN . fromMaybe 100 . unHelpful . topN $ opts
-        features'    = fmap Feature . unHelpful . features $ opts
-        aggregate' = Aggregate . unHelpful . aggregate $ opts
-        separateNodes' = SeparateNodes . unHelpful . plotSeparateNodes $ opts
-        separateLabels' = SeparateLabels . unHelpful . plotSeparateLabels $ opts
-        violinFlag' = ViolinFlag . unHelpful . plotViolin $ opts
-        noOutlierFlag' = NoOutlierFlag . unHelpful . plotNoOutlier $ opts
-        updateTreeRows' = UpdateTreeRowsFlag . not . unHelpful . noUpdateTreeRows $ opts
-        edger' = Edger . unHelpful . edger $ opts
-        subsampleGroups' = fmap Subsample . unHelpful . subsampleGroups $ opts
-        seed' = Seed . fromMaybe 0 . unHelpful . seed $ opts
+          DiffNodes . readOrErr "Cannot read --nodes." . nodes $ opts
+        prior'    = PriorPath . (prior :: Differential -> String) $ opts
+        topN'     = TopN . (topN :: Differential -> Int) $ opts
+        features'    = fmap Feature . features $ opts
+        aggregate' = Aggregate . aggregate $ opts
+        separateNodes' = SeparateNodes . plotSeparateNodes $ opts
+        separateLabels' = SeparateLabels . plotSeparateLabels $ opts
+        violinFlag' = ViolinFlag . plotViolin $ opts
+        noOutlierFlag' = NoOutlierFlag . plotNoOutlier $ opts
+        updateTreeRows' = UpdateTreeRowsFlag . not . (noUpdateTreeRows :: Differential -> Bool) $ opts
+        edger' = Edger . edger $ opts
+        subsampleGroups' = fmap Subsample . subsampleGroups $ opts
+        seed' = Seed . seed $ opts
         labels'   = fmap ( DiffLabels
                          . L.over L.both ( (\x -> bool (Just x) Nothing . Set.null $ x)
                                          . Set.fromList
@@ -81,16 +78,16 @@ differentialMain opts = do
                                          )
                          . readOrErr "Cannot read --labels."
                          )
-                  . unHelpful
                   . labels
                   $ opts
         (combined1, combined2) = combineNodesLabels nodes' labels'
-        plotOutputR = fromMaybe "out.pdf" . unHelpful . plotOutput $ opts
+        plotOutputR = plotOutput opts
 
     when (isNothing labelsFile' && isJust labels') $
       hPutStrLn stderr "Warning: labels requested with no label file, ignoring labels..."
 
-    scRes <- loadAllSSM opts
+    scRes <- loadAllSSM sub
+           $ (loadMatrixOptions :: Differential -> LoadMatrixOptions) opts
     let processedSc = fmap fst scRes
         customLabelMap = join . fmap snd $ scRes
 
@@ -199,3 +196,4 @@ differentialMain opts = do
           [H.r| suppressMessages(ggsave(diffNormPlot_hs[[1]], file = normOutputR_hs)) |]
 
           return ()
+differentialMain _ = error "Wrong path in differential, contact Gregory Schwartz for this error."

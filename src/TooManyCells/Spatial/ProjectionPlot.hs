@@ -11,15 +11,16 @@ on the left with cumulative distribution functions of features on the right.
 {-# LANGUAGE DeriveGeneric #-}
 
 module TooManyCells.Spatial.ProjectionPlot
-    (
+    ( plotSpatialProjection
     ) where
 
 -- Remote
-import BirchBeer.Types (Feature (..))
+import BirchBeer.Types (Feature (..), LabelMap (..), Label (..), getColNames, Id (..), Sample (..))
 import Data.Bool (bool)
 import Data.Colour.Palette.BrewerSet (Kolor, brewerSet, ColorCat (..) )
 import Data.Colour.Palette.Harmony (colorRamp)
 import Data.Colour.SRGB (sRGB24show)
+import Data.List (genericLength)
 import Data.Maybe (fromMaybe, isJust, catMaybes)
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
@@ -38,19 +39,23 @@ import qualified Turtle as TU
 
 -- Local
 import TooManyCells.File.Types (OutputDirectory (..))
+import TooManyCells.Matrix.Types (SingleCells (..), ProjectionMap (..), X (..), Y (..))
+import TooManyCells.Spatial.Types (ColorMap (..), Range (..))
 import TooManyCells.Spatial.Utility
 
 -- | Get the minimum and maximum values for a projection map.
 getMinMax :: ProjectionMap -> ((Double, Double), (Double, Double))
-getMinMax pm =
+getMinMax =
   fromMaybe ((0, 0), (0, 0))
-    . L.sequenceOf L.both  -- m ((a, b), (c, d))
-    . L.over L.both (L.sequenceOf L.both)  -- (m (a, b), m (b, c))
-    . L.over L.both (F.fold ((,) <$> F.minimum <*> F.maximum))  -- ((m a, m b), (m c, m d))
+    . (L.sequenceOf L.both :: (Maybe (Double, Double), Maybe (Double, Double)) -> Maybe ((Double, Double), (Double, Double)))  -- m ((a, b), (c, d))
+    . (L.over L.both (L.sequenceOf L.both) :: ((Maybe Double, Maybe Double), (Maybe Double, Maybe Double)) -> (Maybe (Double, Double), Maybe (Double, Double)))  -- (m (a, b), m (b, c))
+    . (L.over L.both (Fold.fold ((,) <$> Fold.minimum <*> Fold.maximum)) :: ([Double], [Double]) -> ((Maybe Double, Maybe Double), (Maybe Double, Maybe Double))) -- ((m a, m b), (m c, m d))
+    . (L.over (L._2 . L.mapped) unY :: ([Double], [Y]) -> ([Double], [Double]) )
+    . L.over (L._1 . L.mapped) unX
+    . unzip
     . fmap snd
     . Map.elems
     . unProjectionMap
-    . fmap (maybe 0 (either error fst . T.double) . Map.lookup f . unRow)
 
 -- | Get the color mapping from feature to color.
 getColorMap :: [Feature] -> ColorMap
@@ -106,8 +111,12 @@ legendSpec lm =
                   "pick_legend"
                   VL.Multi
                   [ VL.Fields [ "label" ], VL.Empty ]
-    labels =
-      Set.toAscList . Set.fromList . fmap unLabel . Map.elems . unLabelMap $ lm
+    labels = Set.toAscList
+           . Set.fromList
+           . fmap unLabel
+           . Map.elems
+           . unLabelMap
+           $ lm
     colors =
       fmap (T.pack . sRGB24show) . colorRamp (length labels) . brewerSet Set1 $ 9
     encoding =
@@ -131,14 +140,14 @@ getCircleSpec lm range colorMap features =
   where
     circleEnc =
       VL.encoding
-        . VL.position VL.X [ VL.PName "CenterX"
+        . VL.position VL.X [ VL.PName "x"
                             , VL.PmType VL.Quantitative
                             , VL.PAxis [ VL.AxTitle "X Axis" ]
                             , VL.PScale
                                 [ VL.SDomain (VL.DNumbers [minX range, maxX range])
                                 ]
                             ]
-        . VL.position VL.Y [ VL.PName "CenterY"
+        . VL.position VL.Y [ VL.PName "y"
                             , VL.PmType VL.Quantitative
                             , VL.PAxis [ VL.AxTitle "Y Axis" ]
                             , VL.PScale
@@ -202,14 +211,20 @@ labelColorScale lm = VL.MScale [ VL.SDomain (VL.DStrings labels)
     colors =
       fmap (T.pack . sRGB24show) . colorRamp (length labels) . brewerSet Set1 $ 9
 
-plotSpatialProjection ::
-  OutputDirectory -> Maybe LabelMap -> ProjectionMap -> SingleCells -> IO ()
-plotSpatialProjection labelMap pm sc = do
-  let dataSet = scToVLData labelMap pm sc
-      features = fmap Feature . getColNames $ sc
+plotSpatialProjection :: OutputDirectory
+                      -> Maybe LabelMap
+                      -> ProjectionMap
+                      -> SingleCells
+                      -> Maybe Sample
+                      -> IO ()
+plotSpatialProjection outputDir' labelMap' pm sc sample = do
+  let labelMap = LabelMap . Map.insert (Id "") (Label "NA") . unLabelMap
+             <$> labelMap'  -- Insert dummy cell to account for NA labels.
+      dataSet = scToVLData sample labelMap pm sc
+      features = fmap Feature . V.toList . getColNames $ sc
       ((miX, maX), (miY, maY)) = getMinMax pm
       range = Range miX maX miY maY
-      numWindowCols = ceiling . sqrt . length $ features
+      numWindowCols = ceiling . sqrt . genericLength $ features
 
       colorMap = getColorMap features
       allSelections =
@@ -242,6 +257,8 @@ plotSpatialProjection labelMap pm sc = do
               , allSpec
               ]
 
-  TU.mktree $ unOutputDirectory outputDir'
-  let outputPath = unOutputDirectory outputDir' FP.</> "projection.html"
+  TU.mktree . TU.fromText . T.pack $ unOutputDirectory outputDir'
+  let fileName (Just (Sample x)) = T.unpack x <> "_projection.html"
+      fileName Nothing = "projection.html"
+      outputPath = unOutputDirectory outputDir' FP.</> fileName sample
   VL.toHtmlFile outputPath p

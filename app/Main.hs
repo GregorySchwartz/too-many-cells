@@ -9,7 +9,7 @@ Clusters single cell data.
 module Main where
 
 -- Remote
-import Options.Generic
+import Options.Applicative
 
 -- Local
 import TooManyCells.Program.Differential
@@ -26,17 +26,22 @@ import TooManyCells.Program.Spatial
 
 main :: IO ()
 main = do
-    opts <- getRecord "too-many-cells, Gregory W. Schwartz.\
-                      \ Clusters and analyzes single cell data."
+  let opts = info (sub <**> helper)
+                ( fullDesc
+              <> progDesc "Clusters and analyzes single cell data."
+              <> header "too-many-cells, Gregory W. Schwartz" )
 
-    case opts of
-        MakeTree{}     -> makeTreeMain opts
-        Interactive{}  -> interactiveMain opts
-        Differential{} -> differentialMain opts
-        Diversity{}    -> diversityMain opts
-        Paths{}        -> pathsMain opts
-        Classify{}     -> classifyMain opts
-        Peaks{}        -> peaksMain opts
-        Motifs{}       -> motifsMain opts
-        MatrixOutput{} -> matrixOutputMain opts
-        Spatial{}      -> spatialMain opts
+  config <- customExecParser (prefs (showHelpOnEmpty <> showHelpOnError)) opts
+
+  let mainEntry (MakeTreeCommand _)     = makeTreeMain config
+      mainEntry (InteractiveCommand _)  = interactiveMain config
+      mainEntry (DifferentialCommand _) = differentialMain config
+      mainEntry (DiversityCommand _)    = diversityMain config
+      mainEntry (PathsCommand _)        = pathsMain config
+      mainEntry (ClassifyCommand _)     = classifyMain config
+      mainEntry (PeaksCommand _)        = peaksMain config
+      mainEntry (MotifsCommand _)       = motifsMain config
+      mainEntry (MatrixOutputCommand _) = matrixOutputMain config
+      mainEntry (SpatialCommand _)      = spatialMain config
+
+  mainEntry config
