@@ -220,7 +220,7 @@ plotSpatialProjection :: OutputDirectory
 plotSpatialProjection outputDir' labelMap' pm sc sample = do
   let labelMap = LabelMap . Map.insert (Id "") (Label "NA") . unLabelMap
              <$> labelMap'  -- Insert dummy cell to account for NA labels.
-      dataSet = scToVLData sample labelMap pm sc
+      dataSet = scToVLData labelMap pm sc
       features = fmap Feature . V.toList . getColNames $ sc
       ((miX, maX), (miY, maY)) = getMinMax pm
       range = Range miX maX miY maY

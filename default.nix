@@ -7,15 +7,16 @@ let
              packageOverrides = super: let self = super.pkgs; in {
                 Renv = super.rWrapper.override {
                   packages = with self.rPackages; [
-                    devtools
-                    reshape2
-                    locfit
-                    limma
-                    jsonlite
-                    ggplot2
                     cowplot
+                    devtools
                     dplyr
                     edgeR
+                    ggplot2
+                    jsonlite
+                    limma
+                    locfit
+                    reshape2
+                    spatstat
                   ];
                 };
               };
@@ -26,6 +27,9 @@ let
   fontsConf = pkgs.makeFontsConf {
     fontDirectories = [];
   };
+
+  # Additional dependencies
+  annospat = pkgs.callPackage ./deps/annospat.nix {};
 
   # Haskell compiler
   compiler = pkgs.haskell.packages."${compilerVersion}";
@@ -91,6 +95,7 @@ let
                   pkgs.glibcLocales
                   pkgs.ghcid
                   pkgs.cabal-install
+                  annospat
                   pkgs.MACS2
                   pkgs.kent
                   pkgs.meme-suite
@@ -116,6 +121,7 @@ in (pkg.overrideAttrs(attrs: {
               --prefix 'PATH' ':' "${pkgs.kent}/bin/" \
               --prefix 'PATH' ':' "${pkgs.MACS2}/bin/" \
               --prefix 'PATH' ':' "${pkgs.meme-suite}/bin/" \
+              --prefix 'PATH' ':' "${annospat}/bin/" \
               --prefix-contents 'R_LIBS_SITE' ':' "$out/paths/r_path.txt" \
               --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \

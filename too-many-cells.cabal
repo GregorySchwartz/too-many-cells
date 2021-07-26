@@ -57,7 +57,9 @@ library
                      , TooManyCells.Program.Peaks
                      , TooManyCells.Program.Spatial
                      , TooManyCells.Program.Utility
+                     , TooManyCells.Spatial.AnnoSpat
                      , TooManyCells.Spatial.ProjectionPlot
+                     , TooManyCells.Spatial.Relationships
                      , TooManyCells.Spatial.Types
                      , TooManyCells.Spatial.Utility
   build-depends:       base >= 4.7 && < 5

@@ -144,11 +144,22 @@ loadSSM sub opts matrixPath' = do
 
   fmap (windowSc binWidth' . whiteListFilter cellWhitelist . transposeFunc) unFilteredSc
 
+-- | Ensure proper orientation of matrix based on the number of transposes for
+-- normalizations.
+ensureProperAxis :: [NormType] -> [NormType]
+ensureProperAxis xs = bool (xs <> [TransposeNorm]) xs
+                    . (== 0)
+                    . flip mod 2
+                    . length
+                    . filter (== TransposeNorm)
+                    $ xs
+
 -- | Load all single cell matrices.
 loadAllSSM :: Subcommand -> LoadMatrixOptions -> IO (Maybe (SingleCells, Maybe LabelMap))
 loadAllSSM sub opts = runMaybeT $ do
   let matrixPaths'       = matrixPath $ opts
-      normalizations'    = getNormalization sub (normalization opts)
+      normalizations'    =
+        ensureProperAxis $ getNormalization sub (normalization opts)
       pca'               = fmap PCADim . pca $ opts
       lsa'               = fmap LSADim . lsa $ opts
       svd'               = fmap SVDDim . svd $ opts
@@ -211,6 +222,8 @@ loadAllSSM sub opts = runMaybeT $ do
       normMat TotalNorm      = totalScaleSparseMat
       normMat (LogCPMNorm b) = logCPMSparseMat b
       normMat QuantileNorm   = quantileScaleSparseMat
+      normMat MinMaxNorm     = minMaxNormSparseMat
+      normMat TransposeNorm  = transposeSparseMat
       normMat NoneNorm       = id
       applyNorms mat = foldl' (\acc norm -> L.over matrix (normMat norm) acc) mat normalizations'
       processSc = L.over matrix (MatObsRow . S.sparsifySM . unMatObsRow)

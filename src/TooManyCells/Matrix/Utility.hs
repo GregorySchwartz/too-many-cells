@@ -13,6 +13,7 @@ module TooManyCells.Matrix.Utility
     ( matToRMat
     , scToRMat
     , sparseToHMat
+    , sparseMatToSparseRMat
     , hToSparseMat
     , matToHMat
     , matToSpMat
@@ -29,6 +30,7 @@ module TooManyCells.Matrix.Utility
     , extractCellSc
     , extractCellsSc
     , removeCellsSc
+    , subsetCellsSc
     , extractCellV
     , aggSc
     ) where
@@ -36,6 +38,7 @@ module TooManyCells.Matrix.Utility
 -- Remote
 import BirchBeer.Types
 import Codec.Compression.GZip (compress)
+import Control.Monad (liftM2)
 import Control.Monad.Managed (runManaged)
 import Control.Monad.State (MonadState (..), State (..), evalState, execState, modify)
 import Control.Monad.IO.Class (MonadIO)
@@ -44,7 +47,7 @@ import Data.Char (toUpper)
 import Data.Function (on)
 import Data.Hashable (Hashable)
 import Data.List (maximumBy, isInfixOf, foldl')
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, catMaybes)
 import Data.Matrix.MatrixMarket (Matrix(RMatrix, IntMatrix), Structure (..), writeMatrix')
 import Data.Scientific (toRealFloat, Scientific)
 import Data.Streaming.Zlib (WindowBits)
@@ -60,6 +63,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL
 import qualified Streaming.ByteString.Char8 as BS
 import qualified Data.Clustering.Hierarchical as HC
 import qualified Data.Graph.Inductive as G
+import qualified Data.HashMap.Lazy as HMap
 import qualified Data.HashSet as HSet
 import qualified Data.IntMap.Strict as IMap
 import qualified Data.IntervalMap.Strict as IntervalMap
@@ -98,6 +102,35 @@ matToRMat (MatObsRow m) = do
     -- We want rows as observations and columns as features.
     mat <- [r| as.matrix(fromJSON(mString_hs)) |]
     return . RMatObsRow $ mat
+
+-- | Convert a mat to an RMatrix.
+sparseMatToSparseRMat :: SingleCells -> R s (RMatObsRow s)
+sparseMatToSparseRMat sc = do
+    [r| library(Matrix) |]
+
+    let rowNamesR = fmap (T.unpack . unCell) . V.toList . L.view rowNames $ sc
+        colNamesR = fmap (T.unpack . unFeature) . V.toList . L.view colNames $ sc
+        idxs = S.toListSM . unMatObsRow . L.view matrix $ sc
+        d :: [Double]
+        d = (\(!m, !n) -> fmap fromIntegral [m, n])
+          . S.dimSM
+          . unMatObsRow
+          . L.view matrix
+          $ sc
+        is :: [Double]
+        is = fmap (fromIntegral . (\x -> x + 1) . L.view L._1) idxs
+        js :: [Double]
+        js = fmap (fromIntegral . (\x -> x + 1) . L.view L._2) idxs
+        xs :: [Double]
+        xs = fmap (L.view L._3) idxs
+
+    namedMat <- [r| mat = sparseMatrix(i = is_hs, j = js_hs, x = xs_hs, dims = d_hs)
+                    rownames(mat) = rowNamesR_hs
+                    colnames(mat) = colNamesR_hs
+                    mat
+                |]
+
+    return . RMatObsRow $ namedMat
 
 -- | Convert a sc structure to an RMatrix.
 scToRMat :: SingleCells -> R s (RMatObsRow s)
@@ -341,6 +374,14 @@ extractCellV :: Cell -> SingleCells -> S.SpVector Double
 extractCellV cell sc =
   flip S.extractRow (getCellIdx sc cell) . unMatObsRow . L.view matrix $ sc
 
+-- | Get a single cell vector from a SingleCells type using hashes.
+extractCellHashV ::
+  HMap.HashMap T.Text Int -> SingleCells -> Cell -> Maybe (S.SpVector Double)
+extractCellHashV idxMap sc (Cell cell) =
+  S.extractRow (unMatObsRow . L.view matrix $ sc) <$> idx
+  where
+    idx = HMap.lookup cell idxMap
+
 -- | Remove single cells from a SingleCells type.
 removeCellsSc :: [Cell] -> SingleCells -> SingleCells
 removeCellsSc cells sc = L.set rowNames newRowNames
@@ -348,16 +389,37 @@ removeCellsSc cells sc = L.set rowNames newRowNames
                      $ sc
   where
     blacklistCells = Set.fromList cells
-    blacklistIdxs = Set.fromList . fmap (getCellIdx sc) $ cells
-    whitelistIdxs = filter
-                      (not . flip Set.member blacklistIdxs)
-                      [0..(V.length $ L.view rowNames sc) - 1]
-    newRowNames =
-      V.filter (not . flip Set.member blacklistCells) . L.view rowNames $ sc
+    isValidV = fmap (not . flip Set.member blacklistCells) . L.view rowNames $ sc
+    newRowNames = fmap snd . V.filter fst . V.zip isValidV . L.view rowNames $ sc
     newMatrix = MatObsRow
-              . S.fromRowsL
-              . fmap (\x -> flip S.extractRow x . unMatObsRow . L.view matrix $ sc)
-              $ whitelistIdxs
+              . S.fromRowsV
+              . fmap snd
+              . V.filter fst
+              . V.zip isValidV
+              . V.fromList
+              . S.toRowsL
+              . unMatObsRow
+              . L.view matrix
+              $ sc
+
+-- | Get ordered subset of single cells from a SingleCells type (if they exist).
+subsetCellsSc :: [Cell] -> SingleCells -> SingleCells
+subsetCellsSc cells sc = L.set rowNames newRowNames
+                       . L.set matrix newMatrix
+                       $ sc
+  where
+    idxMap = HMap.fromList
+           . flip zip [0..]
+           . fmap unCell
+           . V.toList
+           . L.view rowNames
+           $ sc
+    newRowNames = V.fromList
+                . catMaybes
+                . zipWith (liftM2 const) (fmap Just cells)
+                $ validRows
+    newMatrix = MatObsRow . S.fromRowsL . catMaybes $ validRows
+    validRows = fmap (extractCellHashV idxMap sc) cells
 
 -- | Get the index of a cell in a SingleCells type.
 getCellIdx :: SingleCells -> Cell -> Int

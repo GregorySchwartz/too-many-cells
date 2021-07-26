@@ -180,7 +180,7 @@ getMotif diffFile bgDiffFile outPath mc gf topN node = TU.sh $ do
                     (TU.format TU.fp tmpFasta)
                     (TU.format TU.fp . unOutputPath $ outPath)
 
-  TU.stdout . TU.inshell cmd $ mempty
+  TU.stderr . TU.inshell cmd $ mempty
 
 getMotifGenome :: DiffFile
                -> Maybe BackgroundDiffFile
@@ -218,4 +218,4 @@ getMotifGenome diffFile bgDiffFile outPath mc gf topN node = TU.sh $ do
                     (unGenomeFile gf)
                     (TU.format TU.fp . unOutputPath $ outPath)
 
-  TU.stdout . TU.inshell cmd $ mempty
+  TU.stderr . TU.inshell cmd $ mempty

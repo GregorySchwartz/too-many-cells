@@ -17,6 +17,8 @@ module TooManyCells.Matrix.Preprocess
     , logCPMSparseMat
     , uqScaleSparseMat
     , medScaleSparseMat
+    , minMaxNormSparseMat
+    , transposeSparseMat
     , quantileScaleSparseMat
     , centerScaleSparseCell
     , tfidfScaleSparseMat
@@ -202,6 +204,20 @@ quantileScaleSparseMat (MatObsRow mat) =
 tfidfScaleSparseMat :: MatObsRow -> MatObsRow
 tfidfScaleSparseMat = MatObsRow . unB2 . b1ToB2 . B1 . unMatObsRow
 
+-- | Scale matrix rows based on min-max normalization.
+minMaxNormSparseMat :: MatObsRow -> MatObsRow
+minMaxNormSparseMat (MatObsRow mat) =
+  MatObsRow
+    . S.sparsifySM
+    . S.fromRowsL
+    . fmap (\x -> fromMaybe x $ minMaxNormSV x)
+    . S.toRowsL
+    $ mat
+
+-- | Transpose matrix (helper to apply normalizations to columns instead, for instance).
+transposeSparseMat :: MatObsRow -> MatObsRow
+transposeSparseMat (MatObsRow mat) = MatObsRow . S.transposeSM $ mat
+
 -- | Scale a cell by the library size.
 scaleDenseCell :: H.Vector H.R -> H.Vector H.R
 scaleDenseCell xs = H.cmap (/ total) xs
@@ -277,6 +293,13 @@ scaleSparseMol xs = fmap (/ med) xs
         . fmap snd
         . S.toListSV
         $ xs
+
+-- | Min-max normalization of sparse vector.
+minMaxNormSV :: S.SpVector Double -> Maybe (S.SpVector Double)
+minMaxNormSV xs = do
+  (mi, ma) <-
+    L.sequenceOf L.both $ Fold.fold ((,) <$> Fold.minimum <*> Fold.maximum) xs
+  pure $ fmap (\x -> (x - mi) / (ma - mi)) xs
 
 -- | Filter a matrix to remove low count cells and features.
 filterDenseMat :: FilterThresholds -> SingleCells -> SingleCells

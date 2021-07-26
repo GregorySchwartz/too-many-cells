@@ -30,6 +30,7 @@ import qualified Data.Graph.Inductive as G
 import qualified Data.Sequence as Seq
 import qualified Data.Sparse.Common as S
 import qualified Numeric.LinearAlgebra as H
+import qualified Turtle as TU
 
 -- Local
 
@@ -45,6 +46,7 @@ newtype PriorPath   = PriorPath
     { unPriorPath :: FilePath
     } deriving (Eq,Ord,Read,Show)
 newtype OutputDirectory  = OutputDirectory { unOutputDirectory :: FilePath }
+newtype TempPath  = TempPath { unTempPath :: TU.FilePath }
 
 -- Advanced
 data MatrixFileFolder = MatrixFile FilePath | MatrixFolder FilePath

@@ -38,6 +38,12 @@ without additional parameters or runs. See below for a full list of features.
   with the options. Open an issue at
   [[https://github.com/GregorySchwartz/too-many-cells/issues]] if you encounter any
   expected errors or behavior!
+- Added MinMaxNorm for min-max normalization and TransposeNorm to transpose the
+  matrix to apply normalizations back and forth between axes, for instance,
+  =--normalization QuantileNorm --normalization TransposeNorm --normalization
+  MinMaxNorm --normalization TransposeNorm= will first apply quantile
+  normalization to each cell, then min-max normalization to each column (before
+  returning the cells to the proper axis with another tranpose).
 - Incompatibility: Projection file format changed "barcode" column to "item".
 
 * New features for v2.2.0.0

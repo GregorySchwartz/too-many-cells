@@ -27,10 +27,7 @@ motifsMain :: Subcommand -> IO ()
 motifsMain (MotifsCommand opts) = do
   let genome' = GenomeFile . motifGenome $ opts
       topN' = TopN . (topN :: Motifs -> Int) $ opts
-      motifCommand' = MotifCommand
-                    . fromMaybe "meme %s -nmotifs 50 -oc %s"
-                    . motifCommand
-                    $ opts
+      motifCommand' = MotifCommand . motifCommand $ opts
       motifGenomeCommand' = fmap MotifGenomeCommand
                           . motifGenomeCommand
                           $ opts
