@@ -100,6 +100,16 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
       return(xs$r[min(which(xs$obs == max(xs$obs)))])
     }
 
+    # Find the first r value of the maximum value with maximum value.
+    findMaxPosWithVal = function(as) {
+      # Do not use 0 values
+      xs = as[-1,]
+      r = findMaxPos(xs)
+      val = max(xs$obs)
+
+      return(val / r)
+    }
+
     # Find the first r value of the minimum value.
     findMinPos = function(xs) {
       return(xs$r[min(which(xs$obs == min(xs$obs)))])
@@ -116,6 +126,8 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
       statsDf$posSwap = findPosSwap(1, df)
       statsDf$longestPosLength = findLongestLength(TRUE, 1, df)
       statsDf$longestNegLength = findLongestLength(FALSE, 1, df)
+      statsDf$maxPosWithVal = findMaxPosWithVal(df)
+      statsDf$logMaxPosWithVal = log(findMaxPosWithVal(df))
       statsDf$maxPos = findMaxPos(df)
       statsDf$minPos = findMinPos(df)
       statsDf$label = basename(outFolder)
