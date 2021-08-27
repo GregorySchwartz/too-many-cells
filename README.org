@@ -817,6 +817,7 @@ tuple containing two lists: ([89, 1], [98]). Then our differential genes for
 #+BEGIN_SRC sh
 too-many-cells differential \
     --matrix-path input \
+    --prior out_pruned \
     --filter-thresholds "(250, 1)" \
     -n "([89, 1], [98])" \
     > differential.csv
@@ -828,6 +829,7 @@ liver cells from all other subtrees, we can use the =--labels= argument:
 #+BEGIN_SRC sh
 too-many-cells differential \
     --matrix-path input \
+    --prior out_pruned \
     --labels-file labels.csv \
     --filter-thresholds "(250, 1)" \
     -n "([89, 1], [98])" \
@@ -847,6 +849,7 @@ compare all nodes to all other cells using 8 OS threads:
 #+BEGIN_SRC sh
 too-many-cells differential \
     --matrix-path input \
+    --prior out_pruned \
     --filter-thresholds "(250, 1)" \
     -n "([], [])" \
     --normalization "UQNorm" \
