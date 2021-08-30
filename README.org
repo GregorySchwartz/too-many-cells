@@ -1067,6 +1067,123 @@ file as a single reference matrix. The output will be identical to a normal
 =too-many-cells= =labels.csv= file, but with an additional column =score= which
 provides the value of the highest cosine-similarity label.
 
+** =spatial=
+:PROPERTIES:
+:CUSTOM_ID: spatial
+:END:
+
+Spatial single-cell technologies allow us to measure not only the features of
+cells such as cell surface markers or transcriptomes, but also the spatial
+location of each individual cell /in situ/. These technologies, such as imaging
+mass cytometry and Visium, allow us to use various methods to quantify the
+spatial relationships between cell features and cell types. =too-many-cells= can
+report these relationships with the =spatial= entrypoint, making use of both
+=AnnoSpat= for cell type classification and =spatstat= for relationship
+quantification.
+
+As an example, consider an imaging mass cytometry output containing two files,
+=features.csv= and =spatial.csv=. =features.csv= (can be any matrix format that
+=too-many-cells= accepts with =-m=) here is a matrix of cell rows and feature
+columns:
+
+#+BEGIN_EXAMPLE
+item,CD20,CD4,CD8,Foxp3,...
+barcode1,0.1095368741640727,0.013183117496457954,0.19233368842522866,0.05579191206063343,...
+barcode2,0.08268388046574766,0.003996753797330361,0.007560142177239592,0.0008473833902161547,...
+...
+#+END_EXAMPLE
+
+=spatial.csv= is a file containing the locations of each cell, of the format
+=item,sample,x,y=, where =item= is the cell barcode, =sample= is the sample the
+barcode came from (for bulk processing to make sure there is segregation by
+sample), and =x= and =y= are the cell coordinates:
+
+#+BEGIN_EXAMPLE
+item,sample,x,y
+barcode1,donor1,-493.99,496.08
+barcode2,donor1,-479.629,496.641
+#+END_EXAMPLE
+
+Using this information, we can relate the cells by their marker expression:
+
+#+BEGIN_SRC sh
+too-many-cells spatial \
+  --matrix-transpose \
+  -m total_normalized_features.csv \
+  -j total_spatial.csv \
+  -o tmc_mark_output \
+  --mark "CD4" \
+  --mark "CD20"
+#+END_SRC
+
+We use =--matrix-transpose= to make sure the barcodes for the feature matrix
+becomes the columns in this case, =-o= denotes the output folder for the
+analyses, and =--mark= denotes each feature we want to relate. If you want to
+see every pairwise comparison between all marks, instead just use =--mark "ALL"=.
+
+=too-many-cells= will output results into the =tmc_mark_output= folder
+containing a folder for each sample. Within each sample folder, there will be
+=projections= and =relationships= folders, the former containing an interactive
+visualization of the cells locations on the left with the cumulative
+distribution functions of each mark on the right. You can click and drag on
+these distributions to filter the cells on the left plot by their mark.
+
+The =relationships= folder contains additional folders for pairwise comparisons
+of marks. Within each of these folders, there are the following files (for more
+information, check out [[http://spatstat.org/][=spatstat=]]:
+
+| File                             | Description                                                              |
+|----------------------------------+--------------------------------------------------------------------------|
+| =basic_plot.csv=                 | Plot of each cell /in situ/.                                             |
+| =crosscorr.rds=                  | R object containing each cross-correlation function.                     |
+| =cross_correlation_function.pdf= | The pairwise cross-correlation function for each mark.                   |
+| =curve.csv=                      | The cross-correlation function in =csv= format.                          |
+| =envelope.pdf=                   | The simulation envelope of the summary function.                         |
+| =mark_correlation_function.pdf=  | The mark correlation function of each mark.                              |
+| =mark_variogram.pdf=             | The mark variogram of each mark.                                         |
+| =stats.csv=                      | The various measures meant to summarize each cross-correlation function. |
+
+The =stats.csv= file contains multiple measures to summarize the functions:
+
+| Column             | Description                                                            |
+|--------------------+------------------------------------------------------------------------|
+| =Var1=             | The first mark for the curve.                                          |
+| =Var2=             | The second mark for the curve.                                         |
+| =value=            | The index for the location of the curve in the cross-correlation plot. |
+| =meanCorr=         | The mean value of the y-axis.                                          |
+| =maxCorr=          | The maximum value of the y-axis.                                       |
+| =minCorr=          | The minimum value of the y-axis.                                       |
+| =topMaxCorr=       | The maximum value of the y-axis in the lower-quartile of \(r\).        |
+| =topMeanCorr=      | The mean value of the y-axis in the lower-quartile of \(r\).           |
+| =negSwap=          | The \(r\) at which the y-axis first goes below 1.                      |
+| =posSwap=          | The \(r\) at which the y-axis first goes above 1.                      |
+| =longestPosLength= | The longest stretch of distance the function is above 1.               |
+| =longestNegLength= | The longest stretch of distance the function is below 1.               |
+| =maxPosWithVal=    | maxCorr / maxPos ignoring the first value (which is usually 0).        |
+| =logMaxPosWithVal= | log(maxPosWithVal).                                                    |
+| =maxPos=           | The \(r\) which resides at maxCorr.                                    |
+| =minPos=           | The \(r\) which resides at minCorr.                                    |
+| =label=            | The label of the curve.                                                |
+| =n=                | The sample size of cells with both marks.                              |
+
+The mark cross-correlation function may be used with discrete values as well, so
+instead of, for instance, cell surface expression, you could use cell types by
+passing in a labels file (used by any =too-many-cells= entrypoint) with =-l=:
+
+#+BEGIN_SRC sh
+too-many-cells spatial \
+  --matrix-transpose \
+  -m total_normalized_features.csv \
+  -j total_spatial.csv \
+  -o tmc_mark_output \
+  -l labels_celltypes.csv \
+  --mark "Helper T Cell" \
+  --mark "B Cell"
+#+END_SRC
+
+You can even use =AnnoSpat= to predict cell types to use instead of a labels
+file with =--annospat-marker-file= (see the =AnnoSpat= documentation for this format).
+
 ** =matrix-output=
 
 A simple entrypoint to output the transformed matrix =too-many-cells= uses
