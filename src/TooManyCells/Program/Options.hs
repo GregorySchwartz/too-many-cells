@@ -405,10 +405,12 @@ matrixOutputParser = do
 data Spatial = Spatial { loadMatrixOptions :: LoadMatrixOptions
               , projectionFile :: Maybe String
               , labelsFile :: Maybe String
+              , stateLabelsFile :: Maybe String
               , annoSpatMarkerFile :: Maybe String
               , annoSpatCommand :: String
               , mark :: [T.Text]
               , pcfCrossFlag :: Bool
+              , onlySummaryFlag :: Bool
               , output :: String
               } deriving (Read, Show)
 
@@ -417,10 +419,12 @@ spatialParser = do
   loadMatrixOptions <- loadMatrixParser
   labelsFile <- labelsFileParser
   projectionFile <- projectionParser
+  stateLabelsFile <- optional $ option str ( long "state-labels-file" <> metavar "FILE" <> help "The input file containing a metadata label for sample (i.e. disease or control) to group samples by, with \"item,label\" header." )
   mark <- many $ option str ( long "mark" <> metavar "FEATURE | LABEL" <> help "Marks for the spatial relationship analysis. A list (`--mark MARK --mark MARK`) where `MARK` is either a feature such as a gene or protein or a label from the `--labels-file`. If the cells have labels (from `--labels-file`, `--annospat-marker-file`, or `--custom-label`), the `MARK` will be interpreted as a label. If `--mark ALL` (capitalized ALL, only ALL and nothing else) and `--labels-file` is given, then a pairwise comparison between labels will be computed, or if the `--labels-file` is not given then a pairwise comparison between features will be computed. If no marks are given, no spatial relationship will be carried out and only the interactive projection plot will be given." )
   annoSpatMarkerFile <- optional $ option str ( long "annospat-marker-file" <> metavar "STRING" <> help "The location of the AnnoSpat marker file for cell classification. Triggers the use of AnnoSpat to generate the labels file rather than --labels-file. Overrides the --labels-file argument." )
   annoSpatCommand <- option str ( long "annospat-command" <> metavar "STRING" <> value "AnnoSpat generateLabels -i %s -m %s -o %s -f %s -l %s -r %s -s \"\"" <> showDefault <> help "The AnnoSpat command to label cells. To customize, use the default value then follow the with custom additional arguments, making sure not to alter the default arguments used here." )
   pcfCrossFlag <- switch ( long "pcf-cross" <> help "Whether to use the multitype point correlation function (pcfcross) instead of the mark correlation function (markcrosscorr) for spatial relationships using categorical marks." )
+  onlySummaryFlag <- switch ( long "summary-only" <> help "Whether to only calculate the summarization of the spatial statistics, for use only if skipping the spatial relationship calculations." )
   output <- outputParser
 
   pure $ SpatialCommand (Spatial {..})

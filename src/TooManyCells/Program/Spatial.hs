@@ -14,7 +14,7 @@ module TooManyCells.Program.Spatial where
 -- Remote
 import BirchBeer.Load (loadLabelData)
 import BirchBeer.Types (LabelFile (..), Delimiter (..), LabelMap (..), Sample (..), Feature (..), Label (..))
-import Control.Monad (join, forM_, guard)
+import Control.Monad (join, forM_, guard, unless)
 import Data.Bool (bool)
 import Data.Maybe (isJust, fromMaybe)
 import Language.R.Instance as R
@@ -38,6 +38,7 @@ import TooManyCells.Program.LoadMatrix (loadAllSSM)
 import TooManyCells.Program.Options
 import TooManyCells.Spatial.AnnoSpat (scToAnnoSpatFile, runAnnoSpat)
 import TooManyCells.Spatial.ProjectionPlot (plotSpatialProjection)
+import TooManyCells.Spatial.SummaryPlot (plotSummary)
 import TooManyCells.Spatial.Relationships (spatialRelationshipsR)
 import TooManyCells.Spatial.Utility (subsampleProjectionMap, markToText)
 import qualified TooManyCells.File.Types as Too
@@ -85,94 +86,134 @@ spatialRelationshipsHelper outDir pcfCrossFlag' pm lm sc sample (fmap markToText
 spatialRelationshipsHelper outDir pcfCrossFlag' pm lm sc sample marks =
   spatialRelationshipsCall outDir pcfCrossFlag' pm lm sc sample marks
 
+-- | Helper for plotting spatial summary.
+spatialSummary
+  :: Too.OutputDirectory -> Delimiter -> Maybe Too.StateLabelsFile -> IO ()
+spatialSummary outputDir' delimiter' stateLabelsFile' = do
+  stateLabelMap <-
+    mapM
+      ( fmap (Too.StateLabelMap . unLabelMap)
+      . loadLabelData delimiter'
+      . LabelFile
+      . Too.unStateLabelsFile
+      )
+      stateLabelsFile'
+  let featureList = fmap
+                      Feature
+                      [ "maxCorr"
+                      , "minCorr"
+                      , "topMaxCorr"
+                      , "topMeanCorr"
+                      , "negSwap"
+                      , "posSwap"
+                      , "longestPosLength"
+                      , "longestNegLength"
+                      , "maxPosWithVal"
+                      , "logMaxPosWithVal"
+                      , "maxPos"
+                      , "minPos"
+                      ]
+  mapM_ (plotSummary outputDir' stateLabelMap) featureList
+
 -- | Spatial path.
 spatialMain :: Subcommand -> IO ()
 spatialMain sub@(SpatialCommand opts) = H.withEmbeddedR R.defaultConfig $ do
-  let readOrErr err = fromMaybe (error err) . readMaybe
-      delimiter'        = Delimiter
-                        . (delimiter :: LoadMatrixOptions -> Char)
-                        . (loadMatrixOptions :: Spatial -> LoadMatrixOptions)
-                        $ opts
-      projectionFile' =
-          maybe (error "--projection-file required") Too.ProjectionFile
-            . (projectionFile :: Spatial -> Maybe String)
-            $ opts
-      annoSpatMarkerFile' = fmap Too.AnnoSpatMarkerFile . annoSpatMarkerFile $ opts
-      annoSpatCommand' = Too.AnnoSpatCommand . annoSpatCommand $ opts
+  let onlySummaryFlag' = onlySummaryFlag opts
       outputDir' = Too.OutputDirectory . (output :: Spatial -> String) $ opts
+      stateLabelsFile' = fmap Too.StateLabelsFile . stateLabelsFile $ opts
+      delimiter' = Delimiter
+                 . (delimiter :: LoadMatrixOptions -> Char)
+                 . (loadMatrixOptions :: Spatial -> LoadMatrixOptions)
+                 $ opts
 
-  scRes <- fmap (fromMaybe (error "Requires --matrix-path"))
-         . loadAllSSM sub
-         $ (loadMatrixOptions :: Spatial -> LoadMatrixOptions) opts
-  let processedSc = fst scRes
-      customLabelMap = snd scRes
+  unless onlySummaryFlag' $ do
 
-  projectionMap <- loadProjectionMap projectionFile'
+    let readOrErr err = fromMaybe (error err) . readMaybe
+        delimiter'        = Delimiter
+                          . (delimiter :: LoadMatrixOptions -> Char)
+                          . (loadMatrixOptions :: Spatial -> LoadMatrixOptions)
+                          $ opts
+        projectionFile' =
+            maybe (error "--projection-file required") Too.ProjectionFile
+              . (projectionFile :: Spatial -> Maybe String)
+              $ opts
+        annoSpatMarkerFile' = fmap Too.AnnoSpatMarkerFile . annoSpatMarkerFile $ opts
+        annoSpatCommand' = Too.AnnoSpatCommand . annoSpatCommand $ opts
 
-  let labelsFileError = hPutStrLn stderr "Warning: Problem in AnnoSpat, skipping label generation ..."
-  labelsFile' <-
-    case annoSpatMarkerFile' of
-      Nothing ->
-        pure . fmap LabelFile . (labelsFile :: Spatial -> Maybe String) $ opts
-      (Just mf) -> (=<<) (maybe (labelsFileError >> pure Nothing) pure) . TU.reduce Fold.head $ do
-        let annoOutDir = Too.OutputDirectory
-                       $ Too.unOutputDirectory outputDir' FP.</> "AnnoSpat_out"
-        tmpDir <- TU.liftIO $ fmap (TU.fromText . T.pack) getTemporaryDirectory
-        tmpOut <- fmap Too.TempPath $ TU.mktempfile tmpDir "AnnoSpat_input.csv"
-        startEndCols <- TU.liftIO $ scToAnnoSpatFile projectionMap processedSc tmpOut
+    scRes <- fmap (fromMaybe (error "Requires --matrix-path"))
+          . loadAllSSM sub
+          $ (loadMatrixOptions :: Spatial -> LoadMatrixOptions) opts
+    let processedSc = fst scRes
+        customLabelMap = snd scRes
 
-        case startEndCols of
-          Nothing -> pure Nothing
-          (Just (startCol, endCol)) ->
-            TU.liftIO
-              $ runAnnoSpat
-                  annoSpatCommand'
-                  tmpOut
-                  mf
-                  annoOutDir
-                  startCol
-                  endCol
+    projectionMap <- loadProjectionMap projectionFile'
 
-  labelMap <- if isJust labelsFile'
-                then mapM (loadLabelData delimiter') $ labelsFile'
-                else return customLabelMap
+    let labelsFileError = hPutStrLn stderr "Warning: Problem in AnnoSpat, skipping label generation ..."
+    labelsFile' <-
+      case annoSpatMarkerFile' of
+        Nothing ->
+          pure . fmap LabelFile . (labelsFile :: Spatial -> Maybe String) $ opts
+        (Just mf) -> (=<<) (maybe (labelsFileError >> pure Nothing) pure) . TU.reduce Fold.head $ do
+          let annoOutDir = Too.OutputDirectory
+                        $ Too.unOutputDirectory outputDir' FP.</> "AnnoSpat_out"
+          tmpDir <- TU.liftIO $ fmap (TU.fromText . T.pack) getTemporaryDirectory
+          tmpOut <- fmap Too.TempPath $ TU.mktempfile tmpDir "AnnoSpat_input.csv"
+          startEndCols <- TU.liftIO $ scToAnnoSpatFile projectionMap processedSc tmpOut
 
-  let marks' = fmap
-                ( bool (Too.MarkFeature . Feature) (Too.MarkLabel . Label)
-                . isJust
-                $ labelMap
-                )
-             . mark
-             $ opts
+          case startEndCols of
+            Nothing -> pure Nothing
+            (Just (startCol, endCol)) ->
+              TU.liftIO
+                $ runAnnoSpat
+                    annoSpatCommand'
+                    tmpOut
+                    mf
+                    annoOutDir
+                    startCol
+                    endCol
 
-  pcfCrossFlag' <- case (isJust labelMap, pcfCrossFlag opts) of
-                    (False, True) -> do
-                      hPutStrLn stderr "Warning: Continuous feature marks detected but pcfcross requested, ignoring pcfcross request ..."
-                      return $ Too.PCFCrossFlag False
-                    _ ->
-                      return . Too.PCFCrossFlag . pcfCrossFlag $ opts
+    labelMap <- if isJust labelsFile'
+                  then mapM (loadLabelData delimiter') $ labelsFile'
+                  else return customLabelMap
 
-  let samples = Set.toList
-              . Set.fromList
-              . fmap fst
-              . Map.elems
-              . Too.unProjectionMap
-              $ projectionMap
+    let marks' = fmap
+                  ( bool (Too.MarkFeature . Feature) (Too.MarkLabel . Label)
+                  . isJust
+                  $ labelMap
+                  )
+              . mark
+              $ opts
 
-  forM_ samples $ \s -> do
-    let sOutLabel = T.unpack $ maybe "total" unSample s
-        projectionOutput = Too.OutputDirectory
-                          . (FP.</> sOutLabel FP.</> "projections")
-                          . Too.unOutputDirectory
-                          $ outputDir'
-        relationshipsOutput = Too.OutputDirectory
-                            . (FP.</> sOutLabel FP.</> "relationships")
+    pcfCrossFlag' <- case (isJust labelMap, pcfCrossFlag opts) of
+                      (False, True) -> do
+                        hPutStrLn stderr "Warning: Continuous feature marks detected but pcfcross requested, ignoring pcfcross request ..."
+                        return $ Too.PCFCrossFlag False
+                      _ ->
+                        return . Too.PCFCrossFlag . pcfCrossFlag $ opts
+
+    let samples = Set.toList
+                . Set.fromList
+                . fmap fst
+                . Map.elems
+                . Too.unProjectionMap
+                $ projectionMap
+
+    forM_ samples $ \s -> do
+      let sOutLabel = T.unpack $ maybe "total" unSample s
+          projectionOutput = Too.OutputDirectory
+                            . (FP.</> sOutLabel FP.</> "projections")
                             . Too.unOutputDirectory
                             $ outputDir'
-        subPm = subsampleProjectionMap s projectionMap
-    plotSpatialProjection projectionOutput labelMap subPm processedSc s
+          relationshipsOutput = Too.OutputDirectory
+                              . (FP.</> sOutLabel FP.</> "relationships")
+                              . Too.unOutputDirectory
+                              $ outputDir'
+          subPm = subsampleProjectionMap s projectionMap
+      plotSpatialProjection projectionOutput labelMap subPm processedSc s
 
-    case marks' of
-      [] -> pure ()
-      m -> spatialRelationshipsHelper relationshipsOutput pcfCrossFlag' subPm labelMap processedSc s m
+      case marks' of
+        [] -> pure ()
+        m -> spatialRelationshipsHelper relationshipsOutput pcfCrossFlag' subPm labelMap processedSc s m
+
+  spatialSummary outputDir' delimiter' stateLabelsFile'
 spatialMain _ = error "Wrong path in spatial, contact Gregory Schwartz for this error."

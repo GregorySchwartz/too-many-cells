@@ -49,10 +49,12 @@ let
               && baseNameOf path != "dist")
             ./.;  # Filter out directories. Is recursive, but excluding a directory excludes all paths below it too.
     source-overrides = {
-      terminal-progress-bar = "0.4.1";
       #birch-beer = builtins.fetchTarball https://github.com/GregorySchwartz/birch-beer/archive/54b1e54b07b267be3e9bf7ca8084a7fd8930a501.tar.gz;
-      birch-beer = /mnt/data1/gw/code/utility/birch-beer;
+      birch-beer = ~/code/utility/birch-beer;
+      hvega-theme = builtins.fetchTarball https://github.com/GregorySchwartz/hvega-theme/archive/66071f477e7a76d9cfbf0339dc4dc2d56c4c1748.tar.gz;
+      ploterific = builtins.fetchTarball https://github.com/GregorySchwartz/ploterific/archive/ae02c2afad10d7ec9d05044021697d3e9036095f.tar.gz;
       sparse-linear-algebra = builtins.fetchTarball https://github.com/ocramz/sparse-linear-algebra/archive/dbad792f6c6a04e4de23806b676cb3e76d36a65b.tar.gz;
+      terminal-progress-bar = "0.4.1";
     };
     overrides = self: super: (with pkgs.haskell.lib; with pkgs.haskellPackages; {
       BiobaseNewick = doJailbreak super.BiobaseNewick;

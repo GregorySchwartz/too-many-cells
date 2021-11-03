@@ -60,6 +60,7 @@ library
                      , TooManyCells.Spatial.AnnoSpat
                      , TooManyCells.Spatial.ProjectionPlot
                      , TooManyCells.Spatial.Relationships
+                     , TooManyCells.Spatial.SummaryPlot
                      , TooManyCells.Spatial.Types
                      , TooManyCells.Spatial.Utility
   build-depends:       base >= 4.7 && < 5
@@ -105,6 +106,7 @@ library
                      , palette
                      , parallel
                      , plots
+                     , ploterific
                      , process
                      , resourcet
                      , safe
@@ -131,13 +133,15 @@ library
                      , vector
                      , vector-algorithms
                      , zlib
-  ghc-options:         -O2
+  -- No specConstr due to memory limitations
+  ghc-options:         -O2 -fno-spec-constr
   default-language:    Haskell2010
 
 executable too-many-cells
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -threaded -rtsopts -O2
+  -- No specConstr due to memory limitations
+  ghc-options:         -threaded -rtsopts -O2 -fno-spec-constr
   build-depends:       base
                      , too-many-cells
                      , optparse-applicative
