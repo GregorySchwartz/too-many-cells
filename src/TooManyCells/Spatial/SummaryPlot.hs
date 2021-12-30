@@ -13,15 +13,17 @@ module TooManyCells.Spatial.SummaryPlot
     ( plotSummary
     ) where
 
-import Control.Monad (when)
+import Control.Exception (SomeException (..), try, evaluate)
+import Control.Monad (when, mfilter, guard)
 import Data.Bool (bool)
 import Data.Function (on)
 import Data.List (sortBy, groupBy, foldl', sort, maximumBy, zipWith4)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe, isNothing)
 import Ploterific.Plot.Plot (labelColorScale)
 import Ploterific.Plot.Types (ColorLabel (..))
 import Safe (headMay)
 import System.Environment (getArgs)
+import System.IO (hPutStrLn, stderr)
 import qualified BirchBeer.Types as Birch
 import qualified Control.Foldl as Fold
 import qualified Control.Lens as L
@@ -48,10 +50,6 @@ import qualified Turtle as TU
 import qualified TooManyCells.File.Types as Too
 import qualified TooManyCells.Spatial.Types as Too
 
-newtype LabelList a = LabelList { unLabelList :: [a] } deriving (Eq, Ord, Show)
-newtype Compare a = Compare { unCompare :: (T.Text, [a]) } deriving (Show)
-newtype VarList a = VarList { unVarList :: [a] } deriving (Show)
-
 -- | Get all pairwise comparisons.
 pairwise :: (Eq a, Ord a) => [a] -> [[a]]
 pairwise xs = Set.toList
@@ -60,28 +58,51 @@ pairwise xs = Set.toList
             . fmap sort
             $ (\x y -> [x,y]) <$> xs <*> xs
 
+-- | Safer Kruskal-Wallis test.
+safeKWTest :: (VU.Unbox a, Ord a) => [VU.Vector a] -> IO Double
+safeKWTest xs = do
+  res <- try ( evaluate
+             . maybe 1 (S.pValue . S.testSignificance)
+             $ S.kruskalWallisTest xs
+             ) :: IO (Either SomeException Double)
+  res' <- case res of
+            Left ex -> do
+              hPutStrLn stderr $ "Caught exception, continuing with p = 1: " <> show ex
+              return 1
+            Right val -> return val
+  return res'
+
 -- | Add on the relevant p-values
 pVal :: Birch.Feature
      -> [Map.Map T.Text T.Text]
-     -> ([Map.Map T.Text T.Text], [Map.Map T.Text T.Text])
-pVal (Birch.Feature feature) ms = (statRows, statSummary)
+     -> IO ([Map.Map T.Text T.Text], [Map.Map T.Text T.Text])
+pVal (Birch.Feature feature) ms = do
+  statRows' <- statRows
+  statSummary' <- statSummary
+  return (statRows', statSummary')
   where
-    statRows =
-      mconcat
+    statRows = do
+      tests' <- tests
+      pairwiseTests' <- pairwiseTests
+      return
+        . mconcat
         . zipWith3
             (\ x xs ys
             -> fmap (\ m
                     -> foldl' (\acc (!a, !b) -> Map.insert a b acc) m (("kwPValue", x):xs)
                     )
-            . concatMap unLabelList
-            . unVarList
+            . concatMap Too.unLabelList
+            . Too.unVarList
             $ ys
             )
-            tests
-            (fmap unVarList pairwiseTests)
+            tests'
+            (fmap Too.unVarList pairwiseTests')
         $ grouped
-    statSummary =
-      mconcat
+    statSummary = do
+      tests' <- tests
+      pairwiseTests' <- pairwiseTests
+      return
+        . mconcat
         . zipWith4
               (\ s x xs ys
               -> fmap (\ m
@@ -90,13 +111,13 @@ pVal (Birch.Feature feature) ms = (statRows, statSummary)
                           m
                           (("highestLabel", s):("kwPValue", x):xs)
                       )
-              . concatMap unLabelList
-              . unVarList
+              . concatMap Too.unLabelList
+              . Too.unVarList
               $ ys
               )
               highestLabel
-              tests
-              (fmap unVarList pairwiseTests)
+              tests'
+              (fmap Too.unVarList pairwiseTests')
           $ summarizedVarList
     highestLabel :: [T.Text]
     highestLabel = fmap ( snd
@@ -110,23 +131,23 @@ pVal (Birch.Feature feature) ms = (statRows, statSummary)
                                    $ Map.lookup "median" x
                                    , Map.findWithDefault
                                       (error "No label found")
-                                      "label"
+                                      "statLabel"
                                       x
                                    )
                                 )
-                                . unLabelList
+                                . Too.unLabelList
                             )
-                        . unVarList
+                        . Too.unVarList
                         )
                  $ summarizedVarList
-    summarizedVarList :: [VarList (LabelList (Map.Map T.Text T.Text))]
-    summarizedVarList = VarList
-                      . fmap ( LabelList
+    summarizedVarList :: [Too.VarList (Too.LabelList (Map.Map T.Text T.Text))]
+    summarizedVarList = Too.VarList
+                      . fmap ( Too.LabelList
                              . (:[])
                              . getStatSummaries
-                             . unLabelList
+                             . Too.unLabelList
                              )
-                      . unVarList
+                      . Too.unVarList
                     <$> grouped
     getStatSummaries !ms = Map.fromList
                          $ ("median", T.pack . show $ getMedianFromMaps ms)
@@ -139,66 +160,92 @@ pVal (Birch.Feature feature) ms = (statRows, statSummary)
                                : acc
                             )
                             []
-                            ["label", "Var1", "Var2"]
+                            ["statLabel", "Var1", "Var2"]
     getMedianFromMaps = S.median S.s . VU.fromList . fmap getFeature
-    kruskalOrBust xs = bool (S.kruskalWallisTest xs) Nothing
-                     . and
-                     $ fmap (== head xs) (tail xs)
-    tests :: [T.Text]
-    tests = fmap ( maybe "1" (T.pack . show . S.pValue . S.testSignificance)
-                 . kruskalOrBust
-                 . fmap (VU.fromList . fmap getFeature . unLabelList)
-                 . unVarList
+    kruskalOrBust = fmap (T.pack . show) . safeKWTest
+    tests :: IO [T.Text]
+    tests = mapM ( kruskalOrBust
+                 . fmap (VU.fromList . fmap getFeature . Too.unLabelList)
+                 . Too.unVarList
                  )
           $ grouped
-    pairwiseTests :: [VarList (T.Text, T.Text)]
-    pairwiseTests = fmap ( VarList
-                         . fmap
-                            ( L.over
+    pairwiseTests :: IO [Too.VarList (T.Text, T.Text)]
+    pairwiseTests = mapM ( fmap Too.VarList
+                         . mapM
+                            ( sequence
+                            . L.over
                                 L._2
-                                ( maybe
-                                    "1"
-                                    ( T.pack
-                                    . show
-                                    . S.pValue
-                                    . S.testSignificance
-                                    )
-                                . kruskalOrBust
+                                ( kruskalOrBust
                                 . fmap
-                                    (VU.fromList . fmap getFeature . unLabelList)
+                                    ( VU.fromList
+                                    . fmap getFeature
+                                    . Too.unLabelList
+                                    )
                                 )
-                                . unCompare
+                                . Too.unCompare
                             )
                          . setupComparisonVar
                          )
                    $ grouped
-    setupComparisonVar :: VarList (LabelList (Map.Map T.Text T.Text))
-                       -> [Compare (LabelList (Map.Map T.Text T.Text))]
-    setupComparisonVar = fmap ( Compare
+    setupComparisonVar :: Too.VarList (Too.LabelList (Map.Map T.Text T.Text))
+                       -> [Too.Compare (Too.LabelList (Map.Map T.Text T.Text))]
+    setupComparisonVar = fmap ( Too.Compare
                               . L.over L._1 (T.intercalate "/")
                               . unzip
                               )
-                       . (\x -> pairwise x :: [[(T.Text, LabelList (Map.Map T.Text T.Text))]])
-                       . fmap ( L.over L._2 LabelList
+                       . (\x -> pairwise x :: [[(T.Text, Too.LabelList (Map.Map T.Text T.Text))]])
+                       . fmap ( L.over L._2 Too.LabelList
                               . L.over L._1 (fromMaybe "" . headMay)
                               . unzip
                               . fmap (\ !x -> (fromMaybe "" $ compLabel x, x))
-                              . unLabelList
+                              . Too.unLabelList
                               )
-                       . unVarList
+                       . Too.unVarList
     getFeature = maybe 0 (either error fst . T.double) . Map.lookup feature
-    grouped :: [VarList (LabelList (Map.Map T.Text T.Text))]
-    grouped = fmap ( VarList
-                   . fmap LabelList
+    grouped :: [Too.VarList (Too.LabelList (Map.Map T.Text T.Text))]
+    grouped = addOthersToGroup
+            . fmap ( Too.VarList
+                   . fmap Too.LabelList
                    . groupBy ((==) `on` compLabel)
                    . sortBy (compare `on` compLabel)
                    )
             . groupBy ((==) `on` compVar)
             . sortBy (compare `on` compVar)
             $ ms
-    compLabel = Map.lookup "label"
+    compLabel = Map.lookup "statLabel"
     compVar x = (Map.lookup "Var1" x, Map.lookup "Var2" x)
 
+-- | Add marksOther-markOther label if present to every group to compare with
+-- all others.
+addOthersToGroup :: [Too.VarList (Too.LabelList (Map.Map T.Text T.Text))]
+                 -> [Too.VarList (Too.LabelList (Map.Map T.Text T.Text))]
+addOthersToGroup varLists = fmap addToVarList varLists
+  where
+    addToVarList xs = fromMaybe xs $ do
+      var1 <- getVarFromVarList "Var1" xs
+      others <- Map.lookup var1 otherMap
+      return $ xs <> others
+    otherMap = otherComparisonsMap varLists
+
+-- | Get marksOther-marksOther label if exists.
+otherComparisonsMap
+  :: [Too.VarList (Too.LabelList (Map.Map T.Text T.Text))]
+  -> Map.Map T.Text (Too.VarList (Too.LabelList (Map.Map T.Text T.Text)))
+otherComparisonsMap = Map.unions . mapMaybe getVarListMap
+  where
+    getVarListMap xs = do
+      var1 <- getVarFromVarList "Var1" xs
+      var2 <- getVarFromVarList "Var2" xs
+      guard (var2 == "marksOther")
+      return $ Map.singleton var1 xs
+
+-- | Get a Var column value from a VarList
+getVarFromVarList :: T.Text
+                  -> Too.VarList (Too.LabelList (Map.Map T.Text T.Text))
+                  -> Maybe T.Text
+getVarFromVarList var xs = (headMay . Too.unVarList $ xs)
+                       >>= headMay . Too.unLabelList
+                       >>= Map.lookup var
 -- | Parse a file into CSV.
 parseFile :: Maybe Too.StateLabelMap -> TU.FilePath -> IO [Map.Map T.Text T.Text]
 parseFile slm file = do
@@ -213,19 +260,42 @@ insertSampleLabel :: Maybe Too.StateLabelMap
                   -> TU.FilePath
                   -> Map.Map T.Text T.Text
                   -> Map.Map T.Text T.Text
-insertSampleLabel slm file =
-  Map.insert "label" label . Map.insert "sample" sample
+insertSampleLabel slm file m =
+  Map.insert "label" (fromMaybe "No label" label)
+    . Map.insert "statLabel" statLabel
+    . Map.insert "sample" sample $ m
   where
-    sample = getSample file
-    label = maybe sample Birch.unLabel
+    sample = Birch.unSample $ getSample file
+    alternateLabel = (\x y -> x <> "-" <> y)
+                 <$> Map.lookup "Var1" m
+                 <*> Map.lookup "Var2" m
+    statLabel = maybe (fromMaybe "No label" alternateLabel) id label
+    label = fmap Birch.unLabel
           . (=<<) (Map.lookup (Birch.Id sample) . Too.unStateLabelMap)
           $ slm
 
 -- | Get sample from file path.
-getSample :: TU.FilePath -> T.Text
-getSample = TU.format TU.fp . TU.basename . p . p . p
+getSample :: TU.FilePath -> Birch.Sample
+getSample = Birch.Sample . TU.format TU.fp . TU.dirname . p . p . p
   where
     p = TU.parent
+
+-- | Remove columns with "marksOther".
+removeOthers :: [Map.Map T.Text T.Text] -> [Map.Map T.Text T.Text]
+removeOthers =
+  fmap (Map.filterWithKey (\k _ -> not . T.isInfixOf "marksOther" $ k))
+
+-- | Make sure all columns are represented in a row, unused for now.
+fillColumns :: [Map.Map T.Text T.Text] -> [Map.Map T.Text T.Text]
+fillColumns xs = fmap addDummy xs
+  where
+    addDummy = flip Map.union dummyColMap  -- Prefer original value, not dummy.
+    dummyColMap = Map.fromList
+                . fmap (\ !x -> (x, "NA"))
+                . Set.toList
+                . Set.fromList
+                . concatMap Map.keys
+                $ xs
 
 plotSummary :: Too.OutputDirectory
             -> Maybe Too.StateLabelMap
@@ -246,8 +316,15 @@ plotSummary (Too.OutputDirectory inDir) slm feature = do
       outputPlot = outDir FP.</> TU.fromText (outputBasename <> ".html")
       outputStats = outDir FP.</> TU.fromText (outputBasename <> ".csv")
       rows' = mconcat statsParsed
-      (rows, stats) = pVal feature rows'
-      pValComparisons = fmap (T.intercalate "/" . fmap (fromMaybe ""))
+      noLabelFlag = (== length rows')
+                  . length
+                  . filter (\x -> (x == Just "No label") || isNothing x)
+                  . fmap (Map.lookup "label")
+                  $ rows'
+
+  (rows, stats) <- pVal feature rows'
+
+  let pValComparisons = fmap (T.intercalate "/" . fmap (fromMaybe ""))
                       . pairwise
                       . Set.toList
                       . Set.fromList
@@ -271,9 +348,6 @@ plotSummary (Too.OutputDirectory inDir) slm feature = do
               . VL.dataColumn
                   "sample"
                   (VL.Strings . fmap (Map.findWithDefault "" "sample") $ rows)
-              . VL.dataColumn
-                  "item"
-                  (VL.Strings . fmap (Map.findWithDefault "" "item") $ rows)
               . VL.dataColumn
                   "kwPValue"
                   ( VL.Numbers
@@ -310,7 +384,7 @@ plotSummary (Too.OutputDirectory inDir) slm feature = do
                   []
       transDens = transMax
                 . VL.density feature' [ VL.DnGroupBy ["var1", "var2", "label"]]
-      transHref = VL.calculateAs ("'../../interactive_classified_imc_publication/' + datum.item + '.tif_mat.csv.html'") "url"
+      transHref = VL.calculateAs ("'../' + datum.sample + '/projections/' + datum.sample + '_projection.html'") "url"
       transMax = VL.joinAggregate
                   [ VL.opAs VL.Max feature' "max" ]
                   [ VL.WGroupBy ["var1", "var2"] ]
@@ -355,7 +429,6 @@ plotSummary (Too.OutputDirectory inDir) slm feature = do
                                   ( [ feature'
                                     , "sample"
                                     , "label"
-                                    , "item"
                                     , "kwPValue"
                                     ]
                                  <> pValComparisons
@@ -421,9 +494,13 @@ plotSummary (Too.OutputDirectory inDir) slm feature = do
 
   -- Output stats
   let header = V.fromList
-             . maybe [] (fmap (B.pack . T.unpack) . Map.keys)
-             . headMay
+             . fmap (B.pack . T.unpack)
+             . bool id (filter (not . T.isInfixOf "marksOther")) noLabelFlag
+             . Set.toList
+             . Set.fromList
+             . concatMap Map.keys
              $ stats
   BL.writeFile (T.unpack . TU.format TU.fp $ outputStats)
     . CSV.encodeByName header
+    . bool id removeOthers noLabelFlag
     $ stats

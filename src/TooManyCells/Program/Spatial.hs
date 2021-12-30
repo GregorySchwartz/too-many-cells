@@ -199,7 +199,8 @@ spatialMain sub@(SpatialCommand opts) = H.withEmbeddedR R.defaultConfig $ do
                 $ projectionMap
 
     forM_ samples $ \s -> do
-      let sOutLabel = T.unpack $ maybe "total" unSample s
+      let s' = fromMaybe (Sample "total") s
+          sOutLabel = T.unpack $ unSample s'
           projectionOutput = Too.OutputDirectory
                             . (FP.</> sOutLabel FP.</> "projections")
                             . Too.unOutputDirectory
@@ -209,7 +210,7 @@ spatialMain sub@(SpatialCommand opts) = H.withEmbeddedR R.defaultConfig $ do
                               . Too.unOutputDirectory
                               $ outputDir'
           subPm = subsampleProjectionMap s projectionMap
-      plotSpatialProjection projectionOutput labelMap subPm processedSc s
+      plotSpatialProjection projectionOutput labelMap subPm processedSc s'
 
       case marks' of
         [] -> pure ()

@@ -5,10 +5,13 @@ Collects the spatial types used in the program.
 -}
 
 {-# LANGUAGE StrictData #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module TooManyCells.Spatial.Types where
 
 -- Remote
+import Control.Applicative (Alternative (..))
+import Control.Monad (Monad (..), MonadPlus (..))
 import Data.Colour.Palette.BrewerSet (Kolor)
 import qualified BirchBeer.Types as Birch
 import qualified Data.Map.Strict as Map
@@ -24,6 +27,9 @@ newtype AnnoSpatCommand = AnnoSpatCommand { unAnnoSpatCommand :: String }
 newtype PCFCrossFlag = PCFCrossFlag { unPCFCrossFlag :: Bool }
 newtype StateLabelsFile = StateLabelsFile { unStateLabelsFile :: String }
 newtype StateLabelMap = StateLabelMap { unStateLabelMap :: Map.Map Birch.Id Birch.Label }
+newtype LabelList a = LabelList { unLabelList :: [a] } deriving (Eq, Ord, Show, Functor, Semigroup, Applicative, Alternative, Monad, MonadPlus)
+newtype Compare a = Compare { unCompare :: (T.Text, [a]) } deriving (Show)
+newtype VarList a = VarList { unVarList :: [a] } deriving (Show, Functor, Semigroup, Applicative, Alternative, Monad, MonadPlus)
 
 data Range = Range { minX :: Double
                    , maxX :: Double

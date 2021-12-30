@@ -117,8 +117,6 @@ legendSpec lm =
            . Map.elems
            . unLabelMap
            $ lm
-    colors =
-      fmap (T.pack . sRGB24show) . colorRamp (length labels) . brewerSet Set1 $ 9
     encoding =
       VL.encoding
         . VL.position VL.Y [ VL.PName "label", VL.PmType VL.Nominal ]
@@ -132,12 +130,15 @@ legendSpec lm =
 getCircleSpec :: Maybe LabelMap -> Range -> ColorMap -> [Feature] -> VL.VLSpec
 getCircleSpec lm range colorMap features =
   VL.asSpec [ VL.mark VL.Circle []
-            , VL.width 800
-            , VL.height 800
+            , VL.width plotWidth
+            , VL.height plotHeight
             , circleEnc []
             , circleFilterTrans []
             ]
   where
+    aspectRatio = (maxY range - minY range) / (maxX range - minX range)
+    plotWidth = 800
+    plotHeight = aspectRatio * plotWidth
     circleEnc =
       VL.encoding
         . VL.position VL.X [ VL.PName "x"
@@ -170,7 +171,7 @@ getCircleSpec lm range colorMap features =
 -- | Get a window spec of a feature for plotting.
 getWindowSpec :: ColorMap -> Feature -> VL.VLSpec
 getWindowSpec colorMap (Feature feature) =
-  VL.asSpec [ VL.title (T.replace "og_" "" feature) []
+  VL.asSpec [ VL.title feature []
             , VL.height 40
             , windowEnc []
             , windowTrans []
@@ -215,7 +216,7 @@ plotSpatialProjection :: OutputDirectory
                       -> Maybe LabelMap
                       -> ProjectionMap
                       -> SingleCells
-                      -> Maybe Sample
+                      -> Sample
                       -> IO ()
 plotSpatialProjection outputDir' labelMap' pm sc sample = do
   let labelMap = LabelMap . Map.insert (Id "") (Label "NA") . unLabelMap
@@ -258,7 +259,6 @@ plotSpatialProjection outputDir' labelMap' pm sc sample = do
               ]
 
   TU.mktree . TU.fromText . T.pack $ unOutputDirectory outputDir'
-  let fileName (Just (Sample x)) = T.unpack x <> "_projection.html"
-      fileName Nothing = "projection.html"
+  let fileName (Sample x) = T.unpack x <> "_projection.html"
       outputPath = unOutputDirectory outputDir' FP.</> fileName sample
   VL.toHtmlFile outputPath p
