@@ -34,8 +34,6 @@ spatialRelationshipsR :: OutputDirectory
                       -> [Too.Mark]
                       -> IO ()
 spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.runRegion $ do
-  [r| gc() |]
-
   let isLabelMarks = bool 0 1 . isJust $ lm :: Double
       pcfCrossFlagDouble = bool 0 1 $ Too.unPCFCrossFlag pcfCrossFlag' :: Double
 

@@ -411,6 +411,7 @@ data Spatial = Spatial { loadMatrixOptions :: LoadMatrixOptions
               , mark :: [T.Text]
               , pcfCrossFlag :: Bool
               , onlySummaryFlag :: Bool
+              , skipFinishedFlag :: Bool
               , output :: String
               } deriving (Read, Show)
 
@@ -425,6 +426,7 @@ spatialParser = do
   annoSpatCommand <- option str ( long "annospat-command" <> metavar "STRING" <> value "AnnoSpat generateLabels -i %s -m %s -o %s -f %s -l %s -r %s -s \"\"" <> showDefault <> help "The AnnoSpat command to label cells. To customize, use the default value then follow the with custom additional arguments, making sure not to alter the default arguments used here." )
   pcfCrossFlag <- switch ( long "pcf-cross" <> help "Whether to use the multitype point correlation function (pcfcross) instead of the mark correlation function (markcrosscorr) for spatial relationships using categorical marks." )
   onlySummaryFlag <- switch ( long "summary-only" <> help "Whether to only calculate the summarization of the spatial statistics, for use only if skipping the spatial relationship calculations." )
+  skipFinishedFlag <- switch ( long "skip-finished" <> help "Whether to skip the finished comparisons (contains the stats.csv file in the output folder)." )
   output <- outputParser
 
   pure $ SpatialCommand (Spatial {..})

@@ -25,6 +25,7 @@ newtype EndCol = EndCol { unEndCol :: T.Text }
 newtype AnnoSpatMarkerFile = AnnoSpatMarkerFile { unAnnoSpatMarkerFile :: String }
 newtype AnnoSpatCommand = AnnoSpatCommand { unAnnoSpatCommand :: String }
 newtype PCFCrossFlag = PCFCrossFlag { unPCFCrossFlag :: Bool }
+newtype SkipFinishedFlag = SkipFinishedFlag { unSkipFinishedFlag :: Bool }
 newtype StateLabelsFile = StateLabelsFile { unStateLabelsFile :: String }
 newtype StateLabelMap = StateLabelMap { unStateLabelMap :: Map.Map Birch.Id Birch.Label }
 newtype LabelList a = LabelList { unLabelList :: [a] } deriving (Eq, Ord, Show, Functor, Semigroup, Applicative, Alternative, Monad, MonadPlus)

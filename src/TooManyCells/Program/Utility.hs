@@ -7,12 +7,16 @@ Utility functions for the command line program.
 module TooManyCells.Program.Utility where
 
 -- Remote
+import Control.Exception (SomeException (..), try)
+import Control.Monad (guard)
+import Control.Monad.Trans.Maybe (runMaybeT, MaybeT (..))
 import Data.Bool (bool)
 import Data.List (isInfixOf)
 import Data.Maybe (fromMaybe)
 import Text.Read (readMaybe)
 import qualified System.Directory as FP
 import qualified System.FilePath as FP
+import qualified Turtle as TU
 
 -- Local
 import TooManyCells.File.Types
@@ -54,3 +58,8 @@ getMatrixFileType path = do
         | otherwise = error "\nMatrix path does not exist."
 
   return matrixFile
+
+-- | Check if file exists and is not empty.
+nonEmptyFileExists :: TU.FilePath -> IO Bool
+nonEmptyFileExists path = either (const False) (/= TU.B 0)
+                      <$> (try $ TU.du path :: IO (Either SomeException TU.Size))
