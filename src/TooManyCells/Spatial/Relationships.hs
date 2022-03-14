@@ -136,7 +136,6 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
     crossCorrCurveStats = function (outFolder) {
 
       # Cross correlation function (several columns of marks).
-      pdf(file = file.path(outFolder, "cross_correlation_function.pdf"))
       if(pcfCrossFlagDouble_hs == 1) {
         crossFn = envelope(pat_hs, pcfcross, funargs=marks)
         crossFn$obs = crossFn$iso
@@ -147,7 +146,6 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
         }
       }
       plot(crossFn)
-      dev.off()
 
       # Object
       outObject = crossFn
@@ -192,38 +190,35 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
       dir.create(outFolder, showWarnings = FALSE, recursive = TRUE)
 
       message("Plotting point process")
-      tryCatch({ pdf(file = file.path(outFolder, "basic_plot.pdf"))
-                 plot(pat_hs)
-               }, error = function (e) message(paste("Could not plot basic_plot.pdf:", e)))
-      tryCatch(dev.off(), error = function (e) message("No error closing device."))
+      pdf(file = file.path(outFolder, "basic_plot.pdf"))
+      tryCatch(plot(pat_hs), error = function (e) message(paste("Could not plot basic_plot.pdf:", e)))
+      dev.off()
 
       message("Plotting mark correlation function")
       # Mark correlation function.
-      tryCatch({ pdf(file = file.path(outFolder, "mark_correlation_function.pdf"))
-                 plot(markcorr(pat_hs))
-               }, error = function (e) message(paste("Could not plot mark_correlation_function.pdf:", e)))
-      tryCatch(dev.off(), error = function (e) message("No error closing device."))
+      pdf(file = file.path(outFolder, "mark_correlation_function.pdf"))
+      tryCatch(plot(markcorr(pat_hs)), error = function (e) message(paste("Could not plot mark_correlation_function.pdf:", e)))
+      dev.off()
 
       # Mark variogram (lower value, more similar mark values at a distance).
       if (!isLabelMarks) {
         message("Plotting variogram")
-        tryCatch({ pdf(file = file.path(outFolder, "mark_variogram.pdf"))
-                   plot(markvario(pat_hs))
-                 }, error = function (e) message(paste("Could not plot mark_variogram:", e)))
-        tryCatch(dev.off(), error = function (e) message("No error closing device."))
+        pdf(file = file.path(outFolder, "mark_variogram.pdf"))
+        tryCatch(plot(markvario(pat_hs)), error = function (e) message(paste("Could not plot mark_variogram:", e)))
+        dev.off()
       }
 
       # Envelope.
       message("Plotting envelope")
-      tryCatch({ pdf(file = file.path(outFolder, "envelope.pdf"))
-                 plot(envelope(pat_hs))
-               }, error = function (e) message(paste("Could not plot envelope", e)))
-      tryCatch(dev.off(), error = function (e) message("No error closing device."))
+      pdf(file = file.path(outFolder, "envelope.pdf"))
+      tryCatch(plot(envelope(pat_hs)), error = function (e) message(paste("Could not plot envelope", e)))
+      dev.off()
 
       # Mark cross correlation
       message("Plotting mark cross correlation")
+      pdf(file = file.path(outFolder, "cross_correlation_function.pdf"))
       tryCatch(crossCorrCurveStats(outFolder), error = function (e) message(paste("Could not compute mark cross correlation statistics:", e)))
-      tryCatch(dev.off(), error = function (e) message("No error closing device."))
+      dev.off()
 
       return()
 

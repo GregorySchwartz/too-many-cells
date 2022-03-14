@@ -4,10 +4,12 @@ Gregory W. Schwartz
 Utility functions for the command line program.
 -}
 
+{-# LANGUAGE BangPatterns      #-}
+
 module TooManyCells.Program.Utility where
 
 -- Remote
-import Control.Exception (SomeException (..), try)
+import Control.Exception (SomeException (..), try, evaluate)
 import Control.Monad (guard)
 import Control.Monad.Trans.Maybe (runMaybeT, MaybeT (..))
 import Data.Bool (bool)
@@ -59,7 +61,10 @@ getMatrixFileType path = do
 
   return matrixFile
 
--- | Check if file exists and is not empty.
+-- | Check if file exists and is not empty. Currently may have a handle closing
+-- issue, do not use for now.
 nonEmptyFileExists :: TU.FilePath -> IO Bool
-nonEmptyFileExists path = either (const False) (/= TU.B 0)
+nonEmptyFileExists path = either (const' False) (/= TU.B 0)
                       <$> (try $ TU.du path :: IO (Either SomeException TU.Size))
+  where
+    const' !x !y = x

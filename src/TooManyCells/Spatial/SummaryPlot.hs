@@ -250,10 +250,11 @@ getVarFromVarList var xs = (headMay . Too.unVarList $ xs)
 parseFile :: Maybe Too.StateLabelMap -> TU.FilePath -> IO [Map.Map T.Text T.Text]
 parseFile slm file = do
   contents <- BL.readFile . T.unpack . TU.format TU.fp $ file
-  return
-    . either error (fmap (insertSampleLabel slm file) . F.toList . snd)
-    . CSVStream.decodeByName
-    $ contents
+  -- Force handles to close
+  let !rows = either error (fmap (insertSampleLabel slm file) . F.toList . snd)
+            . CSVStream.decodeByName
+            $ contents
+  return rows
 
 -- | Insert samples and labels in a row.
 insertSampleLabel :: Maybe Too.StateLabelMap
@@ -285,7 +286,7 @@ removeOthers :: [Map.Map T.Text T.Text] -> [Map.Map T.Text T.Text]
 removeOthers =
   fmap (Map.filterWithKey (\k _ -> not . T.isInfixOf "marksOther" $ k))
 
--- | Make sure all columns are represented in a row, unused for now.
+-- | Make sure all columns are represented in a row
 fillColumns :: [Map.Map T.Text T.Text] -> [Map.Map T.Text T.Text]
 fillColumns xs = fmap addDummy xs
   where
@@ -303,8 +304,8 @@ plotSummary :: Too.OutputDirectory
             -> IO ()
 plotSummary (Too.OutputDirectory inDir) slm feature = do
   let inDir' = TU.fromText . T.pack $ inDir
-  stats <- TU.reduce Fold.list . TU.find (TU.suffix "stats.csv") $ inDir'
-  statsParsed <- mapM (parseFile slm) stats
+  statsFiles <- TU.reduce Fold.list . TU.find (TU.suffix "stats.csv") $ inDir'
+  statsParsed <- mapM (parseFile slm) statsFiles
 
   when (null statsParsed) $ print "No stats.csv files found, first generate spatial results"
 
@@ -502,5 +503,6 @@ plotSummary (Too.OutputDirectory inDir) slm feature = do
              $ stats
   BL.writeFile (T.unpack . TU.format TU.fp $ outputStats)
     . CSV.encodeByName header
+    . fillColumns
     . bool id removeOthers noLabelFlag
     $ stats

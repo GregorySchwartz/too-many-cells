@@ -70,9 +70,9 @@ spatialRelationshipsCall (Too.OutputDirectory outDir) skipFlag' pcfCrossFlag' pm
                 $ Too.unOutputDirectory outDir' FP.</> "stats.csv"
 
   -- If stats.csv exists and is not empty, then run everything
-  skip <- (&&)
-      <$> (pure $ Too.unSkipFinishedFlag skipFlag')
-      <*> (Too.nonEmptyFileExists finalFile)
+  !skip <- (&&)
+       <$> (pure $ Too.unSkipFinishedFlag skipFlag')
+       <*> (TU.testfile finalFile)
   when (not skip) $ spatialRelationshipsR outDir' pcfCrossFlag' pm lm sc marks
 
 -- | Helper for spatial relationships function.
@@ -92,9 +92,7 @@ spatialRelationshipsHelper outDir skipFlag' pcfCrossFlag' pm lm sc sample (fmap 
     void
       . mapTasks workers  -- mapTasks_ not working
       . fmap (\(!x, !y) -> spatialRelationshipsCall outDir skipFlag' pcfCrossFlag' pm lm sc sample [x, y])
-      $ (,)
-    <$> getMarks lm
-    <*> getMarks lm
+      $ (,) <$> getMarks lm <*> getMarks lm
   where
     getMarks Nothing = fmap Too.MarkFeature . V.toList . L.view Too.colNames $ sc
     getMarks (Just lm) =
