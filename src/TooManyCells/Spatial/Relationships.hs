@@ -118,6 +118,7 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
       statsDf = data.frame(meanCorr = mean(df$obs))
       statsDf$maxCorr = max(df$obs)
       statsDf$minCorr = min(df$obs)
+      statsDf$meanCorr = mean(df$obs)
       statsDf$topMaxCorr = max(df$obs[1:round(length(df$obs) / 4)])
       statsDf$topMeanCorr = mean(df$obs[1:round(length(df$obs) / 4)])
       statsDf$negSwap = findNegSwap(1, df)

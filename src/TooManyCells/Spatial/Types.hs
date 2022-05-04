@@ -26,11 +26,12 @@ newtype AnnoSpatMarkerFile = AnnoSpatMarkerFile { unAnnoSpatMarkerFile :: String
 newtype AnnoSpatCommand = AnnoSpatCommand { unAnnoSpatCommand :: String }
 newtype PCFCrossFlag = PCFCrossFlag { unPCFCrossFlag :: Bool }
 newtype SkipFinishedFlag = SkipFinishedFlag { unSkipFinishedFlag :: Bool }
+newtype IncludeOthersFlag = IncludeOthersFlag { unIncludeOthersFlag :: Bool }
 newtype StateLabelsFile = StateLabelsFile { unStateLabelsFile :: String }
 newtype StateLabelMap = StateLabelMap { unStateLabelMap :: Map.Map Birch.Id Birch.Label }
-newtype LabelList a = LabelList { unLabelList :: [a] } deriving (Eq, Ord, Show, Functor, Semigroup, Applicative, Alternative, Monad, MonadPlus)
+newtype LabelList a = LabelList { unLabelList :: [a] } deriving (Eq, Ord, Show, Functor, Monoid, Semigroup, Applicative, Alternative, Monad, MonadPlus)
 newtype Compare a = Compare { unCompare :: (T.Text, [a]) } deriving (Show)
-newtype VarList a = VarList { unVarList :: [a] } deriving (Show, Functor, Semigroup, Applicative, Alternative, Monad, MonadPlus)
+newtype VarList a = VarList { unVarList :: [a] } deriving (Show, Functor, Semigroup, Monoid, Applicative, Alternative, Monad, MonadPlus)
 
 data Range = Range { minX :: Double
                    , maxX :: Double

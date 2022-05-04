@@ -101,9 +101,12 @@ spatialRelationshipsHelper outDir skipFlag' pcfCrossFlag' pm lm sc sample marks 
   spatialRelationshipsCall outDir skipFlag' pcfCrossFlag' pm lm sc sample marks
 
 -- | Helper for plotting spatial summary.
-spatialSummary
-  :: Too.OutputDirectory -> Delimiter -> Maybe Too.StateLabelsFile -> IO ()
-spatialSummary outputDir' delimiter' stateLabelsFile' = do
+spatialSummary :: Too.OutputDirectory
+               -> Delimiter
+               -> Too.IncludeOthersFlag
+               -> Maybe Too.StateLabelsFile
+               -> IO ()
+spatialSummary outputDir' delimiter' iof stateLabelsFile' = do
   stateLabelMap <-
     mapM
       ( fmap (Too.StateLabelMap . unLabelMap)
@@ -127,7 +130,7 @@ spatialSummary outputDir' delimiter' stateLabelsFile' = do
                       , "maxPos"
                       , "minPos"
                       ]
-  mapM_ (plotSummary outputDir' stateLabelMap) featureList
+  mapM_ (plotSummary outputDir' iof stateLabelMap) featureList
 
 -- | Spatial path.
 spatialMain :: Subcommand -> IO ()
@@ -140,6 +143,7 @@ spatialMain sub@(SpatialCommand opts) = H.withEmbeddedR R.defaultConfig $ do
                  . (loadMatrixOptions :: Spatial -> LoadMatrixOptions)
                  $ opts
       skipFlag' = Too.SkipFinishedFlag $ skipFinishedFlag opts
+      iof' = Too.IncludeOthersFlag $ includeOthersFlag opts
 
   unless onlySummaryFlag' $ do
 
@@ -231,5 +235,5 @@ spatialMain sub@(SpatialCommand opts) = H.withEmbeddedR R.defaultConfig $ do
         [] -> pure ()
         m -> spatialRelationshipsHelper relationshipsOutput skipFlag' pcfCrossFlag' subPm labelMap processedSc s m
 
-  spatialSummary outputDir' delimiter' stateLabelsFile'
+  spatialSummary outputDir' delimiter' iof' stateLabelsFile'
 spatialMain _ = error "Wrong path in spatial, contact Gregory Schwartz for this error."
