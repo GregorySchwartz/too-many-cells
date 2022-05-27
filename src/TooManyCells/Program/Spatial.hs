@@ -117,7 +117,8 @@ spatialSummary outputDir' delimiter' iof stateLabelsFile' = do
       stateLabelsFile'
   let featureList = fmap
                       Feature
-                      [ "maxCorr"
+                      [ "meanCorr"
+                      , "maxCorr"
                       , "minCorr"
                       , "topMaxCorr"
                       , "topMeanCorr"

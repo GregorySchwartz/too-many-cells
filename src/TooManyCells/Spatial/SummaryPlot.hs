@@ -74,11 +74,10 @@ safeKWTest xs = do
   return res'
 
 -- | Add on the relevant p-values
-pVal :: Too.IncludeOthersFlag
-     -> Birch.Feature
+pVal :: Birch.Feature
      -> [Map.Map T.Text T.Text]
      -> IO ([Map.Map T.Text T.Text], [Map.Map T.Text T.Text])
-pVal (Too.IncludeOthersFlag iof) (Birch.Feature feature) ms = do
+pVal (Birch.Feature feature) ms = do
   statRows' <- statRows
   statSummary' <- statSummary
   return (statRows', statSummary')
@@ -372,7 +371,9 @@ removeOthers =
 
 -- | Remove rows with "marksOther".
 removeOthersRows :: [Map.Map T.Text T.Text] -> [Map.Map T.Text T.Text]
-removeOthersRows = filter (not . isOther)
+removeOthersRows = filter (\ x -> (not . isOther $ x)
+                               && (Map.lookup "oldVar2" x /= Just "marksOther")
+                          )
 
 -- | Make sure all columns are represented in a row
 fillColumns :: [Map.Map T.Text T.Text] -> [Map.Map T.Text T.Text]
@@ -407,12 +408,13 @@ plotSummary (Too.OutputDirectory inDir) iof slm feature = do
       outputStats = outDir FP.</> TU.fromText (outputBasename <> ".csv")
       rows' = bool
                 removeOthersRows
-                (filter (not . isVar1Other)) (Too.unIncludeOthersFlag iof)
+                (filter (not . isVar1Other))
+                (Too.unIncludeOthersFlag iof)
             . mconcat
             $ statsParsed
       noLabelFlag = isNothing slm
 
-  (rows, stats) <- pVal iof feature rows'
+  (rows, stats) <- pVal feature rows'
 
   let pValComparisons = fmap (T.intercalate "/" . fmap (fromMaybe ""))
                       . pairwise
