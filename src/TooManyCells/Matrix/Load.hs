@@ -286,7 +286,10 @@ loadFragments whitelist blacklist excludeFragments binWidth (FragmentsFile mf) =
       stream = preprocessStream
              . fmap (T.splitOn "\t")
              . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments by name match
-             . Turtle.mfilter (not . T.null)
+             . Turtle.mfilter (\ x
+                              -> (not . T.null $ x)
+                              && ((fmap fst . T.uncons $ x) /= Just '#')  -- No commented or empty lines
+                              )
              . fmap Turtle.lineToText
              . (maybe id filterBlacklist blacklist)
              . Turtle.inproc "bedtools" ["sort", "-i", "stdin"]
@@ -358,7 +361,10 @@ loadBdgBW blacklist excludeFragments binWidth inFile = do
       stream = preprocessStream
              . fmap (T.splitOn "\t")
              . (\x -> maybe x (flip filterFragments x) excludeFragments)  -- Filter out unwanted fragments by name match
-             . Turtle.mfilter (not . T.null)
+             . Turtle.mfilter (\ x
+                              -> (not . T.null $ x)
+                              && ((fmap fst . T.uncons $ x) /= Just '#')  -- No commented or empty lines
+                              )
              . fmap Turtle.lineToText
              . (maybe id filterBlacklist blacklist)
              . Turtle.inproc "bedtools" ["sort", "-i", "stdin"]

@@ -123,7 +123,7 @@ toGenomecov (GenomecovCommand gcc) (GenomeFile gf) clusterTotalMap outputPath fi
 
   _ <- MaybeT . fmap Just $ externalCompressedFragmentsSort file
   _ <- MaybeT . fmap Just . callCommand $ TP.printf gcc file gf scale output
-  _ <- MaybeT . fmap Just $ externalFragmentsSort output
+  -- _ <- MaybeT . fmap Just $ externalFragmentsSort output  -- Removing as sorting ruins track line
   _ <- MaybeT . fmap Just . callCommand $ TP.printf "bedGraphToBigWig %s %s %s" output gf wigOut
   return ()
 
@@ -244,7 +244,9 @@ saveClusterFragments
           $ cr
       cellClusterMap :: HMap.HashMap T.Text [Int]
       cellClusterMap = HMap.fromList clusterAssocList
-      processedStream = S.map (T.splitOn "\t" . T.decodeUtf8)
+      processedStream = S.map (T.splitOn "\t")
+                      . S.filter ((/=) (Just '#') . fmap fst . T.uncons)  -- No commented
+                      . S.map T.decodeUtf8
                       . S.mapped BS.toStrict
                       . BS.lines
                       . decompressStreamAll (WindowBits 31) -- For gunzip
