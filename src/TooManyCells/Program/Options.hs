@@ -26,6 +26,7 @@ import qualified "find-clumpiness" Types as Clump
 
 -- Local
 import TooManyCells.Matrix.Types (NormType)
+import TooManyCells.Spatial.Types (TopDistances)
 
 deriving instance Show Clump.Exclusivity
 
@@ -363,8 +364,8 @@ peaksParser = do
   genome <- option str ( long "genome" <> metavar "PATH" <> value "./human.hg38.genome" <> showDefault <> help "The location of the genome file for the --genomecov-command, see https://github.com/arq5x/bedtools2/tree/master/genomes" )
   skipFragments <- switch ( long "skip-fragments" <> help "Whether to skip the generation of the fragments (e.g. if changing only --peak-call-command and fragment separation by cluster already exists)." )
   peakNode <- many $ option auto ( long "peak-node" <> metavar "[NODE]" <> help "List of nodes to peak call, i.e. \"--peak-node 3 --peak-node 5 --peak-node 7\". If the node is not a leaf node, make sure to use --all-nodes in addition. Defaults to all leaf nodes." )
-  peakNodeLabels <- many $ option str ( long "peakNodeLabels" <> metavar "[LABEL])" <> help "List of labels to keep in each node when outputting fragments and peaks, i.e. --peak-node-labels \"(3, [\\\"Red\\\"])\" --peak-node-labels \"(5, [\\\"Red\\\", \\\"Blue\\\"]. Nodes not listed will include all labels. Defaults to all labels." )
-  allNodes <- switch ( long "allNodes" <> help "Whether to get fragments and peaks for all nodes, not just the leaves." )
+  peakNodeLabels <- many $ option str ( long "peak-node-labels" <> metavar "[LABEL])" <> help "List of labels to keep in each node when outputting fragments and peaks, i.e. --peak-node-labels \"(3, [\\\"Red\\\"])\" --peak-node-labels \"(5, [\\\"Red\\\", \\\"Blue\\\"]. Nodes not listed will include all labels. Defaults to all labels." )
+  allNodes <- switch ( long "all-nodes" <> help "Whether to get fragments and peaks for all nodes, not just the leaves." )
   bedgraph <- switch ( long "bedgraph" <> help "Whether to output cluster normalized per million bedgraph output." )
   output <- outputParser
 
@@ -409,6 +410,7 @@ data Spatial = Spatial { loadMatrixOptions :: LoadMatrixOptions
               , annoSpatMarkerFile :: Maybe String
               , annoSpatCommand :: String
               , mark :: [T.Text]
+              , topDistances :: Maybe TopDistances
               , pcfCrossFlag :: Bool
               , onlySummaryFlag :: Bool
               , skipFinishedFlag :: Bool
@@ -423,6 +425,7 @@ spatialParser = do
   projectionFile <- projectionParser
   stateLabelsFile <- optional $ option str ( long "state-labels-file" <> metavar "FILE" <> help "The input file containing a metadata label for sample (i.e. disease or control) to group samples by, with \"item,label\" header." )
   mark <- many $ option str ( long "mark" <> metavar "FEATURE | LABEL" <> help "Marks for the spatial relationship analysis. A list (`--mark MARK --mark MARK`) where `MARK` is either a feature such as a gene or protein or a label from the `--labels-file`. If the cells have labels (from `--labels-file`, `--annospat-marker-file`, or `--custom-label`), the `MARK` will be interpreted as a label. If `--mark ALL` (capitalized ALL, only ALL and nothing else) and `--labels-file` is given, then a pairwise comparison between labels will be computed, or if the `--labels-file` is not given then a pairwise comparison between features will be computed. If no marks are given, no spatial relationship will be carried out and only the interactive projection plot will be given. Importantly, if --include-others is enabled, the summary output files will also contain Kruskal-Wallis calculations with the shown distributions, but also with the marksOther-marksOther relationships to ensure the observation is not random. This explains why the Kruskal-Wallis value may be different from a single label vs. label comparison value, which would be equal otherwise." )
+  topDistances <- optional $ option auto ( long "top-distances" <> metavar "[TopQuantile 10] | TopQuantile DOUBLE | TopDistance DOUBLE" <> help "For \"top\" (close) distance statistics, this number defines the top quantile (TopQuantile) or exact top distance (TopDistance). For instance, TopQuantile 4 would be the closest 25% of all distances, while TopQuantile 10 would be the closest 10% of all distances, and TopDistance 15 would be all distances from the origin to 15 (whatever unit that would be)." )
   annoSpatMarkerFile <- optional $ option str ( long "annospat-marker-file" <> metavar "STRING" <> help "The location of the AnnoSpat marker file for cell classification. Triggers the use of AnnoSpat to generate the labels file rather than --labels-file. Overrides the --labels-file argument." )
   annoSpatCommand <- option str ( long "annospat-command" <> metavar "STRING" <> value "AnnoSpat generateLabels -i %s -m %s -o %s -f %s -l %s -r %s -s \"\"" <> showDefault <> help "The AnnoSpat command to label cells. To customize, use the default value then follow the with custom additional arguments, making sure not to alter the default arguments used here." )
   pcfCrossFlag <- switch ( long "pcf-cross" <> help "Whether to use the multitype point correlation function (pcfcross) instead of the mark correlation function (markcrosscorr) for spatial relationships using categorical marks." )
