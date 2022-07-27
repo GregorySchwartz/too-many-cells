@@ -56,9 +56,10 @@ spatialRelationshipsCall :: Too.OutputDirectory
                          -> Maybe LabelMap
                          -> Too.SingleCells
                          -> Maybe Sample
+                         -> Maybe Too.TopDistances
                          -> [Too.Mark]
                          -> IO ()
-spatialRelationshipsCall (Too.OutputDirectory outDir) skipFlag' pcfCrossFlag' pm lm sc sample marks = do
+spatialRelationshipsCall (Too.OutputDirectory outDir) skipFlag' pcfCrossFlag' pm lm sc sample td marks = do
   let markString = T.unpack . T.intercalate "_" . fmap markToText $ marks
       folderName (Just (Sample x)) = T.unpack x <> "_" <> markString
       folderName Nothing = markString
@@ -73,7 +74,8 @@ spatialRelationshipsCall (Too.OutputDirectory outDir) skipFlag' pcfCrossFlag' pm
   !skip <- (&&)
        <$> (pure $ Too.unSkipFinishedFlag skipFlag')
        <*> (TU.testfile finalFile)
-  when (not skip) $ spatialRelationshipsR outDir' pcfCrossFlag' pm lm sc marks
+  when (not skip)
+    $ spatialRelationshipsR outDir' pcfCrossFlag' pm lm sc td marks
 
 -- | Helper for spatial relationships function.
 spatialRelationshipsHelper :: Too.OutputDirectory
@@ -83,22 +85,23 @@ spatialRelationshipsHelper :: Too.OutputDirectory
                            -> Maybe LabelMap
                            -> Too.SingleCells
                            -> Maybe Sample
+                           -> Maybe Too.TopDistances
                            -> [Too.Mark]
                            -> IO ()
-spatialRelationshipsHelper _ _ _ _ _ _ _ [] = pure ()
-spatialRelationshipsHelper outDir skipFlag' pcfCrossFlag' pm lm sc sample (fmap markToText -> ["ALL"]) = do
+spatialRelationshipsHelper _ _ _ _ _ _ _ _ [] = pure ()
+spatialRelationshipsHelper outDir skipFlag' pcfCrossFlag' pm lm sc sample td (fmap markToText -> ["ALL"]) = do
   cores <- getNumCapabilities
   withTaskGroup cores $ \workers ->
     void
       . mapTasks workers  -- mapTasks_ not working
-      . fmap (\(!x, !y) -> spatialRelationshipsCall outDir skipFlag' pcfCrossFlag' pm lm sc sample [x, y])
+      . fmap (\(!x, !y) -> spatialRelationshipsCall outDir skipFlag' pcfCrossFlag' pm lm sc sample td [x, y])
       $ (,) <$> getMarks lm <*> getMarks lm
   where
     getMarks Nothing = fmap Too.MarkFeature . V.toList . L.view Too.colNames $ sc
     getMarks (Just lm) =
       fmap Too.MarkLabel . Set.toList . Set.fromList . Map.elems . unLabelMap $ lm
-spatialRelationshipsHelper outDir skipFlag' pcfCrossFlag' pm lm sc sample marks =
-  spatialRelationshipsCall outDir skipFlag' pcfCrossFlag' pm lm sc sample marks
+spatialRelationshipsHelper outDir skipFlag' pcfCrossFlag' pm lm sc sample td marks =
+  spatialRelationshipsCall outDir skipFlag' pcfCrossFlag' pm lm sc sample td marks
 
 -- | Helper for plotting spatial summary.
 spatialSummary :: Too.OutputDirectory
@@ -121,6 +124,7 @@ spatialSummary outputDir' delimiter' iof stateLabelsFile' = do
                       , "maxCorr"
                       , "minCorr"
                       , "topMaxCorr"
+                      , "topMinCorr"
                       , "topMeanCorr"
                       , "negSwap"
                       , "posSwap"
@@ -145,6 +149,7 @@ spatialMain sub@(SpatialCommand opts) = H.withEmbeddedR R.defaultConfig $ do
                  $ opts
       skipFlag' = Too.SkipFinishedFlag $ skipFinishedFlag opts
       iof' = Too.IncludeOthersFlag $ includeOthersFlag opts
+      td' = topDistances opts
 
   unless onlySummaryFlag' $ do
 
@@ -234,7 +239,7 @@ spatialMain sub@(SpatialCommand opts) = H.withEmbeddedR R.defaultConfig $ do
 
       case marks' of
         [] -> pure ()
-        m -> spatialRelationshipsHelper relationshipsOutput skipFlag' pcfCrossFlag' subPm labelMap processedSc s m
+        m -> spatialRelationshipsHelper relationshipsOutput skipFlag' pcfCrossFlag' subPm labelMap processedSc s td' m
 
   spatialSummary outputDir' delimiter' iof' stateLabelsFile'
 spatialMain _ = error "Wrong path in spatial, contact Gregory Schwartz for this error."

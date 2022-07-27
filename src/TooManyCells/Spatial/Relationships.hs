@@ -31,11 +31,16 @@ spatialRelationshipsR :: OutputDirectory
                       -> ProjectionMap
                       -> Maybe LabelMap
                       -> SingleCells
+                      -> Maybe Too.TopDistances
                       -> [Too.Mark]
                       -> IO ()
-spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.runRegion $ do
+spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc td marks = R.runRegion $ do
   let isLabelMarks = bool 0 1 . isJust $ lm :: Double
       pcfCrossFlagDouble = bool 0 1 $ Too.unPCFCrossFlag pcfCrossFlag' :: Double
+      (tVal, tQFlag) = case td of
+                        Nothing -> (10, 1 :: Double)
+                        Just (Too.TopQuantile x) -> (x :: Double, 1)
+                        Just (Too.TopDistance x) -> (x :: Double, 0)
 
   pat <- scToRPat lm pm sc marks
 
@@ -113,14 +118,23 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
       return(xs$r[min(which(xs$obs == min(xs$obs)))])
     }
 
+    topDistances = function(xs) {
+      if(tQFlag_hs == 1) {
+        return(xs$obs[1:round(length(xs$obs) / tVal_hs)])
+      } else {
+        return(xs$obs[1:max(which(xs$r <= tVal_hs))])
+      }
+    }
+
     # Find statistics for a single curve
     getCurveStats = function (outFolder, df) {
       statsDf = data.frame(meanCorr = mean(df$obs))
       statsDf$maxCorr = max(df$obs)
       statsDf$minCorr = min(df$obs)
       statsDf$meanCorr = mean(df$obs)
-      statsDf$topMaxCorr = max(df$obs[1:round(length(df$obs) / 4)])
-      statsDf$topMeanCorr = mean(df$obs[1:round(length(df$obs) / 4)])
+      statsDf$topMaxCorr = max(topDistances(df))
+      statsDf$topMeanCorr = mean(topDistances(df))
+      statsDf$topMinCorr = min(topDistances(df))
       statsDf$negSwap = findNegSwap(1, df)
       statsDf$posSwap = findPosSwap(1, df)
       statsDf$longestPosLength = findLongestLength(TRUE, 1, df)
@@ -130,6 +144,8 @@ spatialRelationshipsR (OutputDirectory outDir) pcfCrossFlag' pm lm sc marks = R.
       statsDf$maxPos = findMaxPos(df)
       statsDf$minPos = findMinPos(df)
       statsDf$label = basename(outFolder)
+      statsDf$topVal = tVal_hs
+      statsDf$topQuantile = tQFlag_hs
 
       return(statsDf)
     }

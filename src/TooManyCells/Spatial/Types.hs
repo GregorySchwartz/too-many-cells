@@ -39,3 +39,4 @@ data Range = Range { minX :: Double
                    , maxY :: Double
                    }
 data Mark = MarkFeature Birch.Feature | MarkLabel Birch.Label deriving (Show, Read, Eq, Ord)
+data TopDistances = TopQuantile Double | TopDistance Double deriving (Show, Read)
