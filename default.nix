@@ -30,6 +30,7 @@ let
 
   # Additional dependencies
   annospat = pkgs.callPackage ./deps/annospat.nix {};
+  homer = pkgs.callPackage ./deps/homer.nix {};
 
   # Haskell compiler
   compiler = pkgs.haskell.packages."${compilerVersion}";
@@ -74,33 +75,34 @@ let
       typed-spreadsheet = doJailbreak super.typed-spreadsheet;
     });
   };
-  buildInputs = [ pkgs.zlib
-                  pkgs.zlib.dev
-                  pkgs.zlib.out
-                  pkgs.blas
+  buildInputs = [ annospat
+                  homer
+                  pkgs.MACS2
+                  pkgs.Renv
                   pkgs.bedtools
-                  pkgs.coreutils
-                  pkgs.liblapack
-                  pkgs.gfortran.cc.lib
+                  pkgs.blas
+                  pkgs.cabal-install
                   pkgs.cairo
-                  pkgs.stdenv
+                  pkgs.coreutils
+                  pkgs.fontconfig
+                  pkgs.gfortran.cc.lib
+                  pkgs.ghcid
+                  pkgs.glibcLocales
                   pkgs.gmp
+                  pkgs.graphviz
                   pkgs.gsl
                   pkgs.gtk2
                   pkgs.gzip
-                  pkgs.pango
-                  pkgs.graphviz
-                  pkgs.pkg-config
-                  pkgs.fontconfig
-                  pkgs.Renv
-                  pkgs.makeWrapper
-                  pkgs.glibcLocales
-                  pkgs.ghcid
-                  pkgs.cabal-install
-                  annospat
-                  pkgs.MACS2
                   pkgs.kent
+                  pkgs.liblapack
+                  pkgs.makeWrapper
                   pkgs.meme-suite
+                  pkgs.pango
+                  pkgs.pkg-config
+                  pkgs.stdenv
+                  pkgs.zlib
+                  pkgs.zlib.dev
+                  pkgs.zlib.out
                ];
 in (pkg.overrideAttrs(attrs: {
   buildInputs = attrs.buildInputs ++ buildInputs;
@@ -124,6 +126,7 @@ in (pkg.overrideAttrs(attrs: {
               --prefix 'PATH' ':' "${pkgs.MACS2}/bin/" \
               --prefix 'PATH' ':' "${pkgs.meme-suite}/bin/" \
               --prefix 'PATH' ':' "${annospat}/bin/" \
+              --prefix 'PATH' ':' "${homer}/bin/" \
               --prefix-contents 'R_LIBS_SITE' ':' "$out/paths/r_path.txt" \
               --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \
