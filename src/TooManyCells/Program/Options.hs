@@ -399,7 +399,7 @@ data MatrixOutput = MatrixOutput { loadMatrixOptions :: LoadMatrixOptions
 matrixOutputParser :: Parser Subcommand
 matrixOutputParser = do
   loadMatrixOptions <- loadMatrixParser
-  matOutput <- option str ( long "matOutput" <> metavar "FOLDER | FILE.csv" <> value "out_matrix" <> showDefault <> help "Output the filtered and normalized (not including TfIdfNorm) matrix in this folder in matrix market format or, if a csv file is specified, a dense csv format. Like input, features are rows." )
+  matOutput <- option str ( long "matrix-output" <> metavar "FOLDER | FILE.csv" <> value "out_matrix" <> showDefault <> help "Output the filtered and normalized (not including TfIdfNorm) matrix in this folder in matrix market format or, if a csv file is specified, a dense csv format. Like input, features are rows." )
 
   pure $ MatrixOutputCommand (MatrixOutput {..})
 
