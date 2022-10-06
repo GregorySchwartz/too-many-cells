@@ -7,7 +7,7 @@ license:             GPL-3
 license-file:        LICENSE
 author:              Gregory W. Schwartz
 maintainer:          gregory.schwartz@uhnresearch.ca
-copyright:           2021 Gregory W. Schwartz
+copyright:           2022 Gregory W. Schwartz
 category:            Bioinformatics
 build-type:          Simple
 -- extra-source-files:
