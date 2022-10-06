@@ -7,7 +7,7 @@
 [[https://gregoryschwartz.github.io/too-many-cells/][Website]]
 
 See [[https://github.com/GregorySchwartz/too-many-cells]] for latest version. See [[#too-many-peaks][
-=too-many-peaks= ]] for more information about scATAC-seq usage. See [[ =spatial= ]] for
+=too-many-peaks= ]] for more information about scATAC-seq usage. See [[#spatial][ =spatial= ]] for
 more information about spatial usage.
 
 See [[https://doi.org/10.1038/s41592-020-0748-5][the publication]] (and please cite!) for more information about the algorithm.
@@ -1202,24 +1202,30 @@ too-many-cells -h
 #+END_SRC
 
 #+begin_example
-too-many-cells, Gregory W. Schwartz. Clusters and analyzes single cell data.
+too-many-cells, Gregory W. Schwartz
 
-Usage: too-many-cells (make-tree | interactive | differential | diversity |
-                      paths | classify | peaks | motifs | matrix-output)
+Usage: too-many-cells (COMMAND | COMMAND | COMMAND)
+  Clusters and analyzes single cell data.
 
 Available options:
   -h,--help                Show this help text
 
-Available commands:
-  make-tree                
-  interactive              
-  differential             
-  diversity                
-  paths                    
-  classify                 
-  peaks                    
-  motifs                   
-  matrix-output            
+Analyses using the single-cell matrix
+  make-tree                Generate and plot the too-many-cells tree
+  interactive              Interactive tree plotting (legacy, slow)
+  differential             Find differential features between groups of nodes
+  classify                 Classify single-cells based on reference profiles
+  spatial                  Spatially analyze single-cells
+  matrix-output            Transform the input matrix only
+
+No single-cell matrix analyses
+  diversity                Quantify the diversity and rarefaction curves of the
+                           tree
+  paths                    Infer pseudo-time information from the tree
+
+too-many-peaks analyses for scATAC-seq
+  peaks                    Find peaks in nodes for scATAC-seq
+  motifs                   Find motifs from peaks for scATAC-seq
 #+end_example
 
 * Demo
