@@ -304,6 +304,9 @@ Docker containers may run into this issue if the memory given to the containers
 is insufficient. Make sure to [[https://docs.docker.com/config/containers/resource_constraints/][increase the memory]] that can be used by docker
 containers.
 
+** I am getting the error =--draw-leaf= cannot be read, but I copied the command!
+For some computers, you may need to change the command to single quotations for
+the argument: =--draw-leaf 'DrawItem (DrawContinuous [\"Cd4\"])'=
 * Included projects
 
 This project is a collection of libraries and programs written specifically for
