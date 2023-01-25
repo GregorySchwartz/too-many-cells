@@ -948,7 +948,7 @@ too-many-cells make-tree\
     -m ./control_fragments.tsv.gz
     -Z "Control" \
     --filter-thresholds "(1000, 1)" \
-    --bindwidth 5000 \
+    --binwidth 5000 \
     --lsa 50 \
     --normalization NoneNorm \
     --blacklist-regions-file Anshul_Hg19UltraHighSignalArtifactRegions.bed.gz \
@@ -967,7 +967,7 @@ blacklist known biased regions in the genome, we can call
 =--blacklist-regions-file=. The =--fragments-output= and =--labels-output= go
 hand-in-hand with =-Z= in order to keep the renamed barcodes and labels (found
 in the output folder). =too-many-cells= will binarize the data by default unless
-=--no-binarize= is specified. Lastly, we choose a bindwidth using =--binwidth=
+=--no-binarize= is specified. Lastly, we choose a binwidth using =--binwidth=
 to conform to a set of standard features across cells and samples.
 
 ** =peaks=
