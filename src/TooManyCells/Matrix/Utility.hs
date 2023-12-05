@@ -306,9 +306,9 @@ matrixValidity mat
                            <> ","
                            <> show numCells
                            <> ") with matrix (rows, columns) ("
-                           <> show rows
-                           <> ","
                            <> show cols
+                           <> ","
+                           <> show rows
                            <> "), will probably result in error."
   | otherwise = Nothing
   where
