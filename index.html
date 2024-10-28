@@ -10,31 +10,44 @@
 <meta name="generator" content="Org Mode" />
 <link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/htmlize.css"/>
 <link rel="stylesheet" type="text/css" href="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/css/readtheorg.css"/>
+<link rel="stylesheet" type="text/css" href="src/readtheorg_theme/css/search.css"/>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 <script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/lib/js/jquery.stickytableheaders.min.js"></script>
+<script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/js/search.js"></script>
 <script type="text/javascript" src="https://fniessen.github.io/org-html-themes/src/readtheorg_theme/js/readtheorg.js"></script>
-<script type="text/x-mathjax-config">
-    MathJax.Hub.Config({
-        displayAlign: "center",
-        displayIndent: "0em",
-
-        "HTML-CSS": { scale: 100,
-                        linebreaks: { automatic: "false" },
-                        webFont: "TeX"
-                       },
-        SVG: {scale: 100,
-              linebreaks: { automatic: "false" },
-              font: "TeX"},
-        NativeMML: {scale: 100},
-        TeX: { equationNumbers: {autoNumber: "AMS"},
-               MultLineWidth: "85%",
-               TagSide: "right",
-               TagIndent: ".8em"
-             }
-});
+<script>
+  window.MathJax = {
+    tex: {
+      ams: {
+        multlineWidth: '85%'
+      },
+      tags: 'ams',
+      tagSide: 'right',
+      tagIndent: '.8em'
+    },
+    chtml: {
+      scale: 1.0,
+      displayAlign: 'center',
+      displayIndent: '0em'
+    },
+    svg: {
+      scale: 1.0,
+      displayAlign: 'center',
+      displayIndent: '0em'
+    },
+    output: {
+      font: 'mathjax-modern',
+      displayOverflow: 'overflow'
+    }
+  };
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+
+<script
+  id="MathJax-script"
+  async
+  src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+</script>
 </head>
 <body>
 <div id="content" class="content">
@@ -43,57 +56,58 @@
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#orga7a65ea">1. Description</a></li>
-<li><a href="#org126bbfb">2. New features for v3.0.0.0</a></li>
-<li><a href="#orgde817bf">3. New features for v2.2.0.0</a></li>
-<li><a href="#org9783757">4. New features for v2.0.0.0</a></li>
-<li><a href="#orgd16f6a0">5. New features since initial launch</a></li>
-<li><a href="#org76af853">6. Installation</a>
+<li><a href="#org396c2f2">Description</a></li>
+<li><a href="#org96129c8">New interactive release with Python implementation</a></li>
+<li><a href="#org7c67aeb">New features for v3.0.0.0</a></li>
+<li><a href="#org608b575">New features for v2.2.0.0</a></li>
+<li><a href="#org43419d4">New features for v2.0.0.0</a></li>
+<li><a href="#org4ccc04c">New features since initial launch</a></li>
+<li><a href="#orgf94b8f3">Installation</a>
 <ul>
-<li><a href="#org311e14a">6.1. nix</a></li>
-<li><a href="#org1ab957f">6.2. Stack (unsupported in <code>too-many-cells &gt;= v2.0.0.0</code>, use nix)</a>
+<li><a href="#org6381902">nix</a></li>
+<li><a href="#orgaf526dc">Stack (unsupported in <code>too-many-cells &gt;= v2.0.0.0</code>, use nix)</a>
 <ul>
-<li><a href="#org3b25e1f">6.2.1. Dependencies</a></li>
-<li><a href="#org43fed89">6.2.2. Install <code>stack</code></a></li>
-<li><a href="#org40eda2f">6.2.3. Install <code>too-many-cells</code></a></li>
+<li><a href="#orgda1de96">Dependencies</a></li>
+<li><a href="#orgbfba4b3">Install <code>stack</code></a></li>
+<li><a href="#org8e53b2f">Install <code>too-many-cells</code></a></li>
 </ul>
 </li>
-<li><a href="#orgcd143d9">6.3. Docker</a></li>
+<li><a href="#org747659d">Docker</a></li>
 </ul>
 </li>
-<li><a href="#org9b76316">7. Troubleshooting</a>
+<li><a href="#org8b79a91">Troubleshooting</a>
 <ul>
-<li><a href="#org7bf2a21">7.1. Using nix, I'm getting shared object not found errors.</a></li>
-<li><a href="#org5f2cfe5">7.2. I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</a></li>
-<li><a href="#org1bb0ba3">7.3. I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</a></li>
-<li><a href="#orgb0582fb">7.4. I am still having issues with installation</a></li>
-<li><a href="#orga7e3837">7.5. I am on macOS/Windows with docker and <code>too-many-cells</code> silently crashes.</a></li>
+<li><a href="#org44f087f">Using nix, I&rsquo;m getting shared object not found errors.</a></li>
+<li><a href="#org343ed00">I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</a></li>
+<li><a href="#orgf86f5af">I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</a></li>
+<li><a href="#org95288ba">I am still having issues with installation</a></li>
+<li><a href="#orgf59e6f4">I am on macOS/Windows with docker and <code>too-many-cells</code> silently crashes.</a></li>
 </ul>
 </li>
-<li><a href="#orga7c847c">8. Included projects</a></li>
-<li><a href="#orga1e5e91">9. Usage</a>
+<li><a href="#org3219ed5">Included projects</a></li>
+<li><a href="#org3a9cbe1">Usage</a>
 <ul>
-<li><a href="#makeTreeUsage">9.1. <code>make-tree</code></a>
+<li><a href="#makeTreeUsage"><code>make-tree</code></a>
 <ul>
-<li><a href="#orgcf60e30">9.1.1. Output</a></li>
-<li><a href="#org74dd419">9.1.2. Outline with options</a></li>
-<li><a href="#orgc37647e">9.1.3. Example</a></li>
+<li><a href="#orgd3dfc6e">Output</a></li>
+<li><a href="#orgfc54d58">Outline with options</a></li>
+<li><a href="#org1a5ec36">Example</a></li>
 </ul>
 </li>
-<li><a href="#orgfc9b11d">9.2. <code>interactive</code></a></li>
-<li><a href="#org27a5713">9.3. <code>differential</code></a></li>
-<li><a href="#org610c96f">9.4. <code>diversity</code></a></li>
-<li><a href="#org56d3d0e">9.5. <code>paths</code></a></li>
-<li><a href="#too-many-peaks">9.6. Working with scATAC-seq data using <code>too-many-peaks</code></a></li>
-<li><a href="#org1560136">9.7. <code>peaks</code></a></li>
-<li><a href="#org9dd98df">9.8. <code>motifs</code></a></li>
-<li><a href="#org6afe9f8">9.9. <code>classify</code></a></li>
-<li><a href="#spatial">9.10. <code>spatial</code></a></li>
-<li><a href="#org8237717">9.11. <code>matrix-output</code></a></li>
+<li><a href="#org6fc5fd6"><code>interactive</code></a></li>
+<li><a href="#orgd70e8ce"><code>differential</code></a></li>
+<li><a href="#org631ed2e"><code>diversity</code></a></li>
+<li><a href="#org52c0c89"><code>paths</code></a></li>
+<li><a href="#too-many-peaks">Working with scATAC-seq data using <code>too-many-peaks</code></a></li>
+<li><a href="#orgc677b55"><code>peaks</code></a></li>
+<li><a href="#orgc4dcb0b"><code>motifs</code></a></li>
+<li><a href="#orgec6a497"><code>classify</code></a></li>
+<li><a href="#spatial"><code>spatial</code></a></li>
+<li><a href="#org5d14e6d"><code>matrix-output</code></a></li>
 </ul>
 </li>
-<li><a href="#orgc0ffda6">10. Advanced documentation</a></li>
-<li><a href="#orgb73898a">11. Demo</a></li>
+<li><a href="#org595bfd6">Advanced documentation</a></li>
+<li><a href="#org8058217">Demo</a></li>
 </ul>
 </div>
 </div>
@@ -112,14 +126,13 @@ See <a href="https://doi.org/10.1038/s41592-020-0748-5">the publication</a> (and
 </p>
 
 
-<div id="orgb8f0bfe" class="figure">
+<div id="org0a3ea9d" class="figure">
 <p><img src="img/pruned_tree.png" alt="pruned_tree.png" />
 </p>
 </div>
-
-<div id="outline-container-orga7a65ea" class="outline-2">
-<h2 id="orga7a65ea"><span class="section-number-2">1.</span> Description</h2>
-<div class="outline-text-2" id="text-1">
+<div id="outline-container-org396c2f2" class="outline-2">
+<h2 id="org396c2f2">Description</h2>
+<div class="outline-text-2" id="text-org396c2f2">
 <p>
 <code>too-many-cells</code> is a suite of tools, algorithms, and visualizations focusing on
 the relationships between cell clades. This includes new ways of clustering,
@@ -137,10 +150,25 @@ without additional parameters or runs. See below for a full list of features.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org126bbfb" class="outline-2">
-<h2 id="org126bbfb"><span class="section-number-2">2.</span> New features for v3.0.0.0</h2>
-<div class="outline-text-2" id="text-2">
+<div id="outline-container-org96129c8" class="outline-2">
+<h2 id="org96129c8">New interactive release with Python implementation</h2>
+<div class="outline-text-2" id="text-org96129c8">
+<ul class="org-ul">
+<li>A new interactive version of TooManyCells, TooManyCellsInteractive, was
+launched! Check it out at
+<a href="https://github.com/schwartzlab-methods/too-many-cells-interactive">https://github.com/schwartzlab-methods/too-many-cells-interactive</a>, with
+the relevant publication at
+<a href="https://academic.oup.com/gigascience/article/doi/10.1093/gigascience/giae056/7738847">https://academic.oup.com/gigascience/article/doi/10.1093/gigascience/giae056/7738847</a>.</li>
+<li>A new Python implementation of the clustering process, TooManyCells (à la
+Python), was released at
+<a href="https://github.com/schwartzlab-methods/too-many-cells-python">https://github.com/schwartzlab-methods/too-many-cells-python</a>, fully
+compatible with AnnData objects (and TooManyCellsInteractive)!</li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org7c67aeb" class="outline-2">
+<h2 id="org7c67aeb">New features for v3.0.0.0</h2>
+<div class="outline-text-2" id="text-org7c67aeb">
 <ul class="org-ul">
 <li>Added new <code>spatial</code> entry point for spatial analysis of cells! Can make
 interactive plots of the cells in-situ with their features as well as quantify
@@ -155,14 +183,13 @@ matrix to apply normalizations back and forth between axes, for instance,
   MinMaxNorm --normalization TransposeNorm</code> will first apply quantile
 normalization to each cell, then min-max normalization to each column (before
 returning the cells to the proper axis with another tranpose).</li>
-<li>Incompatibility: Projection file format changed "barcode" column to "item".</li>
+<li>Incompatibility: Projection file format changed &ldquo;barcode&rdquo; column to &ldquo;item&rdquo;.</li>
 </ul>
 </div>
 </div>
-
-<div id="outline-container-orgde817bf" class="outline-2">
-<h2 id="orgde817bf"><span class="section-number-2">3.</span> New features for v2.2.0.0</h2>
-<div class="outline-text-2" id="text-3">
+<div id="outline-container-org608b575" class="outline-2">
+<h2 id="org608b575">New features for v2.2.0.0</h2>
+<div class="outline-text-2" id="text-org608b575">
 <ul class="org-ul">
 <li><code>--no-edger</code> replaced with <code>--edger</code> as the default is now Kruskal-Wallis.</li>
 <li>Can now use backgrounds for motifs.</li>
@@ -173,10 +200,9 @@ returning the cells to the proper axis with another tranpose).</li>
 </ul>
 </div>
 </div>
-
-<div id="outline-container-org9783757" class="outline-2">
-<h2 id="org9783757"><span class="section-number-2">4.</span> New features for v2.0.0.0</h2>
-<div class="outline-text-2" id="text-4">
+<div id="outline-container-org43419d4" class="outline-2">
+<h2 id="org43419d4">New features for v2.0.0.0</h2>
+<div class="outline-text-2" id="text-org43419d4">
 <ul class="org-ul">
 <li>Support for scATAC-seq for chromatin state relationships with <a href="#too-many-peaks"> <code>too-many-peaks</code> </a>!</li>
 <li>Find enchriched regions as peaks for scATAC-seq with <code>peaks</code>.</li>
@@ -192,10 +218,9 @@ returning the cells to the proper axis with another tranpose).</li>
 </ul>
 </div>
 </div>
-
-<div id="outline-container-orgd16f6a0" class="outline-2">
-<h2 id="orgd16f6a0"><span class="section-number-2">5.</span> New features since initial launch</h2>
-<div class="outline-text-2" id="text-5">
+<div id="outline-container-org4ccc04c" class="outline-2">
+<h2 id="org4ccc04c">New features since initial launch</h2>
+<div class="outline-text-2" id="text-org4ccc04c">
 <ul class="org-ul">
 <li>Now packaged for the functional package manager <code>nix</code> (Linux only)! No more dependency
 shuffling or root for Docker needed!</li>
@@ -212,26 +237,24 @@ aggregate features by average.</li>
 </ul>
 </div>
 </div>
-
-<div id="outline-container-org76af853" class="outline-2">
-<h2 id="org76af853"><span class="section-number-2">6.</span> Installation</h2>
-<div class="outline-text-2" id="text-6">
+<div id="outline-container-orgf94b8f3" class="outline-2">
+<h2 id="orgf94b8f3">Installation</h2>
+<div class="outline-text-2" id="text-orgf94b8f3">
 <p>
 We provide multiple ways to install <code>too-many-cells</code>. We recommend installing
-with <a href="#org311e14a"> <code>nix</code> </a>. <code>nix</code> will provide all dependencies in the build, supports Linux,
-and should be reproducible, so try that first. We also have <a href="#orgcd143d9">docker</a> images and a
+with <a href="#org6381902"> <code>nix</code> </a>. <code>nix</code> will provide all dependencies in the build, supports Linux,
+and should be reproducible, so try that first. We also have <a href="#org747659d">docker</a> images and a
 <code>Dockerfile</code> to use in any system in case you have a custom build (for instance,
 a non-standard R installation) or difficulty installing. <b>macOS and Windows
 users:</b> <code>too-many-cells</code> was built and tested on Linux, so we highly recommend
-using the <a href="#orgcd143d9">docker</a> image (which is a completely isolated environment which
+using the <a href="#org747659d">docker</a> image (which is a completely isolated environment which
 requires no compiling or installation, other than docker itself) as there may be
 difficulties in installing the dependencies.
 </p>
 </div>
-
-<div id="outline-container-org311e14a" class="outline-3">
-<h3 id="org311e14a"><span class="section-number-3">6.1.</span> nix</h3>
-<div class="outline-text-3" id="text-6-1">
+<div id="outline-container-org6381902" class="outline-3">
+<h3 id="org6381902">nix</h3>
+<div class="outline-text-3" id="text-org6381902">
 <p>
 <code>too-many-cells</code> can be installed using the functional package manager <a href="https://nixos.org/nix/"> <code>nix</code> </a>.
 While you will need <code>sudo</code> to install, no <code>sudo</code> is required after the correct
@@ -241,20 +264,19 @@ setup. First, install <code>nix</code> following the instructions
 
 <div class="org-src-container">
 <pre class="src src-sh">git clone https://github.com/GregorySchwartz/too-many-cells.git
-<span style="color: #ff8700;">cd</span> too-many-cells
+<span style="color: #fe8019;">cd</span> too-many-cells
 nix-env -f default.nix -i too-many-cells
 </pre>
 </div>
 </div>
 </div>
-
-<div id="outline-container-org1ab957f" class="outline-3">
-<h3 id="org1ab957f"><span class="section-number-3">6.2.</span> Stack (unsupported in <code>too-many-cells &gt;= v2.0.0.0</code>, use nix)</h3>
-<div class="outline-text-3" id="text-6-2">
+<div id="outline-container-orgaf526dc" class="outline-3">
+<h3 id="orgaf526dc">Stack (unsupported in <code>too-many-cells &gt;= v2.0.0.0</code>, use nix)</h3>
+<div class="outline-text-3" id="text-orgaf526dc">
 </div>
-<div id="outline-container-org3b25e1f" class="outline-4">
-<h4 id="org3b25e1f"><span class="section-number-4">6.2.1.</span> Dependencies</h4>
-<div class="outline-text-4" id="text-6-2-1">
+<div id="outline-container-orgda1de96" class="outline-4">
+<h4 id="orgda1de96">Dependencies</h4>
+<div class="outline-text-4" id="text-orgda1de96">
 <p>
 You may require the following dependencies to build and run (from Ubuntu 14.04,
 use the appropriate packages from your distribution of choice):
@@ -299,17 +321,16 @@ To install them in R,
 </p>
 
 <div class="org-src-container">
-<pre class="src src-R">install.packages<span style="color: #008787;">(</span>c<span style="color: #d75f87;">(</span><span style="color: #afaf00;">"ggplot2"</span>, <span style="color: #afaf00;">"cowplot"</span>, <span style="color: #afaf00;">"jsonlite"</span><span style="color: #d75f87;">)</span><span style="color: #008787;">)</span>
-install.packages<span style="color: #008787;">(</span><span style="color: #afaf00;">"BiocManager"</span><span style="color: #008787;">)</span>
-BiocManager::install<span style="color: #008787;">(</span><span style="color: #afaf00;">"edgeR"</span><span style="color: #008787;">)</span>
+<pre class="src src-R">install.packages<span style="color: #458588;">(</span>c<span style="color: #b16286;">(</span><span style="color: #b8bb26;">"ggplot2"</span>, <span style="color: #b8bb26;">"cowplot"</span>, <span style="color: #b8bb26;">"jsonlite"</span><span style="color: #b16286;">)</span><span style="color: #458588;">)</span>
+install.packages<span style="color: #458588;">(</span><span style="color: #b8bb26;">"BiocManager"</span><span style="color: #458588;">)</span>
+BiocManager::install<span style="color: #458588;">(</span><span style="color: #b8bb26;">"edgeR"</span><span style="color: #458588;">)</span>
 </pre>
 </div>
 </div>
 </div>
-
-<div id="outline-container-org43fed89" class="outline-4">
-<h4 id="org43fed89"><span class="section-number-4">6.2.2.</span> Install <code>stack</code></h4>
-<div class="outline-text-4" id="text-6-2-2">
+<div id="outline-container-orgbfba4b3" class="outline-4">
+<h4 id="orgbfba4b3">Install <code>stack</code></h4>
+<div class="outline-text-4" id="text-orgbfba4b3">
 <p>
 See <a href="https://docs.haskellstack.org/en/stable/README/">https://docs.haskellstack.org/en/stable/README/</a> for more details.
 </p>
@@ -321,30 +342,28 @@ stack setup
 </div>
 </div>
 </div>
-
-<div id="outline-container-org40eda2f" class="outline-4">
-<h4 id="org40eda2f"><span class="section-number-4">6.2.3.</span> Install <code>too-many-cells</code></h4>
-<div class="outline-text-4" id="text-6-2-3">
+<div id="outline-container-org8e53b2f" class="outline-4">
+<h4 id="org8e53b2f">Install <code>too-many-cells</code></h4>
+<div class="outline-text-4" id="text-org8e53b2f">
 </div>
-<ol class="org-ol">
-<li><a id="orgd4cd168"></a>Source<br />
-<div class="outline-text-5" id="text-6-2-3-1">
+<ul class="org-ul">
+<li><a id="org212e1f1"></a>Source<br />
+<div class="outline-text-5" id="text-org212e1f1">
 <p>
-Probably the easiest method if you don't want to mess with dependencies (outside
+Probably the easiest method if you don&rsquo;t want to mess with dependencies (outside
 of the ones above).
 </p>
 
 <div class="org-src-container">
 <pre class="src src-sh">git clone https://github.com/GregorySchwartz/too-many-cells.git
-<span style="color: #ff8700;">cd</span> too-many-cells
+<span style="color: #fe8019;">cd</span> too-many-cells
 stack install
 </pre>
 </div>
 </div>
 </li>
-
-<li><a id="org5d87e72"></a>Online<br />
-<div class="outline-text-5" id="text-6-2-3-2">
+<li><a id="org4d78f50"></a>Online<br />
+<div class="outline-text-5" id="text-org4d78f50">
 <p>
 We only require <code>stack</code> (or <code>cabal</code>), you do not need to download any source
 code (but you might need the stack.yaml.old dependency versions), just run the
@@ -366,14 +385,13 @@ file. For a quick <code>yaml</code> configuration, refer to
 </p>
 </div>
 </li>
-
 <li><a id="macOS"></a>macOS<br />
 <div class="outline-text-5" id="text-macOS">
 <p>
-We recommend using <a href="#orgcd143d9">docker</a> on macOS. The following is written for
+We recommend using <a href="#org747659d">docker</a> on macOS. The following is written for
 <code>too-many-cells &lt; v2.0.0.0</code>. If you must compile
 <code>too-many-cells</code>, you should get the above dependencies. For some dependencies,
-you can use <a href="https://brew.sh/">brewer</a>, then install <code>too-many-cells</code> (in the cloned folder, don't
+you can use <a href="https://brew.sh/">brewer</a>, then install <code>too-many-cells</code> (in the cloned folder, don&rsquo;t
 forget to install the R dependencies above):
 </p>
 
@@ -385,23 +403,22 @@ brew tap brewsci/bio
 brew tap brewsci/science
 brew install r zeromq graphviz pkg-config gsl libffi gobject-introspection gtk+ gtk+3
 
-<span style="color: #767676;"># </span><span style="color: #767676;">Needed so pkg-config and libraries can be found.</span>
-<span style="color: #767676;"># </span><span style="color: #767676;">For the second path, use the ouput of "brew info libffi".</span>
-<span style="color: #ff8700;">export</span> <span style="color: #87afaf;">PKG_CONFIG_PATH</span>=/usr/local/lib/pkgconfig:/usr/local/opt/libffi/lib/pkgconfig
+<span style="color: #7c6f64;"># </span><span style="color: #7c6f64;">Needed so pkg-config and libraries can be found.</span>
+<span style="color: #7c6f64;"># </span><span style="color: #7c6f64;">For the second path, use the ouput of "brew info libffi".</span>
+<span style="color: #fe8019;">export</span> <span style="color: #83a598;">PKG_CONFIG_PATH</span>=/usr/local/lib/pkgconfig:/usr/local/opt/libffi/lib/pkgconfig
 
-<span style="color: #767676;"># </span><span style="color: #767676;">Tell gtk that it's quartz</span>
+<span style="color: #7c6f64;"># </span><span style="color: #7c6f64;">Tell gtk that it's quartz</span>
 stack install --flag gtk:have-quartz-gtk
 </pre>
 </div>
 </div>
 </li>
-</ol>
+</ul>
 </div>
 </div>
-
-<div id="outline-container-orgcd143d9" class="outline-3">
-<h3 id="orgcd143d9"><span class="section-number-3">6.3.</span> Docker</h3>
-<div class="outline-text-3" id="text-6-3">
+<div id="outline-container-org747659d" class="outline-3">
+<h3 id="org747659d">Docker</h3>
+<div class="outline-text-3" id="text-org747659d">
 <p>
 Different computers have different setups, operating systems, and repositories.
 Do put the entire program in a container to bypass difficulties (with the other
@@ -422,7 +439,7 @@ To run <code>too-many-cells</code> in a docker container:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">sudo docker run -it --rm -v <span style="color: #afaf00;">"/home/username:/home/username"</span> gregoryschwartz/too-many-cells:2.0.0.0 -h
+<pre class="src src-sh">sudo docker run -it --rm -v <span style="color: #b8bb26;">"/home/username:/home/username"</span> gregoryschwartz/too-many-cells:2.0.0.0 -h
 </pre>
 </div>
 
@@ -432,19 +449,19 @@ commands. If you add yourself to the docker group, <code>sudo</code> is not need
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">docker run -it --rm -v <span style="color: #afaf00;">"/home/username:/home/username"</span> <span style="color: #afaf00;">\</span>
-    gregoryschwartz/too-many-cells:2.0.0.0 make-tree <span style="color: #afaf00;">\</span>
-    --matrix-path /home/username/path/to/input <span style="color: #afaf00;">\</span>
-    --labels-file /home/username/path/to/labels.csv <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieRing"</span> <span style="color: #afaf00;">\</span>
-    --output /home/username/path/to/out <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">docker run -it --rm -v <span style="color: #b8bb26;">"/home/username:/home/username"</span> <span style="color: #b8bb26;">\</span>
+    gregoryschwartz/too-many-cells:2.0.0.0 make-tree <span style="color: #b8bb26;">\</span>
+    --matrix-path /home/username/path/to/input <span style="color: #b8bb26;">\</span>
+    --labels-file /home/username/path/to/labels.csv <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieRing"</span> <span style="color: #b8bb26;">\</span>
+    --output /home/username/path/to/out <span style="color: #b8bb26;">\</span>
     &gt; clusters.csv
 </pre>
 </div>
 
 <p>
 Make sure to <a href="https://docs.docker.com/config/containers/resource_constraints/">increase the memory</a> that can be used by docker containers if you
-use macOS or Windows. Also, docker won't be able to find your files by default.
+use macOS or Windows. Also, docker won&rsquo;t be able to find your files by default.
 You need to mount the folders with <code>-v</code> in order to have docker read and write
 from and to the filesystem, respectively. Read the <a href="https://docs.docker.com/storage/volumes/">documentation</a> about volumes
 for more information. You can simply mount your entire relevant path as in the
@@ -463,40 +480,37 @@ To build the <code>too-many-cells</code> image yourself if you want:
 
 <div class="org-src-container">
 <pre class="src src-sh">nix-build docker.nix
-docker load &lt; /nix/store/$<span style="color: #008787;">{</span><span style="color: #87afaf;">NAME_OF_OUTPUT_IMAGE</span><span style="color: #008787;">}</span>.tar.gz
+docker load &lt; /nix/store/$<span style="color: #458588;">{</span><span style="color: #83a598;">NAME_OF_OUTPUT_IMAGE</span><span style="color: #458588;">}</span>.tar.gz
 </pre>
 </div>
 </div>
 </div>
 </div>
-
-<div id="outline-container-org9b76316" class="outline-2">
-<h2 id="org9b76316"><span class="section-number-2">7.</span> Troubleshooting</h2>
-<div class="outline-text-2" id="text-7">
+<div id="outline-container-org8b79a91" class="outline-2">
+<h2 id="org8b79a91">Troubleshooting</h2>
+<div class="outline-text-2" id="text-org8b79a91">
 </div>
-<div id="outline-container-org7bf2a21" class="outline-3">
-<h3 id="org7bf2a21"><span class="section-number-3">7.1.</span> Using nix, I'm getting shared object not found errors.</h3>
-<div class="outline-text-3" id="text-7-1">
+<div id="outline-container-org44f087f" class="outline-3">
+<h3 id="org44f087f">Using nix, I&rsquo;m getting shared object not found errors.</h3>
+<div class="outline-text-3" id="text-org44f087f">
 <p>
 Be sure to have <code>LD_LIBRARY_PATH</code> unset when running <code>nix-env</code> to make sure the
 linked libraries are in <code>/nix/store</code>.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org5f2cfe5" class="outline-3">
-<h3 id="org5f2cfe5"><span class="section-number-3">7.2.</span> I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</h3>
-<div class="outline-text-3" id="text-7-2">
+<div id="outline-container-org343ed00" class="outline-3">
+<h3 id="org343ed00">I am getting errors like <code>AesonException "Error in $.packages.cassava.constraints.flags...</code> when running <code>stack</code> commands</h3>
+<div class="outline-text-3" id="text-org343ed00">
 <p>
 Try upgrading stack with <code>stack upgrade</code>. The new installation will be in
 <code>~/.local/bin</code>, so use that binary.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org1bb0ba3" class="outline-3">
-<h3 id="org1bb0ba3"><span class="section-number-3">7.3.</span> I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</h3>
-<div class="outline-text-3" id="text-7-3">
+<div id="outline-container-orgf86f5af" class="outline-3">
+<h3 id="orgf86f5af">I use conda or custom ld library locations and I cannot install <code>too-many-cells</code> or run into weird R errors</h3>
+<div class="outline-text-3" id="text-orgf86f5af">
 <p>
 <code>stack</code> and <code>too-many-cells</code> assume system libraries and programs. To solve this
 issue, first install the dependencies above at the system level, including
@@ -517,20 +531,18 @@ when installing (and / or the location of R libraries, such as
 </p>
 </div>
 </div>
-
-<div id="outline-container-orgb0582fb" class="outline-3">
-<h3 id="orgb0582fb"><span class="section-number-3">7.4.</span> I am still having issues with installation</h3>
-<div class="outline-text-3" id="text-7-4">
+<div id="outline-container-org95288ba" class="outline-3">
+<h3 id="org95288ba">I am still having issues with installation</h3>
+<div class="outline-text-3" id="text-org95288ba">
 <p>
 <a href="https://github.com/GregorySchwartz/too-many-cells/issues">Open an issue</a>! While working on the issue, try out the docker for
 <code>too-many-cells</code>, it requires no installation at all (other than docker).
 </p>
 </div>
 </div>
-
-<div id="outline-container-orga7e3837" class="outline-3">
-<h3 id="orga7e3837"><span class="section-number-3">7.5.</span> I am on macOS/Windows with docker and <code>too-many-cells</code> silently crashes.</h3>
-<div class="outline-text-3" id="text-7-5">
+<div id="outline-container-orgf59e6f4" class="outline-3">
+<h3 id="orgf59e6f4">I am on macOS/Windows with docker and <code>too-many-cells</code> silently crashes.</h3>
+<div class="outline-text-3" id="text-orgf59e6f4">
 <p>
 Docker containers may run into this issue if the memory given to the containers
 is insufficient. Make sure to <a href="https://docs.docker.com/config/containers/resource_constraints/">increase the memory</a> that can be used by docker
@@ -539,10 +551,9 @@ containers.
 </div>
 </div>
 </div>
-
-<div id="outline-container-orga7c847c" class="outline-2">
-<h2 id="orga7c847c"><span class="section-number-2">8.</span> Included projects</h2>
-<div class="outline-text-2" id="text-8">
+<div id="outline-container-org3219ed5" class="outline-2">
+<h2 id="org3219ed5">Included projects</h2>
+<div class="outline-text-2" id="text-org3219ed5">
 <p>
 This project is a collection of libraries and programs written specifically for
 <code>too-many-cells</code>:
@@ -560,10 +571,9 @@ distributions (statuses).</dd>
 </dl>
 </div>
 </div>
-
-<div id="outline-container-orga1e5e91" class="outline-2">
-<h2 id="orga1e5e91"><span class="section-number-2">9.</span> Usage</h2>
-<div class="outline-text-2" id="text-9">
+<div id="outline-container-org3a9cbe1" class="outline-2">
+<h2 id="org3a9cbe1">Usage</h2>
+<div class="outline-text-2" id="text-org3a9cbe1">
 <p>
 <code>too-many-cells</code> has several entry points depending on the desired analysis.
 </p>
@@ -605,7 +615,7 @@ distributions (statuses).</dd>
 
 <tr>
 <td class="org-left"><code>paths</code></td>
-<td class="org-left">The binary tree equivalent of the so called "pseudotime", or 1D dimensionality reduction</td>
+<td class="org-left">The binary tree equivalent of the so called &ldquo;pseudotime&rdquo;, or 1D dimensionality reduction</td>
 </tr>
 </tbody>
 </table>
@@ -623,9 +633,8 @@ At any point, use <code>-h</code> to see the help of each entry point.
 Also, check out <a href="https://github.com/GregorySchwartz/tooManyCellsR">tooManyCellsR</a> for an R wrapper!
 </p>
 </div>
-
 <div id="outline-container-makeTreeUsage" class="outline-3">
-<h3 id="makeTreeUsage"><span class="section-number-3">9.1.</span> <code>make-tree</code></h3>
+<h3 id="makeTreeUsage"><code>make-tree</code></h3>
 <div class="outline-text-3" id="text-makeTreeUsage">
 <p>
 <code>too-many-cells make-tree</code> generates a binary tree using hierarchical spectral
@@ -658,8 +667,8 @@ input2</code>.
 
 <p>
 The second most important argument is <code>--labels-file</code>. Supply with a <code>csv</code> with
-a format and header of "item,label" to provide colorings and statistics of the
-relationships between labels. Here the "item" column contains the name of each
+a format and header of &ldquo;item,label&rdquo; to provide colorings and statistics of the
+relationships between labels. Here the &ldquo;item&rdquo; column contains the name of each
 cell (barcode) and the label is any property of the cell (the tissue of origin,
 hour in a time course, celltype, etc.). You can also now use <code>-Z</code> as a list for
 each matching <code>-m</code> in order to manually give the entire matrix that label
@@ -673,10 +682,9 @@ To see the full list of options, use <code>too-many-cells -h</code> and <code>-h
 point (i.e. <code>too-many-cells make-tree -h</code>).
 </p>
 </div>
-
-<div id="outline-container-orgcf60e30" class="outline-4">
-<h4 id="orgcf60e30"><span class="section-number-4">9.1.1.</span> Output</h4>
-<div class="outline-text-4" id="text-9-1-1">
+<div id="outline-container-orgd3dfc6e" class="outline-4">
+<h4 id="orgd3dfc6e">Output</h4>
+<div class="outline-text-4" id="text-orgd3dfc6e">
 <p>
 <code>too-many-cells make-tree</code> generates several files in the output folder. Below
 is a short description of each file.
@@ -709,7 +717,7 @@ is a short description of each file.
 
 <tr>
 <td class="org-left"><code>cluster_diversity.csv</code></td>
-<td class="org-left">When labels are provided, the diversity, or "effective number of labels", of each cluster.</td>
+<td class="org-left">When labels are provided, the diversity, or &ldquo;effective number of labels&rdquo;, of each cluster.</td>
 </tr>
 
 <tr>
@@ -744,16 +752,15 @@ is a short description of each file.
 
 <tr>
 <td class="org-left"><code>projection.pdf</code></td>
-<td class="org-left">When <code>--projection</code> is supplied with a file of the format "barcode,x,y", provides a plot of each cell at the specified x and y coordinates (for instance, when looking at t-SNE plots with the same labelings as the dendrogram here).</td>
+<td class="org-left">When <code>--projection</code> is supplied with a file of the format &ldquo;barcode,x,y&rdquo;, provides a plot of each cell at the specified x and y coordinates (for instance, when looking at t-SNE plots with the same labelings as the dendrogram here).</td>
 </tr>
 </tbody>
 </table>
 </div>
 </div>
-
-<div id="outline-container-org74dd419" class="outline-4">
-<h4 id="org74dd419"><span class="section-number-4">9.1.2.</span> Outline with options</h4>
-<div class="outline-text-4" id="text-9-1-2">
+<div id="outline-container-orgfc54d58" class="outline-4">
+<h4 id="orgfc54d58">Outline with options</h4>
+<div class="outline-text-4" id="text-orgfc54d58">
 <p>
 The basic outline of the <b>default</b> matrix pre-processing pipeline with some
 relevant options is as follows (there are many additional options including cell
@@ -770,12 +777,11 @@ whitelists that can be seen using <code>too-many-cells make-tree -h</code>):
 </ol>
 </div>
 </div>
-
-<div id="outline-container-orgc37647e" class="outline-4">
-<h4 id="orgc37647e"><span class="section-number-4">9.1.3.</span> Example</h4>
-<div class="outline-text-4" id="text-9-1-3">
+<div id="outline-container-org1a5ec36" class="outline-4">
+<h4 id="org1a5ec36">Example</h4>
+<div class="outline-text-4" id="text-org1a5ec36">
 </div>
-<ol class="org-ol">
+<ul class="org-ul">
 <li><a id="preprocessedData"></a>Setup<br />
 <div class="outline-text-5" id="text-preprocessedData">
 <p>
@@ -787,7 +793,7 @@ We start with our input matrix. Here,
 </pre>
 </div>
 
-<pre class="example" id="orgc7bb343">
+<pre class="example" id="orgc3ebb95">
 barcodes.tsv  genes.tsv  matrix.mtx
 </pre>
 
@@ -795,7 +801,7 @@ barcodes.tsv  genes.tsv  matrix.mtx
 Note that the input can be a directory (with the <code>cellranger</code> matrix format
 above) or a file (a <code>csv</code> file). You can also point to a <code>cellranger</code> &gt;= 3.0
 folder which has <code>matrix.mtx.gz</code>, <code>features.tsv.gz</code>, and <code>barcodes.tsv.gz</code> files
-instead. <b>You don't need to use scRNA-seq data!</b> You can use any data that has
+instead. <b>You don&rsquo;t need to use scRNA-seq data!</b> You can use any data that has
 observations (cells) and features (genes), as long as you agree that the
 observations are related by their feature abundances. If
 you do upstream batch effect correction, LSA, normalization, or anything else,
@@ -814,7 +820,7 @@ for formats, the matrix market format contains three files like so:
 The <code>matrix.mtx</code> file is in matrix market format.
 </p>
 
-<pre class="example" id="orgb1aba20">
+<pre class="example" id="orgde38d06">
 %%MatrixMarket matrix coordinate integer general
 %
 23433 1981 4255069
@@ -832,14 +838,14 @@ The <code>matrix.mtx</code> file is in matrix market format.
 The <code>genes.tsv</code> file (or <code>features.tsv.gz</code>) contains the features of each cell
 and corresponds to the rows of <code>matrix.mtx</code>. Here, both columns were the same
 gene symbols, but you can have Ensembl as the first column and gene symbol as
-the second, etc. The columns and column orders don't matter, but make sure all
+the second, etc. The columns and column orders don&rsquo;t matter, but make sure all
 matrices have the same format and specify the symbols you want to use (for
 overlaying gene expression, differential expression, etc.) with
 <code>--feature-column COLUMN</code>. So to use the second column for gene expression, you
 would use <code>--feature-column 2</code>.
 </p>
 
-<pre class="example" id="org5233c97">
+<pre class="example" id="org27d6b46">
 Xkr4	Xkr4
 Rp1	Rp1
 Sox17	Sox17
@@ -858,7 +864,7 @@ The <code>barcodes.tsv</code> file contains the ids of each cell or observation 
 corresponds to the columns of <code>matrix.mtx</code>.
 </p>
 
-<pre class="example" id="org0c0e048">
+<pre class="example" id="orga4fde7b">
 AAACCTGCAGTAACGG-1
 AAACGGGAGAAGAAGC-1
 AAACGGGAGACCGGAT-1
@@ -877,7 +883,7 @@ For a <code>csv</code> file, the format is dense (observation columns (cells), f
 (genes)):
 </p>
 
-<pre class="example" id="org956942c">
+<pre class="example" id="org727bab4">
 "","A22.D042044.3_9_M.1.1","C5.D042044.3_9_M.1.1","D10.D042044.3_9_M.1.1","E13.D042044.3_9_M.1.1","F19.D042044.3_9_M.1.1","H2.D042044.3_9_M.1.1","I9.D042044.3_9_M.1.1",...
 "0610005C13Rik",0,0,0,0,0,0,0,...
 "0610007C21Rik",0,112,185,54,0,96,42,...
@@ -896,7 +902,7 @@ We also know where each cell came from, so we mark that down as well in a
 <code>labels.csv</code> file.
 </p>
 
-<pre class="example" id="org7460d64">
+<pre class="example" id="org4e06a3d">
 item,label
 AAACCTGCAGTAACGG-1,Marrow
 AAACGGGAGACCGGAT-1,Marrow
@@ -911,7 +917,7 @@ This can be easily accomplished with <code>sed</code>:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">cat barcodes.tsv | sed <span style="color: #afaf00;">"s/-1/-1,Marrow/"</span> | s/-2/etc... &gt; labels.csv
+<pre class="src src-sh">cat barcodes.tsv | sed <span style="color: #b8bb26;">"s/-1/-1,Marrow/"</span> | s/-2/etc... &gt; labels.csv
 </pre>
 </div>
 
@@ -922,38 +928,36 @@ aggr</code>.
 </p>
 </div>
 </li>
-
-<li><a id="org88e2910"></a>Default run<br />
-<div class="outline-text-5" id="text-9-1-3-2">
+<li><a id="org14ed04d"></a>Default run<br />
+<div class="outline-text-5" id="text-org14ed04d">
 <p>
 We can now run the <code>too-many-cells</code> algorithm on our data. The resulting cells
-with assigned clusters will be printed to <code>stdout</code> (don't forget to use
+with assigned clusters will be printed to <code>stdout</code> (don&rsquo;t forget to use
 <code>--normalization NoneNorm</code> on preprocessed data, as stated <a href="#preprocessedData">here</a>). While older
 versions had default filter thresholds for (MINCELL, MINFEATURE) counts, since
 <code>v2.0.0.0</code> the default is now no filtering to account for multiple assay types.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieRing"</span> <span style="color: #afaf00;">\</span>
-    --output out <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieRing"</span> <span style="color: #b8bb26;">\</span>
+    --output out <span style="color: #b8bb26;">\</span>
     &gt; clusters.csv
 </pre>
 </div>
 
 
-<div id="orgfb19054" class="figure">
+<div id="orgc147c7f" class="figure">
 <p><img src="img/complete_default_tree.png" alt="complete_default_tree.png" />
 </p>
 </div>
 </div>
 </li>
-
-<li><a id="org34cdf29"></a>Pruning tree<br />
-<div class="outline-text-5" id="text-9-1-3-3">
+<li><a id="org139f57c"></a>Pruning tree<br />
+<div class="outline-text-5" id="text-org139f57c">
 <p>
 Large cell populations can result in a very large tree. What if we only want to
 see larger subpopulations rather than the large (inner nodes) and small
@@ -965,7 +969,7 @@ Varying the number of MADs varies the number of leaves in the tree.
 <code>--smart-cutoff</code> should be used in addition to <code>--min-size</code>, <code>--max-proportion</code>,
 <code>--min-distance</code>, or <code>--min-distance-search</code> to decide which cutoff variable to
 use. The value supplied to the cutoff variable is ignored when <code>--smart-cutoff</code>
-is specified. We'll prune the tree for better visibility in this document.
+is specified. We&rsquo;ll prune the tree for better visibility in this document.
 </p>
 
 <p>
@@ -980,54 +984,52 @@ previous results using <code>--prior</code> (we can also remove <code>--matrix-p
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieRing"</span> <span style="color: #afaf00;">\</span>
-    --output out_pruned <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieRing"</span> <span style="color: #b8bb26;">\</span>
+    --output out_pruned <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="orgd6ab3b8" class="figure">
+<div id="org2fcbe57" class="figure">
 <p><img src="img/pruned_tree.png" alt="pruned_tree.png" />
 </p>
 </div>
 </div>
 </li>
-
-<li><a id="orgcd44b27"></a>Pie charts<br />
-<div class="outline-text-5" id="text-9-1-3-4">
+<li><a id="org4aecc6c"></a>Pie charts<br />
+<div class="outline-text-5" id="text-org4aecc6c">
 <p>
 What if we want pie charts instead of showing each individual cell (the
 default)?
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
-    --output out_pruned <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieChart"</span> <span style="color: #b8bb26;">\</span>
+    --output out_pruned <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="orge6677b6" class="figure">
+<div id="orgb5c1fd2" class="figure">
 <p><img src="img/piechart_pruned_tree.png" alt="piechart_pruned_tree.png" />
 </p>
 </div>
 </div>
 </li>
-
-<li><a id="org50f2973"></a>Node numbering<br />
-<div class="outline-text-5" id="text-9-1-3-5">
+<li><a id="org8e563c5"></a>Node numbering<br />
+<div class="outline-text-5" id="text-org8e563c5">
 <p>
 Now that we see the relationships between clusters and nodes in the dendrogram,
 how can we go back to the data &#x2013; which nodes represent which node IDs in the
@@ -1035,76 +1037,74 @@ data?
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
-    --draw-node-number <span style="color: #afaf00;">\</span>
-    --output out_pruned <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieChart"</span> <span style="color: #b8bb26;">\</span>
+    --draw-node-number <span style="color: #b8bb26;">\</span>
+    --output out_pruned <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="org0d35a78" class="figure">
+<div id="org2aae63f" class="figure">
 <p><img src="img/numbered_pruned_tree.png" alt="numbered_pruned_tree.png" />
 </p>
 </div>
 </div>
 </li>
-
-<li><a id="org8245e69"></a>Branch width<br />
-<div class="outline-text-5" id="text-9-1-3-6">
+<li><a id="org4c20b2c"></a>Branch width<br />
+<div class="outline-text-5" id="text-org4c20b2c">
 <p>
 We can also change the width of the nodes and branches, for instance if we want
 thinner branches:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
-    --draw-max-node-size <span style="color: #d787af;">40</span> <span style="color: #afaf00;">\</span>
-    --output out_pruned <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieChart"</span> <span style="color: #b8bb26;">\</span>
+    --draw-max-node-size <span style="color: #d3869b;">40</span> <span style="color: #b8bb26;">\</span>
+    --output out_pruned <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="org1d3cc6d" class="figure">
+<div id="orgc90c9f4" class="figure">
 <p><img src="img/thin_pruned_tree.png" alt="thin_pruned_tree.png" />
 </p>
 </div>
 </div>
 </li>
-
-<li><a id="org83a16f6"></a>No scaling<br />
-<div class="outline-text-5" id="text-9-1-3-7">
+<li><a id="orgbf38948"></a>No scaling<br />
+<div class="outline-text-5" id="text-orgbf38948">
 <p>
 We can remove all scaling for a normal tree and still control the branch widths:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
-    --draw-max-node-size <span style="color: #d787af;">40</span> <span style="color: #afaf00;">\</span>
-    --draw-no-scale-nodes <span style="color: #afaf00;">\</span>
-    --output out_pruned <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieChart"</span> <span style="color: #b8bb26;">\</span>
+    --draw-max-node-size <span style="color: #d3869b;">40</span> <span style="color: #b8bb26;">\</span>
+    --draw-no-scale-nodes <span style="color: #b8bb26;">\</span>
+    --output out_pruned <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="org04cd68d" class="figure">
+<div id="org56373f8" class="figure">
 <p><img src="img/no_scaling_pruned_tree.png" alt="no_scaling_pruned_tree.png" />
 </p>
 </div>
@@ -1115,28 +1115,27 @@ on top of each node:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --draw-collection <span style="color: #afaf00;">"PieChart"</span> <span style="color: #afaf00;">\</span>
-    --draw-mark <span style="color: #afaf00;">"MarkModularity"</span> <span style="color: #afaf00;">\</span>
-    --output out_pruned <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --draw-collection <span style="color: #b8bb26;">"PieChart"</span> <span style="color: #b8bb26;">\</span>
+    --draw-mark <span style="color: #b8bb26;">"MarkModularity"</span> <span style="color: #b8bb26;">\</span>
+    --output out_pruned <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="orgace59db" class="figure">
+<div id="orgf8abaa3" class="figure">
 <p><img src="img/modularity_pruned_tree.png" alt="modularity_pruned_tree.png" />
 </p>
 </div>
 </div>
 </li>
-
-<li><a id="orgc4e8f4d"></a>Gene expression<br />
-<div class="outline-text-5" id="text-9-1-3-8">
+<li><a id="org2927b4c"></a>Gene expression<br />
+<div class="outline-text-5" id="text-org2927b4c">
 <p>
 What if we want to draw the gene expression onto the tree in another folder
 (requires <code>--matrix-path</code>, may take some time depending on matrix size. Defaults
@@ -1148,22 +1147,22 @@ gene symbol, use <code>--feature-column 2</code> (1 is default).
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --feature-column <span style="color: #d787af;">2</span> <span style="color: #afaf00;">\</span>
-    --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous [\"Cd4\"])"</span> <span style="color: #afaf00;">\</span>
-    --output out_gene_expression <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --feature-column <span style="color: #d3869b;">2</span> <span style="color: #b8bb26;">\</span>
+    --draw-leaf <span style="color: #b8bb26;">"DrawItem (DrawContinuous [\"Cd4\"])"</span> <span style="color: #b8bb26;">\</span>
+    --output out_gene_expression <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="org238bcaf" class="figure">
+<div id="org85761ab" class="figure">
 <p><img src="img/cd4_dendrogram.png" alt="cd4_dendrogram.png" />
 </p>
 </div>
@@ -1173,66 +1172,66 @@ Notice that <i>Cd4</i> is within a list ([]), so multiple features can be listed
 the average of those values for each cell will be used. While this
 representation shows the expression of <i>Cd4</i> in each cell and blends those
 levels together, due to the sparsity of single cell data these cells and their
-respective subtrees may be hard to see without additional processing. Let's
+respective subtrees may be hard to see without additional processing. Let&rsquo;s
 scale the saturation to more clearly see sections of the tree with our desired
 expression (when choosing other high and low colors with <code>--draw-colors</code>,
 scaling the saturation will only affect non-grayscale colors).
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --feature-column <span style="color: #d787af;">2</span> <span style="color: #afaf00;">\</span>
-    --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawContinuous [\"Cd4\"])"</span> <span style="color: #afaf00;">\</span>
-    --draw-scale-saturation <span style="color: #d787af;">10</span>
-    --output out_gene_expression <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --feature-column <span style="color: #d3869b;">2</span> <span style="color: #b8bb26;">\</span>
+    --draw-leaf <span style="color: #b8bb26;">"DrawItem (DrawContinuous [\"Cd4\"])"</span> <span style="color: #b8bb26;">\</span>
+    --draw-scale-saturation <span style="color: #d3869b;">10</span>
+    --output out_gene_expression <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="org1cff9ff" class="figure">
+<div id="orgd3403c3" class="figure">
 <p><img src="img/cd4_saturated_10_dendrogram.png" alt="cd4_saturated_10_dendrogram.png" />
 </p>
 </div>
 
 <p>
-There, much better! Now it's clearly enriched in the subtree containing the
+There, much better! Now it&rsquo;s clearly enriched in the subtree containing the
 thymus, where we would expect many T cells to be. While this tree makes the
 expression a bit more visible, there is another tactic we can use. Instead of
-the continuous color spectrum of expression values, we can have a binary "high"
-and "low" expression. Here, we'll continue to have the red and gray colors
+the continuous color spectrum of expression values, we can have a binary &ldquo;high&rdquo;
+and &ldquo;low&rdquo; expression. Here, we&rsquo;ll continue to have the red and gray colors
 represent high and low expressions respectively using the <code>--draw-colors</code>
 argument. Note that this binary expression technique can be used for multiple
-features, hence it's a list of features with cutoffs (<code>Exact</code> for specified
+features, hence it&rsquo;s a list of features with cutoffs (<code>Exact</code> for specified
 cutoffs or <code>MadMedian</code> for how many MADs from the median) so you can be high in
 a gene and low in another gene, etc. for all possible combinations.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --feature-column <span style="color: #d787af;">2</span> <span style="color: #afaf00;">\</span>
-    --draw-leaf <span style="color: #afaf00;">"DrawItem (DrawThresholdContinuous [(\"Cd4\", Exact 0), (\"Cd8a\", Exact 0)])"</span> <span style="color: #afaf00;">\</span>
-    --draw-colors <span style="color: #afaf00;">"[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]"</span> <span style="color: #afaf00;">\</span>
-    --draw-scale-saturation <span style="color: #d787af;">10</span> <span style="color: #afaf00;">\</span>
-    --output out_gene_expression <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --feature-column <span style="color: #d3869b;">2</span> <span style="color: #b8bb26;">\</span>
+    --draw-leaf <span style="color: #b8bb26;">"DrawItem (DrawThresholdContinuous [(\"Cd4\", Exact 0), (\"Cd8a\", Exact 0)])"</span> <span style="color: #b8bb26;">\</span>
+    --draw-colors <span style="color: #b8bb26;">"[\"#e41a1c\", \"#377eb8\", \"#4daf4a\", \"#eaeaea\"]"</span> <span style="color: #b8bb26;">\</span>
+    --draw-scale-saturation <span style="color: #d3869b;">10</span> <span style="color: #b8bb26;">\</span>
+    --output out_gene_expression <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="org6efa183" class="figure">
+<div id="org9b71301" class="figure">
 <p><img src="img/cd4_cd8_sat_10_dendrogram.png" alt="cd4_cd8_sat_10_dendrogram.png" />
 </p>
 </div>
@@ -1242,49 +1241,47 @@ Now we can see the expression of both <i>Cd4</i> and <i>Cd8a</i> at the same tim
 </p>
 </div>
 </li>
-
-<li><a id="org4a434a2"></a>Diversity<br />
-<div class="outline-text-5" id="text-9-1-3-9">
+<li><a id="orgc971afd"></a>Diversity<br />
+<div class="outline-text-5" id="text-orgc971afd">
 <p>
 We can also see an overview of the diversity of cell labels within each subtree
 and leaves.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --smart-cutoff <span style="color: #d787af;">4</span> <span style="color: #afaf00;">\</span>
-    --min-size <span style="color: #d787af;">1</span> <span style="color: #afaf00;">\</span>
-    --draw-leaf <span style="color: #afaf00;">"DrawItem DrawDiversity"</span> <span style="color: #afaf00;">\</span>
-    --output out_diversity <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --smart-cutoff <span style="color: #d3869b;">4</span> <span style="color: #b8bb26;">\</span>
+    --min-size <span style="color: #d3869b;">1</span> <span style="color: #b8bb26;">\</span>
+    --draw-leaf <span style="color: #b8bb26;">"DrawItem DrawDiversity"</span> <span style="color: #b8bb26;">\</span>
+    --output out_diversity <span style="color: #b8bb26;">\</span>
     &gt; clusters_pruned.csv
 </pre>
 </div>
 
 
-<div id="org1927dff" class="figure">
+<div id="org57a6847" class="figure">
 <p><img src="img/diversity_pruned_tree.png" alt="diversity_pruned_tree.png" />
 </p>
 </div>
 
 <p>
-Here, the deeper the red, the more diverse (a larger "effective number of cell
-states") the cell labels in that group are. Note that the inner nodes are
+Here, the deeper the red, the more diverse (a larger &ldquo;effective number of cell
+states&rdquo;) the cell labels in that group are. Note that the inner nodes are
 colored relative to themselves, while the leaves are colored relative to all
 leaves, so there are two different scales.
 </p>
 </div>
 </li>
-</ol>
+</ul>
 </div>
 </div>
-
-<div id="outline-container-orgfc9b11d" class="outline-3">
-<h3 id="orgfc9b11d"><span class="section-number-3">9.2.</span> <code>interactive</code></h3>
-<div class="outline-text-3" id="text-9-2">
+<div id="outline-container-org6fc5fd6" class="outline-3">
+<h3 id="org6fc5fd6"><code>interactive</code></h3>
+<div class="outline-text-3" id="text-org6fc5fd6">
 <p>
 The <code>interactive</code> entry point has a basic GUI interface for quick plotting with
 a few features. We recommend limited use of this feature, however,
@@ -1293,26 +1290,25 @@ specific dependencies.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells interactive <span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells interactive <span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
     --labels-file labels.csv
 </pre>
 </div>
 </div>
 </div>
-
-<div id="outline-container-org27a5713" class="outline-3">
-<h3 id="org27a5713"><span class="section-number-3">9.3.</span> <code>differential</code></h3>
-<div class="outline-text-3" id="text-9-3">
+<div id="outline-container-orgd70e8ce" class="outline-3">
+<h3 id="orgd70e8ce"><code>differential</code></h3>
+<div class="outline-text-3" id="text-orgd70e8ce">
 <p>
 A main use of single cell clustering is to find differential genes between
 multiple groups of cells. The <code>differential</code> aids in this endeavor by allowing
-comparisons with <code>edgeR</code>. Let's find the differential genes between the liver
+comparisons with <code>edgeR</code>. Let&rsquo;s find the differential genes between the liver
 group and all other cells. Consider our pruned tree from earlier:
 </p>
 
 
-<div id="orgd7460ee" class="figure">
+<div id="orge071236" class="figure">
 <p><img src="img/piechart_pruned_tree.png" alt="piechart_pruned_tree.png" />
 </p>
 </div>
@@ -1322,25 +1318,25 @@ We can see the id of each group with <code>--draw-node-number</code>.
 </p>
 
 
-<div id="org44e277c" class="figure">
+<div id="org1051309" class="figure">
 <p><img src="img/numbered_pruned_tree.png" alt="numbered_pruned_tree.png" />
 </p>
 </div>
 
 <p>
 We need to define two groups to compare. Well, it looks like node 98 defines the
-liver cluster. Then, since we don't want 98 to be in the other group, we say
+liver cluster. Then, since we don&rsquo;t want 98 to be in the other group, we say
 that all other cells are within nodes 89 and 1. As a result, we end up with a
 tuple containing two lists: ([89, 1], [98]). Then our differential genes for
 (liver / others) can be found with <code>differential</code> (sent to <code>stdout</code>):
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells differential <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --prior out_pruned <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    -n <span style="color: #afaf00;">"([89, 1], [98])"</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells differential <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --prior out_pruned <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    -n <span style="color: #b8bb26;">"([89, 1], [98])"</span> <span style="color: #b8bb26;">\</span>
     &gt; differential.csv
 </pre>
 </div>
@@ -1351,13 +1347,13 @@ liver cells from all other subtrees, we can use the <code>--labels</code> argume
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells differential <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --prior out_pruned <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    -n <span style="color: #afaf00;">"([89, 1], [98])"</span> <span style="color: #afaf00;">\</span>
-    --labels <span style="color: #afaf00;">"([\"Liver\"], [\"Liver\"])"</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells differential <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --prior out_pruned <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    -n <span style="color: #b8bb26;">"([89, 1], [98])"</span> <span style="color: #b8bb26;">\</span>
+    --labels <span style="color: #b8bb26;">"([\"Liver\"], [\"Liver\"])"</span> <span style="color: #b8bb26;">\</span>
     &gt; differential_liver.csv
 </pre>
 </div>
@@ -1376,23 +1372,22 @@ compare all nodes to all other cells using 8 OS threads:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells differential <span style="color: #afaf00;">\</span>
-    --matrix-path input <span style="color: #afaf00;">\</span>
-    --prior out_pruned <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(250, 1)"</span> <span style="color: #afaf00;">\</span>
-    -n <span style="color: #afaf00;">"([], [])"</span> <span style="color: #afaf00;">\</span>
-    --normalization <span style="color: #afaf00;">"UQNorm"</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells differential <span style="color: #b8bb26;">\</span>
+    --matrix-path input <span style="color: #b8bb26;">\</span>
+    --prior out_pruned <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(250, 1)"</span> <span style="color: #b8bb26;">\</span>
+    -n <span style="color: #b8bb26;">"([], [])"</span> <span style="color: #b8bb26;">\</span>
+    --normalization <span style="color: #b8bb26;">"UQNorm"</span> <span style="color: #b8bb26;">\</span>
     +RTS -N8
 </pre>
 </div>
 </div>
 </div>
-
-<div id="outline-container-org610c96f" class="outline-3">
-<h3 id="org610c96f"><span class="section-number-3">9.4.</span> <code>diversity</code></h3>
-<div class="outline-text-3" id="text-9-4">
+<div id="outline-container-org631ed2e" class="outline-3">
+<h3 id="org631ed2e"><code>diversity</code></h3>
+<div class="outline-text-3" id="text-org631ed2e">
 <p>
-Diversity is the measure of the "effective number of entities within a system",
+Diversity is the measure of the &ldquo;effective number of entities within a system&rdquo;,
 originating from ecology (See Jost: Entropy and Diversity). Here, each cell is
 an organism and each cell label or cluster is a species, depending on the
 question. In ecology, the diversity index measures the effective number of
@@ -1400,16 +1395,16 @@ species within a population such that the minimum is a diversity of 1 for a
 single dominant species up to maximum of the total number of species (evenly
 abundant). If our species is a cluster, then here the diversity is the effective
 number of cell states within a population (for labels, <code>make-tree</code> generates
-these results automatically in "diversity" columns). Say we have two populations
+these results automatically in &ldquo;diversity&rdquo; columns). Say we have two populations
 and we generated the trees using <code>make-tree</code> into two different output folders,
 <code>out1</code> and <code>out2</code>. We can find the diversity of each population using the
 <code>diversity</code> entry point.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells diversity<span style="color: #afaf00;">\</span>
-    --priors out1 <span style="color: #afaf00;">\</span>
-    --priors out2 <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells diversity<span style="color: #b8bb26;">\</span>
+    --priors out1 <span style="color: #b8bb26;">\</span>
+    --priors out2 <span style="color: #b8bb26;">\</span>
     -o out_diversity_stats
 </pre>
 </div>
@@ -1422,32 +1417,30 @@ the population sizes differ.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org56d3d0e" class="outline-3">
-<h3 id="org56d3d0e"><span class="section-number-3">9.5.</span> <code>paths</code></h3>
-<div class="outline-text-3" id="text-9-5">
+<div id="outline-container-org52c0c89" class="outline-3">
+<h3 id="org52c0c89"><code>paths</code></h3>
+<div class="outline-text-3" id="text-org52c0c89">
 <p>
-"Pseudotime" refers to the one dimensional relationship between cells, useful
+&ldquo;Pseudotime&rdquo; refers to the one dimensional relationship between cells, useful
 for looking at the ordering of cell states or labels. The implementation of
 pseudotime in a <code>too-many-cells</code> point-of-view is by finding the distance
 between all cells and the cells found in the longest path from the root in the
-tree. Then each cell has a distance from the "start" and thus we plot those
+tree. Then each cell has a distance from the &ldquo;start&rdquo; and thus we plot those
 distances.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells paths<span style="color: #afaf00;">\</span>
-    --prior out <span style="color: #afaf00;">\</span>
-    --labels-file labels.csv <span style="color: #afaf00;">\</span>
-    --bandwidth <span style="color: #d787af;">3</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells paths<span style="color: #b8bb26;">\</span>
+    --prior out <span style="color: #b8bb26;">\</span>
+    --labels-file labels.csv <span style="color: #b8bb26;">\</span>
+    --bandwidth <span style="color: #d3869b;">3</span> <span style="color: #b8bb26;">\</span>
     -o out_paths
 </pre>
 </div>
 </div>
 </div>
-
 <div id="outline-container-too-many-peaks" class="outline-3">
-<h3 id="too-many-peaks"><span class="section-number-3">9.6.</span> Working with scATAC-seq data using <code>too-many-peaks</code></h3>
+<h3 id="too-many-peaks">Working with scATAC-seq data using <code>too-many-peaks</code></h3>
 <div class="outline-text-3" id="text-too-many-peaks">
 <p>
 For more information, check out the <a href="too-many-peaks_doc/too-many-peaks.html"> <code>too-many-peaks</code> walkthrough</a>.
@@ -1471,21 +1464,21 @@ the fragments ending, such as <code>t-all_fragments.tsv.gz</code>. For example:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells make-tree<span style="color: #afaf00;">\</span>
-    -m ./t-all_fragments.tsv.gz <span style="color: #afaf00;">\</span>
-    -Z <span style="color: #afaf00;">"T-ALL"</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells make-tree<span style="color: #b8bb26;">\</span>
+    -m ./t-all_fragments.tsv.gz <span style="color: #b8bb26;">\</span>
+    -Z <span style="color: #b8bb26;">"T-ALL"</span> <span style="color: #b8bb26;">\</span>
     -m ./control_fragments.tsv.gz
-    -Z <span style="color: #afaf00;">"Control"</span> <span style="color: #afaf00;">\</span>
-    --filter-thresholds <span style="color: #afaf00;">"(1000, 1)"</span> <span style="color: #afaf00;">\</span>
-    --bindwidth <span style="color: #d787af;">5000</span> <span style="color: #afaf00;">\</span>
-    --lsa <span style="color: #d787af;">50</span> <span style="color: #afaf00;">\</span>
-    --normalization NoneNorm <span style="color: #afaf00;">\</span>
-    --blacklist-regions-file Anshul_Hg19UltraHighSignalArtifactRegions.bed.gz <span style="color: #afaf00;">\</span>
-    --draw-node-number <span style="color: #afaf00;">\</span>
-    --draw-mark <span style="color: #afaf00;">"MarkModularity"</span> <span style="color: #afaf00;">\</span>
-    --fragments-output <span style="color: #afaf00;">\</span>
-    --labels-output <span style="color: #afaf00;">\</span>
-    -o out <span style="color: #afaf00;">\</span>
+    -Z <span style="color: #b8bb26;">"Control"</span> <span style="color: #b8bb26;">\</span>
+    --filter-thresholds <span style="color: #b8bb26;">"(1000, 1)"</span> <span style="color: #b8bb26;">\</span>
+    --bindwidth <span style="color: #d3869b;">5000</span> <span style="color: #b8bb26;">\</span>
+    --lsa <span style="color: #d3869b;">50</span> <span style="color: #b8bb26;">\</span>
+    --normalization NoneNorm <span style="color: #b8bb26;">\</span>
+    --blacklist-regions-file Anshul_Hg19UltraHighSignalArtifactRegions.bed.gz <span style="color: #b8bb26;">\</span>
+    --draw-node-number <span style="color: #b8bb26;">\</span>
+    --draw-mark <span style="color: #b8bb26;">"MarkModularity"</span> <span style="color: #b8bb26;">\</span>
+    --fragments-output <span style="color: #b8bb26;">\</span>
+    --labels-output <span style="color: #b8bb26;">\</span>
+    -o out <span style="color: #b8bb26;">\</span>
     &gt; out_leaves.csv
 </pre>
 </div>
@@ -1503,10 +1496,9 @@ to conform to a set of standard features across cells and samples.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org1560136" class="outline-3">
-<h3 id="org1560136"><span class="section-number-3">9.7.</span> <code>peaks</code></h3>
-<div class="outline-text-3" id="text-9-7">
+<div id="outline-container-orgc677b55" class="outline-3">
+<h3 id="orgc677b55"><code>peaks</code></h3>
+<div class="outline-text-3" id="text-orgc677b55">
 <p>
 With scATAC-seq, we want to identify enriched locations in the genome for each
 newly found subpopulation of cells. The <code>peaks</code> entrypoint can collect the
@@ -1514,18 +1506,18 @@ appropriate fragments for quantification and visualization of peaks.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells peaks <span style="color: #afaf00;">\</span>
-    -f ./out/fragments.tsv.gz <span style="color: #afaf00;">\</span>
-    --prior ./out <span style="color: #afaf00;">\</span>
-    --genome human.hg19.genome <span style="color: #afaf00;">\</span>
-    --bedgraph <span style="color: #afaf00;">\</span>
-    --labels-file ./out/labels.csv <span style="color: #afaf00;">\</span>
-    --all-nodes <span style="color: #afaf00;">\</span>
-    --peak-node <span style="color: #afaf00;">"1"</span> <span style="color: #afaf00;">\</span>
-    --peak-node <span style="color: #afaf00;">"5"</span> <span style="color: #afaf00;">\</span>
-    --peak-node-labels <span style="color: #afaf00;">"(1, [\"Control\"])"</span> <span style="color: #afaf00;">\</span>
-    --peak-node-labels <span style="color: #afaf00;">"(5, [\"T-ALL\"])"</span> <span style="color: #afaf00;">\</span>
-    -o out_peaks <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells peaks <span style="color: #b8bb26;">\</span>
+    -f ./out/fragments.tsv.gz <span style="color: #b8bb26;">\</span>
+    --prior ./out <span style="color: #b8bb26;">\</span>
+    --genome human.hg19.genome <span style="color: #b8bb26;">\</span>
+    --bedgraph <span style="color: #b8bb26;">\</span>
+    --labels-file ./out/labels.csv <span style="color: #b8bb26;">\</span>
+    --all-nodes <span style="color: #b8bb26;">\</span>
+    --peak-node <span style="color: #b8bb26;">"1"</span> <span style="color: #b8bb26;">\</span>
+    --peak-node <span style="color: #b8bb26;">"5"</span> <span style="color: #b8bb26;">\</span>
+    --peak-node-labels <span style="color: #b8bb26;">"(1, [\"Control\"])"</span> <span style="color: #b8bb26;">\</span>
+    --peak-node-labels <span style="color: #b8bb26;">"(5, [\"T-ALL\"])"</span> <span style="color: #b8bb26;">\</span>
+    -o out_peaks <span style="color: #b8bb26;">\</span>
     +RTS -N6
 </pre>
 </div>
@@ -1597,21 +1589,20 @@ peaks -h</code> for more information.
 </p>
 </div>
 </div>
-
-<div id="outline-container-org9dd98df" class="outline-3">
-<h3 id="org9dd98df"><span class="section-number-3">9.8.</span> <code>motifs</code></h3>
-<div class="outline-text-3" id="text-9-8">
+<div id="outline-container-orgc4dcb0b" class="outline-3">
+<h3 id="orgc4dcb0b"><code>motifs</code></h3>
+<div class="outline-text-3" id="text-orgc4dcb0b">
 <p>
 After differential accessibility using peaks, the result can be used to find
 motifs enriched in each node.
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells motifs <span style="color: #afaf00;">\</span>
-    --diff-file ./diff_out.csv <span style="color: #afaf00;">\</span>
-    --motif-genome hg19.fa <span style="color: #afaf00;">\</span>
-    --top-n <span style="color: #d787af;">1000</span> <span style="color: #afaf00;">\</span>
-    --motif-command <span style="color: #afaf00;">"homer/homer-4.9/bin/findMotifs.pl %s fasta %s"</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells motifs <span style="color: #b8bb26;">\</span>
+    --diff-file ./diff_out.csv <span style="color: #b8bb26;">\</span>
+    --motif-genome hg19.fa <span style="color: #b8bb26;">\</span>
+    --top-n <span style="color: #d3869b;">1000</span> <span style="color: #b8bb26;">\</span>
+    --motif-command <span style="color: #b8bb26;">"homer/homer-4.9/bin/findMotifs.pl %s fasta %s"</span> <span style="color: #b8bb26;">\</span>
     -o motifs
 </pre>
 </div>
@@ -1628,10 +1619,9 @@ locations (check <code>too-many-cells motifs -h</code>).
 </p>
 </div>
 </div>
-
-<div id="outline-container-org6afe9f8" class="outline-3">
-<h3 id="org6afe9f8"><span class="section-number-3">9.9.</span> <code>classify</code></h3>
-<div class="outline-text-3" id="text-9-9">
+<div id="outline-container-orgec6a497" class="outline-3">
+<h3 id="orgec6a497"><code>classify</code></h3>
+<div class="outline-text-3" id="text-orgec6a497">
 <p>
 To identify potential cell type candidates from sorted bulk data,
 <code>too-many-cells classify</code> uses cosine-similarity to provide scores for each bulk
@@ -1641,14 +1631,14 @@ each cell with:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells classify <span style="color: #afaf00;">\</span>
-    --reference-file ./proB.bdg <span style="color: #afaf00;">\</span>
-    --reference-file ./preB.bdg <span style="color: #afaf00;">\</span>
-    --reference-file ./memoryB.bdg <span style="color: #afaf00;">\</span>
-    --reference-file ./plasmaB.bdg <span style="color: #afaf00;">\</span>
-    -m ./mat <span style="color: #afaf00;">\</span>
-    --normalization <span style="color: #afaf00;">"NoneNorm"</span> <span style="color: #afaf00;">\</span>
-    --blacklist-regions-file <span style="color: #afaf00;">"mm9-blacklist.bed.gz"</span> <span style="color: #afaf00;">\</span>
+<pre class="src src-sh">too-many-cells classify <span style="color: #b8bb26;">\</span>
+    --reference-file ./proB.bdg <span style="color: #b8bb26;">\</span>
+    --reference-file ./preB.bdg <span style="color: #b8bb26;">\</span>
+    --reference-file ./memoryB.bdg <span style="color: #b8bb26;">\</span>
+    --reference-file ./plasmaB.bdg <span style="color: #b8bb26;">\</span>
+    -m ./mat <span style="color: #b8bb26;">\</span>
+    --normalization <span style="color: #b8bb26;">"NoneNorm"</span> <span style="color: #b8bb26;">\</span>
+    --blacklist-regions-file <span style="color: #b8bb26;">"mm9-blacklist.bed.gz"</span> <span style="color: #b8bb26;">\</span>
     &gt; labels.csv
 </pre>
 </div>
@@ -1664,9 +1654,8 @@ provides the value of the highest cosine-similarity label.
 </p>
 </div>
 </div>
-
 <div id="outline-container-spatial" class="outline-3">
-<h3 id="spatial"><span class="section-number-3">9.10.</span> <code>spatial</code></h3>
+<h3 id="spatial"><code>spatial</code></h3>
 <div class="outline-text-3" id="text-spatial">
 <p>
 Spatial single-cell technologies allow us to measure not only the features of
@@ -1686,7 +1675,7 @@ As an example, consider an imaging mass cytometry output containing two files,
 columns:
 </p>
 
-<pre class="example" id="org202894b">
+<pre class="example" id="org0f69e98">
 item,CD20,CD4,CD8,Foxp3,...
 barcode1,0.1095368741640727,0.013183117496457954,0.19233368842522866,0.05579191206063343,...
 barcode2,0.08268388046574766,0.003996753797330361,0.007560142177239592,0.0008473833902161547,...
@@ -1700,7 +1689,7 @@ barcode came from (for bulk processing to make sure there is segregation by
 sample), and <code>x</code> and <code>y</code> are the cell coordinates:
 </p>
 
-<pre class="example" id="org0fd4ba0">
+<pre class="example" id="orgd24e885">
 item,sample,x,y
 barcode1,donor1,-493.99,496.08
 barcode2,donor1,-479.629,496.641
@@ -1711,13 +1700,13 @@ Using this information, we can relate the cells by their marker expression:
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells spatial <span style="color: #afaf00;">\</span>
-  --matrix-transpose <span style="color: #afaf00;">\</span>
-  -m total_normalized_features.csv <span style="color: #afaf00;">\</span>
-  -j total_spatial.csv <span style="color: #afaf00;">\</span>
-  -o tmc_mark_output <span style="color: #afaf00;">\</span>
-  --mark <span style="color: #afaf00;">"CD4"</span> <span style="color: #afaf00;">\</span>
-  --mark <span style="color: #afaf00;">"CD20"</span>
+<pre class="src src-sh">too-many-cells spatial <span style="color: #b8bb26;">\</span>
+  --matrix-transpose <span style="color: #b8bb26;">\</span>
+  -m total_normalized_features.csv <span style="color: #b8bb26;">\</span>
+  -j total_spatial.csv <span style="color: #b8bb26;">\</span>
+  -o tmc_mark_output <span style="color: #b8bb26;">\</span>
+  --mark <span style="color: #b8bb26;">"CD4"</span> <span style="color: #b8bb26;">\</span>
+  --mark <span style="color: #b8bb26;">"CD20"</span>
 </pre>
 </div>
 
@@ -1918,14 +1907,14 @@ passing in a labels file (used by any <code>too-many-cells</code> entrypoint) wi
 </p>
 
 <div class="org-src-container">
-<pre class="src src-sh">too-many-cells spatial <span style="color: #afaf00;">\</span>
-  --matrix-transpose <span style="color: #afaf00;">\</span>
-  -m total_normalized_features.csv <span style="color: #afaf00;">\</span>
-  -j total_spatial.csv <span style="color: #afaf00;">\</span>
-  -o tmc_mark_output <span style="color: #afaf00;">\</span>
-  -l labels_celltypes.csv <span style="color: #afaf00;">\</span>
-  --mark <span style="color: #afaf00;">"Helper T Cell"</span> <span style="color: #afaf00;">\</span>
-  --mark <span style="color: #afaf00;">"B Cell"</span>
+<pre class="src src-sh">too-many-cells spatial <span style="color: #b8bb26;">\</span>
+  --matrix-transpose <span style="color: #b8bb26;">\</span>
+  -m total_normalized_features.csv <span style="color: #b8bb26;">\</span>
+  -j total_spatial.csv <span style="color: #b8bb26;">\</span>
+  -o tmc_mark_output <span style="color: #b8bb26;">\</span>
+  -l labels_celltypes.csv <span style="color: #b8bb26;">\</span>
+  --mark <span style="color: #b8bb26;">"Helper T Cell"</span> <span style="color: #b8bb26;">\</span>
+  --mark <span style="color: #b8bb26;">"B Cell"</span>
 </pre>
 </div>
 
@@ -1935,10 +1924,9 @@ file with <code>--annospat-marker-file</code> (see the <code>AnnoSpat</code> doc
 </p>
 </div>
 </div>
-
-<div id="outline-container-org8237717" class="outline-3">
-<h3 id="org8237717"><span class="section-number-3">9.11.</span> <code>matrix-output</code></h3>
-<div class="outline-text-3" id="text-9-11">
+<div id="outline-container-org5d14e6d" class="outline-3">
+<h3 id="org5d14e6d"><code>matrix-output</code></h3>
+<div class="outline-text-3" id="text-org5d14e6d">
 <p>
 A simple entrypoint to output the transformed matrix <code>too-many-cells</code> uses
 before clustering. Saves to <code>--mat-output</code>.
@@ -1946,10 +1934,9 @@ before clustering. Saves to <code>--mat-output</code>.
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgc0ffda6" class="outline-2">
-<h2 id="orgc0ffda6"><span class="section-number-2">10.</span> Advanced documentation</h2>
-<div class="outline-text-2" id="text-10">
+<div id="outline-container-org595bfd6" class="outline-2">
+<h2 id="org595bfd6">Advanced documentation</h2>
+<div class="outline-text-2" id="text-org595bfd6">
 <p>
 Each entry point has its own documentation accessible with <code>-h</code>, such as
 <code>too-many-cells make-tree -h</code>:
@@ -1960,7 +1947,7 @@ Each entry point has its own documentation accessible with <code>-h</code>, such
 </pre>
 </div>
 
-<pre class="example" id="org731cc5e">
+<pre class="example" id="org2248c3c">
 too-many-cells, Gregory W. Schwartz
 
 Usage: too-many-cells (COMMAND | COMMAND | COMMAND)
@@ -1988,10 +1975,9 @@ too-many-peaks analyses for scATAC-seq
 </pre>
 </div>
 </div>
-
-<div id="outline-container-orgb73898a" class="outline-2">
-<h2 id="orgb73898a"><span class="section-number-2">11.</span> Demo</h2>
-<div class="outline-text-2" id="text-11">
+<div id="outline-container-org8058217" class="outline-2">
+<h2 id="org8058217">Demo</h2>
+<div class="outline-text-2" id="text-org8058217">
 <p>
 Check out an instructional example of using <code>too-many-cells</code> <a href="workshop/workshop.html">here</a> when finished
 looking at the brief <a href="#makeTreeUsage">feature overview</a>.

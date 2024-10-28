@@ -30,6 +30,18 @@ different perspective of single cells, using our [[http://github.com/GregorySchw
 and tree measures to describe simultaneously large and small populations,
 without additional parameters or runs. See below for a full list of features.
 
+* New interactive release with Python implementation
+
+- A new interactive version of TooManyCells, TooManyCellsInteractive, was
+  launched! Check it out at
+  [[https://github.com/schwartzlab-methods/too-many-cells-interactive]], with
+  the relevant publication at
+  [[https://academic.oup.com/gigascience/article/doi/10.1093/gigascience/giae056/7738847]].
+- A new Python implementation of the clustering process, TooManyCells (à la
+  Python), was released at
+  [[https://github.com/schwartzlab-methods/too-many-cells-python]], fully
+  compatible with AnnData objects (and TooManyCellsInteractive)!
+
 * New features for v3.0.0.0
 
 - Added new =spatial= entry point for spatial analysis of cells! Can make
