@@ -30,7 +30,6 @@ let
 
   # Additional dependencies
   annospat = pkgs.callPackage ./deps/annospat.nix {};
-  homer = pkgs.callPackage ./deps/homer.nix {};
 
   # Haskell compiler
   compiler = pkgs.haskell.packages."${compilerVersion}";
@@ -75,7 +74,6 @@ let
     });
   };
   buildInputs = [ annospat
-                  homer
                   pkgs.MACS2
                   pkgs.Renv
                   pkgs.bedtools
@@ -125,7 +123,6 @@ in (pkg.overrideAttrs(attrs: {
               --prefix 'PATH' ':' "${pkgs.MACS2}/bin/" \
               --prefix 'PATH' ':' "${pkgs.meme-suite}/bin/" \
               --prefix 'PATH' ':' "${annospat}/bin/" \
-              --prefix 'PATH' ':' "${homer}/bin/" \
               --prefix-contents 'R_LIBS_SITE' ':' "$out/paths/r_path.txt" \
               --set 'R_LIBS_USER' "${pkgs.R}/lib/R/library" \
               --set 'LANG' 'en_US.UTF-8' \
